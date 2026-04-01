@@ -1,5 +1,5 @@
 import Head from 'next/head'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const TABS = [
   { id: 'overview',     label: 'Overview',          icon: '⬡' },
@@ -25,33 +25,6 @@ const STATUS_DOTS = [
   { label: 'WhatsApp',       color: '#22c55e' },
   { label: 'GBP',            color: '#22c55e' },
 ]
-
-const METRICS = {
-  today: [
-    { label: 'Online revenue', val: '£1,320', note: '+14% vs yesterday', color: '#22c55e' },
-    { label: 'Website visits', val: '2,184',  note: '+8% vs yesterday',  color: '#22c55e' },
-    { label: 'Ads cost/sale',  val: '£9.35',  note: 'Target: £8.00',     color: '#f59e0b' },
-    { label: 'Avg GBP rating', val: '3.8★',   note: '3 new reviews today', color: '#f59e0b' },
-  ],
-  week: [
-    { label: 'Online revenue', val: '£9,240',  note: '+8% vs last week',  color: '#22c55e' },
-    { label: 'Website visits', val: '14,561',  note: '+12% vs last week', color: '#22c55e' },
-    { label: 'Ads cost/sale',  val: '£9.35',   note: 'Target: under £8',  color: '#f59e0b' },
-    { label: 'Avg GBP rating', val: '3.8★',    note: '220 total reviews', color: '#f59e0b' },
-  ],
-  month: [
-    { label: 'Online revenue', val: '£38,400', note: '+5% vs last month',  color: '#22c55e' },
-    { label: 'Website visits', val: '61,200',  note: '+9% vs last month',  color: '#22c55e' },
-    { label: 'Ads cost/sale',  val: '£8.90',   note: 'Target: under £8',   color: '#f59e0b' },
-    { label: 'Avg GBP rating', val: '3.8★',    note: '220 total reviews',  color: '#f59e0b' },
-  ],
-  year: [
-    { label: 'Online revenue', val: '£412,000', note: '+18% vs last year', color: '#22c55e' },
-    { label: 'Website visits', val: '720,000',  note: '+22% vs last year', color: '#22c55e' },
-    { label: 'Ads cost/sale',  val: '£7.80',    note: 'Target: under £8',  color: '#22c55e' },
-    { label: 'Avg GBP rating', val: '3.8★',     note: '220 total reviews', color: '#f59e0b' },
-  ],
-}
 
 const PILLARS = [
   {
@@ -84,9 +57,9 @@ const PILLARS = [
 ]
 
 const BRANCHES = [
-  { name: 'Chapeltown — LS7', rating: 4.0, reviews: 66,  lastPost: '2 days ago', photos: 12, qa: 3, alertColor: '#f59e0b', alerts: ['Post due today', '3 unanswered Q&A'] },
-  { name: 'Roundhay — LS8',   rating: 3.8, reviews: 119, lastPost: '5 days ago', photos: 8,  qa: 0, alertColor: '#ef4444', alerts: ['Post overdue 5 days'] },
-  { name: 'City Centre',      rating: 3.3, reviews: 35,  lastPost: '1 day ago',  photos: 4,  qa: 1, alertColor: '#ef4444', alerts: ['Low rating — needs reviews!'] },
+  { name: 'Chapeltown — LS7', rating: 4.0, reviews: 66,  lastPost: '2 days ago', alertColor: '#f59e0b', alerts: ['Post due today', '3 unanswered Q&A'] },
+  { name: 'Roundhay — LS8',   rating: 3.8, reviews: 119, lastPost: '5 days ago', alertColor: '#ef4444', alerts: ['Post overdue 5 days'] },
+  { name: 'City Centre',      rating: 3.3, reviews: 35,  lastPost: '1 day ago',  alertColor: '#ef4444', alerts: ['Low rating — needs reviews!'] },
 ]
 
 const TEAM_TASKS = [
@@ -106,10 +79,10 @@ const KEYWORDS = [
 ]
 
 const BRAND_ADS = [
-  { brand: 'ORS',         cpa: '47p CPA',   pct: 95, color: '#22c55e' },
-  { brand: 'Cantu',       cpa: '£1.77',     pct: 75, color: '#22c55e' },
-  { brand: 'Loreal',      cpa: '£7.23',     pct: 45, color: '#f59e0b' },
-  { brand: 'H&Shoulders', cpa: '£0 conv',   pct: 8,  color: '#ef4444' },
+  { brand: 'ORS',         cpa: '47p CPA',  pct: 95, color: '#22c55e' },
+  { brand: 'Cantu',       cpa: '£1.77',    pct: 75, color: '#22c55e' },
+  { brand: 'Loreal',      cpa: '£7.23',    pct: 45, color: '#f59e0b' },
+  { brand: 'H&Shoulders', cpa: '£0 conv',  pct: 8,  color: '#ef4444' },
 ]
 
 const REVIEWS_DATA = {
@@ -141,29 +114,38 @@ const REVIEWS_DATA = {
 
 function genReply(rating, branch) {
   const t = {
-    5: 'Thank you so much for your wonderful review! We\'re thrilled you had such a great experience at our ' + branch + ' store. We look forward to seeing you again soon!',
-    4: 'Thank you for your kind review and for visiting our ' + branch + ' branch! We\'re glad you had a positive experience. Please don\'t hesitate to ask our staff for help anytime.',
-    3: 'Thank you for taking the time to leave a review. We appreciate your honest feedback about our ' + branch + ' branch. We\'d love the opportunity to give you an even better experience next time!',
-    2: 'Thank you for your feedback. We\'re sorry to hear your visit to our ' + branch + ' branch didn\'t fully meet your expectations. We\'d love to make this right — please do come back and give us another chance!',
-    1: 'Thank you for your feedback. We\'re very sorry about your experience at our ' + branch + ' branch. Please contact us directly so we can resolve this for you.',
+    5: `Thank you so much for your wonderful review! We're thrilled you had such a great experience at our ${branch} store. We look forward to seeing you again soon!`,
+    4: `Thank you for your kind review and for visiting our ${branch} branch! We're glad you had a positive experience. Please don't hesitate to ask our staff for help anytime.`,
+    3: `Thank you for taking the time to leave a review. We appreciate your honest feedback about our ${branch} branch. We'd love the opportunity to give you an even better experience next time!`,
+    2: `Thank you for your feedback. We're sorry to hear your visit to our ${branch} branch didn't fully meet your expectations. We'd love to make this right — please do come back and give us another chance!`,
+    1: `Thank you for your feedback. We're very sorry about your experience at our ${branch} branch. Please contact us directly so we can resolve this for you.`,
   }
   return t[rating] || t[3]
 }
 
-function Stars({ n, size }) {
-  return (
-    <span>
-      {[1,2,3,4,5].map(i => (
-        <span key={i} style={{ color: i <= n ? '#f59e0b' : '#2e3347', fontSize: size || 14 }}>★</span>
-      ))}
-    </span>
-  )
+function Spinner() {
+  return <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite', fontSize: 16 }}>⟳</span>
 }
 
 function ReviewCard({ review, branchName }) {
   const [reply, setReply] = useState(genReply(review.rating, branchName))
   const [copied, setCopied] = useState(false)
   const [editing, setEditing] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
+
+  async function regenerate() {
+    setRegenerating(true)
+    try {
+      const res = await fetch('/api/ai-reply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ review: review.text, branch: branchName, rating: review.rating }),
+      })
+      const data = await res.json()
+      if (data.reply) setReply(data.reply)
+    } catch (e) { console.error(e) }
+    setRegenerating(false)
+  }
 
   function copy() {
     navigator.clipboard.writeText(reply)
@@ -175,7 +157,7 @@ function ReviewCard({ review, branchName }) {
     <div style={{ background: '#1a1d27', border: '1px solid #2e3347', borderRadius: 12, padding: 16, marginBottom: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Stars n={review.rating} />
+          <span>{[1,2,3,4,5].map(i => <span key={i} style={{ color: i <= review.rating ? '#f59e0b' : '#2e3347', fontSize: 14 }}>★</span>)}</span>
           <span style={{ fontWeight: 600, color: '#e8eaf0' }}>{review.author}</span>
           <span style={{ color: '#555b75', fontSize: 12 }}>· {review.time}</span>
         </div>
@@ -195,20 +177,56 @@ function ReviewCard({ review, branchName }) {
         <a href="https://business.google.com" target="_blank" rel="noreferrer" style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #2e3347', background: '#22263a', color: '#818cf8', cursor: 'pointer', fontSize: 12, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
           Open in Google →
         </a>
-        <button onClick={() => setEditing(!editing)} style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #2e3347', background: '#22263a', color: '#e8eaf0', cursor: 'pointer', fontSize: 12, marginLeft: 'auto' }}>
+        <button onClick={() => setEditing(!editing)} style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #2e3347', background: '#22263a', color: '#e8eaf0', cursor: 'pointer', fontSize: 12 }}>
           {editing ? 'Done' : 'Edit'}
+        </button>
+        <button onClick={regenerate} disabled={regenerating} style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #2e3347', background: '#22263a', color: '#e8eaf0', cursor: 'pointer', fontSize: 12, marginLeft: 'auto' }}>
+          {regenerating ? '...' : '↺ Regenerate'}
         </button>
       </div>
     </div>
   )
 }
 
-function OverviewTab() {
+function OverviewTab({ shopifyData, shopifyLoading }) {
   const [period, setPeriod] = useState('today')
   const [taskDone, setTaskDone] = useState({})
-  const metrics = METRICS[period]
   const done = TEAM_TASKS.filter(t => t.done || taskDone[t.text]).length
   const pct = Math.round((done / TEAM_TASKS.length) * 100)
+
+  const periodLabels = { today: 'Today', week: 'This Week', month: 'This Month', year: 'This Year' }
+  const p = shopifyData?.periods?.[period]
+
+  const metrics = [
+    {
+      label: 'Online revenue',
+      val: shopifyLoading ? '...' : p ? p.revenueFormatted : '—',
+      sub: shopifyLoading ? 'Loading from Shopify...' : p ? `${p.orders} orders` : 'No data',
+      color: '#22c55e',
+      live: true,
+    },
+    {
+      label: 'Total products',
+      val: shopifyLoading ? '...' : shopifyData ? shopifyData.productCount?.toLocaleString() : '—',
+      sub: 'Live from Shopify',
+      color: '#3b82f6',
+      live: true,
+    },
+    {
+      label: 'Ads cost/sale',
+      val: '£9.35',
+      sub: 'Target: £8.00 — upload CSV',
+      color: '#f59e0b',
+      live: false,
+    },
+    {
+      label: 'Avg GBP rating',
+      val: '3.8★',
+      sub: '220 total reviews · 3 branches',
+      color: '#f59e0b',
+      live: false,
+    },
+  ]
 
   return (
     <div>
@@ -219,24 +237,47 @@ function OverviewTab() {
             padding: '7px 14px', borderRadius: 8, border: period === p ? 'none' : '1px solid #2e3347',
             background: period === p ? '#6366f1' : '#1a1d27', color: '#e8eaf0', cursor: 'pointer', fontSize: 13, fontWeight: 500,
           }}>
-            {{ today:'Today', week:'This Week', month:'This Month', year:'This Year' }[p]}
+            {periodLabels[p]}
           </button>
         ))}
       </div>
 
       {/* Metrics */}
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: '#555b75', marginBottom: 10 }}>
-        {{ today:'Today', week:'This Week', month:'This Month', year:'This Year' }[period]} at a glance
+        {periodLabels[period]} at a glance
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 24 }}>
         {metrics.map(m => (
-          <div key={m.label} style={{ background: '#1a1d27', border: '1px solid #2e3347', borderRadius: 12, padding: 16 }}>
+          <div key={m.label} style={{ background: '#1a1d27', border: '1px solid ' + (m.live ? '#22c55e20' : '#2e3347'), borderRadius: 12, padding: 16, position: 'relative' }}>
+            {m.live && <div style={{ position: 'absolute', top: 10, right: 10, width: 6, height: 6, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 6px #22c55e' }} />}
             <div style={{ fontSize: 28, fontWeight: 700, color: '#e8eaf0', letterSpacing: '-0.02em' }}>{m.val}</div>
             <div style={{ color: '#8b90a7', fontSize: 12, marginTop: 2 }}>{m.label}</div>
-            <div style={{ color: m.color, fontSize: 12, marginTop: 4, fontWeight: 500 }}>{m.note}</div>
+            <div style={{ color: m.color, fontSize: 12, marginTop: 4, fontWeight: 500 }}>{m.sub}</div>
           </div>
         ))}
       </div>
+
+      {/* Recent orders from Shopify */}
+      {shopifyData?.recentOrders?.length > 0 && (
+        <>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: '#555b75', marginBottom: 10 }}>
+            Recent orders — live from Shopify
+          </div>
+          <div style={{ background: '#1a1d27', border: '1px solid #22c55e20', borderRadius: 12, overflow: 'hidden', marginBottom: 24 }}>
+            {shopifyData.recentOrders.map((o, i) => (
+              <div key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderBottom: i < shopifyData.recentOrders.length - 1 ? '1px solid #2e3347' : 'none' }}>
+                <div style={{ flex: 1 }}>
+                  <span style={{ fontWeight: 600, color: '#e8eaf0', fontSize: 13 }}>{o.name}</span>
+                  <span style={{ color: '#8b90a7', fontSize: 12, marginLeft: 8 }}>{o.customer}</span>
+                  <div style={{ color: '#555b75', fontSize: 12, marginTop: 2 }}>{o.items}</div>
+                </div>
+                <span style={{ fontWeight: 700, color: '#22c55e', fontSize: 14 }}>{o.total}</span>
+                <span style={{ background: o.status === 'paid' ? 'rgba(34,197,94,.15)' : 'rgba(245,158,11,.15)', color: o.status === 'paid' ? '#22c55e' : '#f59e0b', padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600 }}>{o.status}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Pillars */}
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: '#555b75', marginBottom: 10 }}>Today's tasks — by pillar</div>
@@ -383,11 +424,25 @@ function ReviewsTab() {
 }
 
 function ComingSoon({ tab }) {
+  const info = {
+    tasks:        { icon: '✅', desc: 'Daily auto-generated task list by pillar with assignees and progress tracking.' },
+    'local-seo':  { icon: '📍', desc: 'Live GBP monitoring for all 3 branches, AI review replies, post scheduler, 309 keyword tracker.' },
+    'organic-seo':{ icon: '🔍', desc: 'Keyword clusters, blog pipeline, collection SEO scores, batch AI product fixes.' },
+    'paid-ads':   { icon: '📊', desc: 'CSV upload for Google Ads data, brand CPA performance bars, negative keywords export.' },
+    carts:        { icon: '🛒', desc: 'Abandoned cart recovery via WhatsApp & Email, post-purchase review requests.' },
+    launch:       { icon: '🚀', desc: '8-step pipeline from USA trend detection to Google cache for new product launches.' },
+    shopify:      { icon: '🛍', desc: '1-click content creation for new products — blog, GBP post, ad copy, social post.' },
+    ispy:         { icon: '🕵️', desc: 'Monitor competitors by URL. Track GBP ratings, keyword rankings, social activity.' },
+    audit:        { icon: '📋', desc: 'Automated audit schedule: product SEO weekly, GBP daily, Ads monthly, blogs quarterly.' },
+    content:      { icon: '✍️', desc: 'Content Studio fed from all tabs — no copy/paste. Everything in one place.' },
+    performance:  { icon: '📈', desc: 'Top keywords, most viewed vs most bought, high-views-zero-purchases flag, CPA trends.' },
+  }
+  const t = info[tab] || { icon: '⬡', desc: 'Coming soon.' }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '80px 20px', gap: 16 }}>
-      <div style={{ fontSize: 56 }}>{TABS.find(t => t.id === tab)?.icon || '⬡'}</div>
+      <div style={{ fontSize: 56 }}>{t.icon}</div>
       <div style={{ fontWeight: 700, fontSize: 22, color: '#e8eaf0', textTransform: 'capitalize' }}>{tab.replace(/-/g,' ')}</div>
-      <p style={{ color: '#8b90a7', maxWidth: 400, textAlign: 'center', lineHeight: 1.6 }}>This tab is being built next. Come back soon.</p>
+      <p style={{ color: '#8b90a7', maxWidth: 400, textAlign: 'center', lineHeight: 1.6 }}>{t.desc}</p>
       <span style={{ background: 'rgba(168,85,247,.15)', color: '#a855f7', padding: '4px 12px', borderRadius: 99, fontSize: 12, fontWeight: 700 }}>BUILDING NEXT</span>
     </div>
   )
@@ -395,9 +450,18 @@ function ComingSoon({ tab }) {
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('overview')
+  const [shopifyData, setShopifyData] = useState(null)
+  const [shopifyLoading, setShopifyLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/shopify-stats')
+      .then(r => r.json())
+      .then(d => { setShopifyData(d); setShopifyLoading(false) })
+      .catch(() => setShopifyLoading(false))
+  }, [])
 
   function renderTab() {
-    if (activeTab === 'overview') return <OverviewTab />
+    if (activeTab === 'overview') return <OverviewTab shopifyData={shopifyData} shopifyLoading={shopifyLoading} />
     if (activeTab === 'reviews')  return <ReviewsTab />
     return <ComingSoon tab={activeTab} />
   }
@@ -414,6 +478,7 @@ export default function Home() {
           ::-webkit-scrollbar { width: 6px; height: 6px; }
           ::-webkit-scrollbar-thumb { background: #2e3347; border-radius: 3px; }
           button { font-family: inherit; }
+          @keyframes spin { to { transform: rotate(360deg); } }
         `}</style>
       </Head>
 
@@ -426,10 +491,11 @@ export default function Home() {
         <div style={{ display: 'flex', gap: 16, marginLeft: 'auto', alignItems: 'center' }}>
           {STATUS_DOTS.map(s => (
             <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: s.color }} />
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: s.color, boxShadow: '0 0 5px ' + s.color }} />
               <span style={{ fontSize: 12, color: '#8b90a7' }}>{s.label}</span>
             </div>
           ))}
+          <a href="/debug" style={{ fontSize: 12, color: '#555b75', textDecoration: 'none', marginLeft: 8 }}>⚙ debug</a>
         </div>
       </div>
 
@@ -438,7 +504,7 @@ export default function Home() {
         {TABS.map(tab => {
           const active = tab.id === activeTab
           return (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ padding: '10px 14px', background: 'none', border: 'none', borderBottom: active ? '2px solid #818cf8' : '2px solid transparent', color: active ? '#818cf8' : '#8b90a7', fontSize: 13, fontWeight: active ? 600 : 400, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6, transition: 'all .15s' }}>
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ padding: '10px 14px', background: 'none', border: 'none', borderBottom: active ? '2px solid #818cf8' : '2px solid transparent', color: active ? '#818cf8' : '#8b90a7', fontSize: 13, fontWeight: active ? 600 : 400, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
               {tab.icon} {tab.label}
             </button>
           )
