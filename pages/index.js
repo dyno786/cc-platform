@@ -6,6 +6,10 @@ import LocalSEO from '../components/tabs/LocalSEO'
 import Reviews from '../components/tabs/Reviews'
 import ComingSoon from '../components/tabs/ComingSoon'
 
+export async function getServerSideProps() {
+  return { props: {} }
+}
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState('overview')
 
@@ -21,7 +25,7 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>CC Hair & Beauty — Intelligence Platform</title>
+        <title>CC Hair &amp; Beauty — Intelligence Platform</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
