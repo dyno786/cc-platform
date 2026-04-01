@@ -9,30 +9,37 @@ const C = {
   blue:'#3b82f6', accent:'#6366f1', accent2:'#818cf8',
 }
 
-// Tabs — those with a page get a link, others show coming soon inline
-const TABS = [
-  { id:'overview',     label:'Overview',          icon:'⬡',  page:null },
-  { id:'tasks',        label:'Tasks',             icon:'✅', page:'/tasks' },
-  { id:'local-seo',    label:'Local SEO',         icon:'📍', page:null },
-  { id:'organic-seo',  label:'Organic SEO',       icon:'🔍', page:'/organic-seo' },
-  { id:'paid-ads',     label:'Paid Ads',          icon:'📊', page:'/paid-ads' },
-  { id:'reviews',      label:'Reviews',           icon:'⭐', page:null },
-  { id:'carts',        label:'Abandoned Carts',   icon:'🛒', page:'/abandoned-carts' },
-  { id:'launch',       label:'New Product Launch',icon:'🚀', page:null },
-  { id:'shopify',      label:'Shopify',           icon:'🛍', page:'/shopify-content' },
-  { id:'ispy',         label:'i-Spy Competitors', icon:'🕵️', page:null },
-  { id:'audit',        label:'Audit',             icon:'📋', page:null },
-  { id:'content',      label:'Content Studio',    icon:'✍️', page:'/content-studio' },
-  { id:'performance',  label:'Performance',       icon:'📈', page:null },
+const NAV = [
+  { id:'overview',     label:'Overview',           icon:'⬡',  page:null,               group:'main' },
+  { id:'tasks',        label:'Tasks',              icon:'✅', page:'/tasks',           group:'main' },
+  { id:'local-seo',    label:'Local SEO',          icon:'📍', page:null,               group:'seo' },
+  { id:'organic-seo',  label:'Organic SEO',        icon:'🔍', page:'/organic-seo',     group:'seo' },
+  { id:'paid-ads',     label:'Paid Ads',           icon:'📊', page:'/paid-ads',        group:'ads' },
+  { id:'reviews',      label:'Reviews',            icon:'⭐', page:null,               group:'main' },
+  { id:'carts',        label:'Abandoned Carts',    icon:'🛒', page:'/abandoned-carts', group:'main' },
+  { id:'launch',       label:'New Product Launch', icon:'🚀', page:null,               group:'shopify' },
+  { id:'shopify',      label:'Shopify Content',    icon:'🛍', page:'/shopify-content', group:'shopify' },
+  { id:'ispy',         label:'i-Spy Competitors',  icon:'🕵️', page:null,               group:'intel' },
+  { id:'audit',        label:'Audit',              icon:'📋', page:null,               group:'intel' },
+  { id:'content',      label:'Content Studio',     icon:'✍️', page:'/content-studio',  group:'content' },
+  { id:'performance',  label:'Performance',        icon:'📈', page:'/performance',     group:'main' },
+]
+
+const GROUPS = [
+  { id:'main',    label:'Dashboard' },
+  { id:'seo',     label:'SEO' },
+  { id:'ads',     label:'Advertising' },
+  { id:'shopify', label:'Shopify' },
+  { id:'content', label:'Content' },
+  { id:'intel',   label:'Intelligence' },
 ]
 
 const STATUS_DOTS = [
-  { label:'Shopify',        color:'#22c55e' },
-  { label:'Search Console', color:'#22c55e' },
-  { label:'Analytics',      color:'#22c55e' },
-  { label:'Ads CSV',        color:'#f59e0b' },
-  { label:'WhatsApp',       color:'#22c55e' },
-  { label:'GBP',            color:'#22c55e' },
+  { label:'Shopify',  color:'#22c55e' },
+  { label:'SC',       color:'#22c55e' },
+  { label:'Ads CSV',  color:'#f59e0b' },
+  { label:'WhatsApp', color:'#22c55e' },
+  { label:'GBP',      color:'#22c55e' },
 ]
 
 const PILLARS = [
@@ -69,9 +76,9 @@ const TEAM_TASKS = [
   {pillar:'Local SEO', pc:'#22c55e', text:'Print and display Google Review QR badges — all 3 branches',          assign:'Branch managers',  when:'Done',      done:true},
   {pillar:'Local SEO', pc:'#22c55e', text:'Post weekly offer to Google Business Profile — all 3 branches',       assign:'Social media team', when:'Today',     done:false},
   {pillar:'Organic',   pc:'#3b82f6', text:'Publish blog: "Best relaxers for natural hair — available in Leeds"', assign:'Content team',      when:'Today',     done:false},
-  {pillar:'Paid Ads',  pc:'#f59e0b', text:'Google Ads: Set desktop bid +30% on Shopify All Products',             assign:'Mohammed',          when:'Today',     done:false},
-  {pillar:'Paid Ads',  pc:'#f59e0b', text:'Add COLOUR10 banner to Hair Dye & Colour collection page',             assign:'Shopify team',      when:'This week', done:false},
-  {pillar:'Organic',   pc:'#3b82f6', text:'Fix 12 products with missing meta descriptions',                       assign:'Content team',      when:'This week', done:false},
+  {pillar:'Paid Ads',  pc:'#f59e0b', text:'Google Ads: Set desktop bid +30% on Shopify All Products',            assign:'Mohammed',          when:'Today',     done:false},
+  {pillar:'Paid Ads',  pc:'#f59e0b', text:'Add COLOUR10 banner to Hair Dye & Colour collection page',            assign:'Shopify team',      when:'This week', done:false},
+  {pillar:'Organic',   pc:'#3b82f6', text:'Fix 12 products with missing meta descriptions',                      assign:'Content team',      when:'This week', done:false},
 ]
 
 const BRAND_ADS = [
@@ -84,8 +91,8 @@ const BRAND_ADS = [
 const KEYWORDS = [
   {kw:'cc hair beauty',    vol:1150},
   {kw:'hair shop leeds',   vol:220},
-  {kw:'wigs leeds',        vol:95},
   {kw:'braiding hair leeds',vol:180},
+  {kw:'wigs leeds',        vol:95},
 ]
 
 const REVIEWS_DATA = {
@@ -111,7 +118,7 @@ function genReply(rating, branch) {
     5:`Thank you so much for your wonderful review! We're thrilled you had such a great experience at our ${branch} store. We look forward to seeing you again soon!`,
     4:`Thank you for your kind review and for visiting our ${branch} branch! We're glad you had a positive experience. Please don't hesitate to ask our staff for help anytime.`,
     3:`Thank you for taking the time to leave a review. We appreciate your honest feedback about our ${branch} branch. We'd love the opportunity to give you an even better experience next time!`,
-    2:`Thank you for your feedback. We're sorry to hear your visit to our ${branch} branch didn't fully meet your expectations. We stock specialist professional brands not available in supermarkets. Please do come back and give us another chance!`,
+    2:`Thank you for your feedback. We're sorry to hear your visit to our ${branch} branch didn't fully meet your expectations. We stock specialist professional brands not available in supermarkets. Please do come back!`,
     1:`Thank you for your feedback. We're very sorry about your experience at our ${branch} branch. Please contact us directly so we can resolve this for you.`,
   }
   return t[rating] || t[3]
@@ -121,26 +128,24 @@ function ReviewCard({review, branchName}) {
   const [reply, setReply] = useState(genReply(review.rating, branchName))
   const [copied, setCopied] = useState(false)
   const [editing, setEditing] = useState(false)
-  const [regenerating, setRegenerating] = useState(false)
+  const [regen, setRegen] = useState(false)
 
   async function regenerate() {
-    setRegenerating(true)
+    setRegen(true)
     try {
       const res = await fetch('/api/ai-reply', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({review:review.text,branch:branchName,rating:review.rating})})
       const d = await res.json()
       if (d.reply) setReply(d.reply)
     } catch(e) {}
-    setRegenerating(false)
+    setRegen(false)
   }
 
   return (
     <div style={{background:C.surface,border:'1px solid '+C.border,borderRadius:12,padding:16,marginBottom:12}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-        <div style={{display:'flex',alignItems:'center',gap:10}}>
-          <span>{[1,2,3,4,5].map(i=><span key={i} style={{color:i<=review.rating?'#f59e0b':C.border,fontSize:14}}>★</span>)}</span>
-          <span style={{fontWeight:600}}>{review.author}</span>
-          <span style={{color:C.text3,fontSize:12}}>· {review.time}</span>
-        </div>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
+        <span>{[1,2,3,4,5].map(i=><span key={i} style={{color:i<=review.rating?'#f59e0b':C.border,fontSize:14}}>★</span>)}</span>
+        <span style={{fontWeight:600,color:C.text}}>{review.author}</span>
+        <span style={{color:C.text3,fontSize:12}}>· {review.time}</span>
       </div>
       <p style={{color:C.text2,fontSize:13,fontStyle:'italic',marginBottom:10,lineHeight:1.5}}>"{review.text}"</p>
       <div style={{background:'rgba(99,102,241,0.08)',border:'1px solid rgba(99,102,241,0.2)',borderRadius:8,padding:12,marginBottom:10}}>
@@ -150,7 +155,7 @@ function ReviewCard({review, branchName}) {
           : <p style={{color:C.text,fontSize:13,lineHeight:1.6,margin:0}}>{reply}</p>
         }
       </div>
-      <div style={{display:'flex',gap:8}}>
+      <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
         <button onClick={()=>{navigator.clipboard.writeText(reply);setCopied(true);setTimeout(()=>setCopied(false),2000)}} style={{padding:'6px 12px',borderRadius:6,border:'1px solid '+C.border,background:C.surface2,color:C.text,cursor:'pointer',fontSize:12,fontFamily:'inherit'}}>
           {copied?'✓ Copied!':'📋 Copy reply'}
         </button>
@@ -158,8 +163,8 @@ function ReviewCard({review, branchName}) {
           Open in Google →
         </a>
         <button onClick={()=>setEditing(!editing)} style={{padding:'6px 12px',borderRadius:6,border:'1px solid '+C.border,background:C.surface2,color:C.text,cursor:'pointer',fontSize:12,fontFamily:'inherit'}}>{editing?'Done':'Edit'}</button>
-        <button onClick={regenerate} disabled={regenerating} style={{padding:'6px 12px',borderRadius:6,border:'1px solid '+C.border,background:C.surface2,color:C.text,cursor:'pointer',fontSize:12,marginLeft:'auto',fontFamily:'inherit'}}>
-          {regenerating?'...':'↺ Regenerate'}
+        <button onClick={regenerate} disabled={regen} style={{padding:'6px 12px',borderRadius:6,border:'1px solid '+C.border,background:C.surface2,color:C.text,cursor:'pointer',fontSize:12,marginLeft:'auto',fontFamily:'inherit'}}>
+          {regen?'...':'↺ Regenerate'}
         </button>
       </div>
     </div>
@@ -174,15 +179,14 @@ function OverviewTab({shopifyData, shopifyLoading}) {
   const p = shopifyData?.periods?.[period]
 
   const metrics = [
-    {label:'Online revenue',  val:shopifyLoading?'...':(p?p.revenueFormatted:'—'), sub:shopifyLoading?'Loading...':(p?p.orders+' orders':'—'), color:C.green,  live:true},
-    {label:'Total products',  val:shopifyLoading?'...':(shopifyData?.productCount?.toLocaleString()||'—'), sub:'Live from Shopify', color:C.blue,   live:true},
-    {label:'Ads cost/sale',   val:'£9.35',   sub:'Target: £8.00 — upload CSV',       color:C.amber,  live:false},
-    {label:'Avg GBP rating',  val:'3.8★',    sub:'220 total reviews · 3 branches',    color:C.amber,  live:false},
+    {label:'Online revenue',  val:shopifyLoading?'...':(p?p.revenueFormatted:'—'), sub:shopifyLoading?'Loading from Shopify...':(p?p.orders+' orders':'—'), color:C.green, live:true},
+    {label:'Total products',  val:shopifyLoading?'...':(shopifyData?.productCount?.toLocaleString()||'—'), sub:'Live from Shopify', color:C.blue, live:true},
+    {label:'Ads cost/sale',   val:'£9.35', sub:'Target: £8.00 — upload CSV',    color:C.amber, live:false},
+    {label:'Avg GBP rating',  val:'3.8★',  sub:'220 reviews · 3 branches',      color:C.amber, live:false},
   ]
 
   return (
     <div>
-      {/* Period toggle */}
       <div style={{display:'flex',gap:8,marginBottom:20}}>
         {['today','week','month','year'].map(p=>(
           <button key={p} onClick={()=>setPeriod(p)} style={{padding:'7px 14px',borderRadius:8,border:period===p?'none':'1px solid '+C.border,background:period===p?C.accent:C.surface,color:C.text,cursor:'pointer',fontSize:13,fontWeight:500,fontFamily:'inherit'}}>
@@ -190,34 +194,26 @@ function OverviewTab({shopifyData, shopifyLoading}) {
           </button>
         ))}
       </div>
-
-      {/* Metrics */}
       <div style={{fontSize:11,fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:C.text3,marginBottom:10}}>
         {{today:'Today',week:'This Week',month:'This Month',year:'This Year'}[period]} at a glance
       </div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:24}}>
         {metrics.map(m=>(
           <div key={m.label} style={{background:C.surface,border:'1px solid '+(m.live?C.green+'20':C.border),borderRadius:12,padding:16,position:'relative'}}>
-            {m.live && <div style={{position:'absolute',top:10,right:10,width:6,height:6,borderRadius:'50%',background:C.green,boxShadow:'0 0 6px '+C.green}}/>}
+            {m.live&&<div style={{position:'absolute',top:10,right:10,width:6,height:6,borderRadius:'50%',background:C.green,boxShadow:'0 0 6px '+C.green}}/>}
             <div style={{fontSize:28,fontWeight:700,color:C.text,letterSpacing:'-0.02em'}}>{m.val}</div>
             <div style={{color:C.text2,fontSize:12,marginTop:2}}>{m.label}</div>
             <div style={{color:m.color,fontSize:12,marginTop:4,fontWeight:500}}>{m.sub}</div>
           </div>
         ))}
       </div>
-
-      {/* Recent orders */}
-      {shopifyData?.recentOrders?.length>0 && (
+      {shopifyData?.recentOrders?.length>0&&(
         <>
-          <div style={{fontSize:11,fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:C.text3,marginBottom:10}}>Recent orders — live from Shopify</div>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:C.text3,marginBottom:10}}>Recent orders — live</div>
           <div style={{background:C.surface,border:'1px solid '+C.green+'20',borderRadius:12,overflow:'hidden',marginBottom:24}}>
             {shopifyData.recentOrders.map((o,i)=>(
               <div key={o.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 16px',borderBottom:i<shopifyData.recentOrders.length-1?'1px solid '+C.border:'none'}}>
-                <div style={{flex:1}}>
-                  <span style={{fontWeight:600,color:C.text,fontSize:13}}>{o.name}</span>
-                  <span style={{color:C.text2,fontSize:12,marginLeft:8}}>{o.customer}</span>
-                  <div style={{color:C.text3,fontSize:12,marginTop:2}}>{o.items}</div>
-                </div>
+                <div style={{flex:1}}><span style={{fontWeight:600,color:C.text,fontSize:13}}>{o.name}</span><span style={{color:C.text2,fontSize:12,marginLeft:8}}>{o.customer}</span><div style={{color:C.text3,fontSize:12,marginTop:2}}>{o.items}</div></div>
                 <span style={{fontWeight:700,color:C.green,fontSize:14}}>{o.total}</span>
                 <span style={{background:o.status==='paid'?'rgba(34,197,94,.15)':'rgba(245,158,11,.15)',color:o.status==='paid'?C.green:C.amber,padding:'2px 8px',borderRadius:99,fontSize:11,fontWeight:600}}>{o.status}</span>
               </div>
@@ -225,8 +221,6 @@ function OverviewTab({shopifyData, shopifyLoading}) {
           </div>
         </>
       )}
-
-      {/* Pillars */}
       <div style={{fontSize:11,fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:C.text3,marginBottom:10}}>Today's tasks — by pillar</div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginBottom:24}}>
         {PILLARS.map(p=>(
@@ -247,28 +241,19 @@ function OverviewTab({shopifyData, shopifyLoading}) {
           </div>
         ))}
       </div>
-
-      {/* GBP branches */}
       <div style={{fontSize:11,fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:C.text3,marginBottom:10}}>Google Business Profile — 3 branches</div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginBottom:24}}>
         {BRANCHES.map(b=>{
-          const rc = b.rating>=4?C.green:b.rating>=3.7?C.amber:C.red
+          const rc=b.rating>=4?C.green:b.rating>=3.7?C.amber:C.red
           return (
             <div key={b.name} style={{background:C.surface,border:'1px solid '+b.alertColor+'40',borderRadius:12,padding:16}}>
-              <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
-                <span style={{fontWeight:600,color:C.text}}>{b.name}</span>
-                <span style={{color:rc,fontWeight:700,fontSize:16}}>{b.rating}★</span>
-              </div>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}><span style={{fontWeight:600,color:C.text}}>{b.name}</span><span style={{color:rc,fontWeight:700,fontSize:16}}>{b.rating}★</span></div>
               <div style={{color:C.text2,fontSize:12,marginBottom:8}}>Reviews: {b.reviews} · Last post: {b.lastPost}</div>
-              <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
-                {b.alerts.map(a=><span key={a} style={{background:b.alertColor+'20',color:b.alertColor,padding:'2px 8px',borderRadius:99,fontSize:11,fontWeight:600}}>{a}</span>)}
-              </div>
+              <div style={{display:'flex',flexWrap:'wrap',gap:4}}>{b.alerts.map(a=><span key={a} style={{background:b.alertColor+'20',color:b.alertColor,padding:'2px 8px',borderRadius:99,fontSize:11,fontWeight:600}}>{a}</span>)}</div>
             </div>
           )
         })}
       </div>
-
-      {/* Team tasks */}
       <div style={{fontSize:11,fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:C.text3,marginBottom:10}}>This week's team tasks</div>
       <div style={{background:C.surface,border:'1px solid '+C.border,borderRadius:12,overflow:'hidden',marginBottom:24}}>
         <div style={{padding:'12px 16px',borderBottom:'1px solid '+C.border,display:'flex',justifyContent:'space-between'}}>
@@ -280,9 +265,7 @@ function OverviewTab({shopifyData, shopifyLoading}) {
           const isDone=t.done||taskDone[t.text]
           return (
             <div key={i} onClick={()=>setTaskDone(p=>({...p,[t.text]:!p[t.text]}))} style={{display:'flex',alignItems:'flex-start',gap:12,padding:'12px 16px',borderBottom:i<TEAM_TASKS.length-1?'1px solid '+C.border:'none',cursor:'pointer'}}>
-              <div style={{width:18,height:18,borderRadius:5,flexShrink:0,marginTop:1,background:isDone?C.green:'transparent',border:'2px solid '+(isDone?C.green:C.border),display:'flex',alignItems:'center',justifyContent:'center'}}>
-                {isDone&&<span style={{color:'#000',fontSize:11,fontWeight:700}}>✓</span>}
-              </div>
+              <div style={{width:18,height:18,borderRadius:5,flexShrink:0,marginTop:1,background:isDone?C.green:'transparent',border:'2px solid '+(isDone?C.green:C.border),display:'flex',alignItems:'center',justifyContent:'center'}}>{isDone&&<span style={{color:'#000',fontSize:11,fontWeight:700}}>✓</span>}</div>
               <div style={{flex:1}}>
                 <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:2}}>
                   <span style={{background:t.pc+'20',color:t.pc,padding:'2px 6px',borderRadius:99,fontSize:11,fontWeight:600}}>{t.pillar}</span>
@@ -290,15 +273,11 @@ function OverviewTab({shopifyData, shopifyLoading}) {
                 </div>
                 <div style={{color:C.text3,fontSize:12}}>Assigned to: {t.assign}</div>
               </div>
-              <span style={{background:isDone?'rgba(34,197,94,.15)':t.when==='Today'?'rgba(99,102,241,.15)':'rgba(139,144,167,.1)',color:isDone?C.green:t.when==='Today'?C.accent2:C.text3,padding:'2px 8px',borderRadius:99,fontSize:11,fontWeight:600,flexShrink:0}}>
-                {isDone?'Done':t.when}
-              </span>
+              <span style={{background:isDone?'rgba(34,197,94,.15)':t.when==='Today'?'rgba(99,102,241,.15)':'rgba(139,144,167,.1)',color:isDone?C.green:t.when==='Today'?C.accent2:C.text3,padding:'2px 8px',borderRadius:99,fontSize:11,fontWeight:600,flexShrink:0}}>{isDone?'Done':t.when}</span>
             </div>
           )
         })}
       </div>
-
-      {/* Performance snapshot */}
       <div style={{fontSize:11,fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:C.text3,marginBottom:10}}>Performance snapshot</div>
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
         <div style={{background:C.surface,border:'1px solid '+C.border,borderRadius:12,padding:16}}>
@@ -306,9 +285,7 @@ function OverviewTab({shopifyData, shopifyLoading}) {
           {KEYWORDS.map(k=>(
             <div key={k.kw} style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
               <span style={{color:C.text2,fontSize:13,width:170,flexShrink:0}}>{k.kw}</span>
-              <div style={{flex:1,height:6,background:C.surface2,borderRadius:3,overflow:'hidden'}}>
-                <div style={{width:(k.vol/1150*100)+'%',height:'100%',background:C.blue,borderRadius:3}}/>
-              </div>
+              <div style={{flex:1,height:6,background:C.surface2,borderRadius:3,overflow:'hidden'}}><div style={{width:(k.vol/1150*100)+'%',height:'100%',background:C.blue,borderRadius:3}}/></div>
               <span style={{color:C.text,fontWeight:600,fontSize:13,width:40,textAlign:'right'}}>{k.vol}</span>
             </div>
           ))}
@@ -318,9 +295,7 @@ function OverviewTab({shopifyData, shopifyLoading}) {
           {BRAND_ADS.map(b=>(
             <div key={b.brand} style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
               <span style={{color:C.text2,fontSize:13,width:110,flexShrink:0}}>{b.brand}</span>
-              <div style={{flex:1,height:6,background:C.surface2,borderRadius:3,overflow:'hidden'}}>
-                <div style={{width:b.pct+'%',height:'100%',background:b.color,borderRadius:3}}/>
-              </div>
+              <div style={{flex:1,height:6,background:C.surface2,borderRadius:3,overflow:'hidden'}}><div style={{width:b.pct+'%',height:'100%',background:b.color,borderRadius:3}}/></div>
               <span style={{color:b.color,fontWeight:600,fontSize:13,width:60,textAlign:'right'}}>{b.cpa}</span>
             </div>
           ))}
@@ -338,30 +313,14 @@ function ReviewsTab() {
       <div style={{display:'flex',gap:8,marginBottom:20}}>
         {Object.entries(REVIEWS_DATA).map(([id,d])=>(
           <button key={id} onClick={()=>setBranch(id)} style={{padding:'7px 14px',borderRadius:8,border:branch===id?'none':'1px solid '+C.border,background:branch===id?C.accent:C.surface,color:C.text,cursor:'pointer',fontSize:13,display:'flex',alignItems:'center',gap:8,fontFamily:'inherit'}}>
-            <div style={{width:8,height:8,borderRadius:'50%',background:d.color}}/>
-            {d.name.split(' —')[0]}
+            <div style={{width:8,height:8,borderRadius:'50%',background:d.color}}/>{d.name.split(' —')[0]}
             <span style={{background:d.color+'20',color:d.color,padding:'1px 6px',borderRadius:99,fontSize:11,fontWeight:700}}>{d.rating}★</span>
           </button>
         ))}
       </div>
       <div style={{background:C.surface,border:'1px solid '+C.border,borderRadius:12,padding:16,marginBottom:16,display:'flex',alignItems:'center',gap:20}}>
-        <div>
-          <div style={{fontSize:36,fontWeight:800,color:b.color}}>{b.rating}★</div>
-          <div style={{color:C.text2,fontSize:13}}>{b.total} total reviews</div>
-        </div>
-        <div style={{flex:1}}>
-          {[5,4,3,2,1].map(n=>{
-            const count=b.reviews.filter(r=>r.rating===n).length
-            return (
-              <div key={n} style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
-                <span style={{color:C.text3,fontSize:12,width:20}}>{n}★</span>
-                <div style={{flex:1,height:6,background:C.surface2,borderRadius:3,overflow:'hidden'}}>
-                  <div style={{width:(count/b.reviews.length*100)+'%',height:'100%',background:b.color,borderRadius:3}}/>
-                </div>
-              </div>
-            )
-          })}
-        </div>
+        <div><div style={{fontSize:36,fontWeight:800,color:b.color}}>{b.rating}★</div><div style={{color:C.text2,fontSize:13}}>{b.total} total reviews</div></div>
+        <div style={{flex:1}}>{[5,4,3,2,1].map(n=>{const count=b.reviews.filter(r=>r.rating===n).length;return(<div key={n} style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}><span style={{color:C.text3,fontSize:12,width:20}}>{n}★</span><div style={{flex:1,height:6,background:C.surface2,borderRadius:3,overflow:'hidden'}}><div style={{width:(count/b.reviews.length*100)+'%',height:'100%',background:b.color,borderRadius:3}}/></div></div>)})}</div>
         <a href="https://business.google.com" target="_blank" rel="noreferrer" style={{padding:'8px 14px',borderRadius:8,background:C.green,color:'#000',fontWeight:600,fontSize:13,textDecoration:'none'}}>View all reviews</a>
       </div>
       <div style={{fontSize:11,fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:C.text3,marginBottom:10}}>Recent reviews — {b.name}</div>
@@ -372,13 +331,12 @@ function ReviewsTab() {
 
 function ComingSoon({tab}) {
   const info = {
-    'local-seo':  {icon:'📍',desc:'Live GBP monitoring, AI review replies, post scheduler, 309 keyword tracker.'},
-    launch:       {icon:'🚀',desc:'8-step pipeline from USA trend detection to Google cache.'},
-    ispy:         {icon:'🕵️',desc:'Monitor competitors by URL — GBP ratings, keyword rankings, social activity.'},
-    audit:        {icon:'📋',desc:'Automated audit schedule: product SEO weekly, GBP daily, Ads monthly.'},
-    performance:  {icon:'📈',desc:'Top keywords, most viewed vs most bought, high-views-zero-purchases flag, CPA trends.'},
+    'local-seo':{icon:'📍',desc:'Live GBP monitoring for all 3 branches, AI review replies, post scheduler, 309 keyword tracker.'},
+    launch:     {icon:'🚀',desc:'8-step pipeline from USA trend detection to Google cache for new product launches.'},
+    ispy:       {icon:'🕵️',desc:'Monitor competitors by URL — GBP ratings, keyword rankings, social follower counts.'},
+    audit:      {icon:'📋',desc:'Automated audit schedule: product SEO weekly, GBP daily, Ads monthly, blogs quarterly.'},
   }
-  const t = info[tab] || {icon:'⬡',desc:'Coming soon.'}
+  const t = info[tab]||{icon:'⬡',desc:'Coming soon.'}
   return (
     <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'80px 20px',gap:16}}>
       <div style={{fontSize:56}}>{t.icon}</div>
@@ -391,6 +349,7 @@ function ComingSoon({tab}) {
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('overview')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [shopifyData, setShopifyData] = useState(null)
   const [shopifyLoading, setShopifyLoading] = useState(true)
 
@@ -407,6 +366,9 @@ export default function Home() {
     return <ComingSoon tab={activeTab}/>
   }
 
+  const builtPages = NAV.filter(n => n.page)
+  const inlineTabs = NAV.filter(n => !n.page)
+
   return (
     <>
       <Head>
@@ -419,54 +381,53 @@ export default function Home() {
           button{font-family:inherit}
           ::-webkit-scrollbar{width:6px;height:6px}
           ::-webkit-scrollbar-thumb{background:${C.border};border-radius:3px}
+          .nav-link:hover{background:rgba(99,102,241,.1)!important;color:#818cf8!important}
         `}</style>
       </Head>
 
-      {/* Header */}
-      <div style={{background:C.surface,borderBottom:'1px solid '+C.border,padding:'0 20px',display:'flex',alignItems:'center',gap:20,height:52,position:'sticky',top:0,zIndex:100}}>
-        <div style={{display:'flex',alignItems:'center',gap:10,flexShrink:0}}>
-          <div style={{width:28,height:28,borderRadius:8,background:'linear-gradient(135deg,#6366f1,#a855f7)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,color:'#fff'}}>CC</div>
-          <span style={{fontWeight:700,fontSize:14}}>CC Hair &amp; Beauty — Intelligence Platform</span>
+      {/* Top header */}
+      <div style={{background:C.surface,borderBottom:'1px solid '+C.border,padding:'0 16px',display:'flex',alignItems:'center',gap:12,height:52,position:'sticky',top:0,zIndex:200}}>
+        {/* Logo */}
+        <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
+          <div style={{width:28,height:28,borderRadius:8,background:'linear-gradient(135deg,#6366f1,#a855f7)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:800,color:'#fff'}}>CC</div>
+          <span style={{fontWeight:700,fontSize:13,display:'none'}}>CC Intelligence</span>
         </div>
-        <div style={{display:'flex',gap:14,marginLeft:'auto',alignItems:'center'}}>
-          {STATUS_DOTS.map(s=>(
-            <div key={s.label} style={{display:'flex',alignItems:'center',gap:5}}>
-              <div style={{width:7,height:7,borderRadius:'50%',background:s.color,boxShadow:'0 0 5px '+s.color}}/>
-              <span style={{fontSize:12,color:C.text2}}>{s.label}</span>
+
+        {/* Nav — visible tabs (built pages + key inline) */}
+        <div style={{display:'flex',gap:2,flex:1,overflowX:'auto',scrollbarWidth:'none'}}>
+          {/* Overview and Reviews inline */}
+          {[{id:'overview',icon:'⬡',label:'Overview'},{id:'reviews',icon:'⭐',label:'Reviews'}].map(t => (
+            <button key={t.id} onClick={()=>setActiveTab(t.id)} className="nav-link" style={{
+              padding:'0 12px', height:52, background:'none', border:'none', cursor:'pointer',
+              borderBottom: activeTab===t.id ? '2px solid '+C.accent2 : '2px solid transparent',
+              color: activeTab===t.id ? C.accent2 : C.text2,
+              fontSize:13, fontWeight:activeTab===t.id?600:400,
+              whiteSpace:'nowrap', display:'flex', alignItems:'center', gap:6,
+              transition:'all .15s',
+            }}>{t.icon} {t.label}</button>
+          ))}
+          {/* Built page links */}
+          {builtPages.map(tab => (
+            <Link key={tab.id} href={tab.page} className="nav-link" style={{
+              padding:'0 12px', height:52, background:'none', border:'none',
+              borderBottom:'2px solid transparent', color:C.text2,
+              fontSize:13, fontWeight:400, whiteSpace:'nowrap',
+              display:'flex', alignItems:'center', gap:6,
+              textDecoration:'none', transition:'all .15s',
+            }}>{tab.icon} {tab.label}</Link>
+          ))}
+        </div>
+
+        {/* Status dots */}
+        <div style={{display:'flex',gap:10,alignItems:'center',flexShrink:0}}>
+          {STATUS_DOTS.map(s => (
+            <div key={s.label} style={{display:'flex',alignItems:'center',gap:4}}>
+              <div style={{width:6,height:6,borderRadius:'50%',background:s.color,boxShadow:'0 0 4px '+s.color}}/>
+              <span style={{fontSize:11,color:C.text3}}>{s.label}</span>
             </div>
           ))}
-          <a href="/debug" style={{fontSize:12,color:C.text3,textDecoration:'none',marginLeft:4}}>⚙ debug</a>
+          <a href="/debug" style={{fontSize:11,color:C.text3,textDecoration:'none',marginLeft:4}}>⚙</a>
         </div>
-      </div>
-
-      {/* Tab bar — links to pages where built, inline for overview/reviews */}
-      <div style={{background:C.surface,borderBottom:'1px solid '+C.border,padding:'0 20px',display:'flex',gap:2,overflowX:'auto',scrollbarWidth:'none'}}>
-        {TABS.map(tab=>{
-          const active = tab.id===activeTab
-          const baseStyle = {
-            padding:'10px 14px', background:'none', border:'none',
-            borderBottom: active?'2px solid '+C.accent2:'2px solid transparent',
-            color: active?C.accent2:C.text2,
-            fontSize:13, fontWeight:active?600:400,
-            cursor:'pointer', whiteSpace:'nowrap',
-            display:'flex', alignItems:'center', gap:6,
-            textDecoration:'none', fontFamily:'inherit',
-          }
-          // Tabs with dedicated pages — use Link
-          if (tab.page) {
-            return (
-              <Link key={tab.id} href={tab.page} style={baseStyle}>
-                {tab.icon} {tab.label}
-              </Link>
-            )
-          }
-          // Inline tabs (overview, reviews, coming soon)
-          return (
-            <button key={tab.id} onClick={()=>setActiveTab(tab.id)} style={baseStyle}>
-              {tab.icon} {tab.label}
-            </button>
-          )
-        })}
       </div>
 
       {/* Content */}
