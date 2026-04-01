@@ -12,7 +12,7 @@ const C = {
 const NAV = [
   { id:'overview',     label:'Overview',           icon:'⬡',  page:null,               group:'main' },
   { id:'tasks',        label:'Tasks',              icon:'✅', page:'/tasks',           group:'main' },
-  { id:'local-seo',    label:'Local SEO',          icon:'📍', page:null,               group:'seo' },
+  { id:'local-seo',    label:'Local SEO',          icon:'📍', page:'/local-seo',       group:'seo' },
   { id:'organic-seo',  label:'Organic SEO',        icon:'🔍', page:'/organic-seo',     group:'seo' },
   { id:'paid-ads',     label:'Paid Ads',           icon:'📊', page:'/paid-ads',        group:'ads' },
   { id:'reviews',      label:'Reviews',            icon:'⭐', page:null,               group:'main' },
