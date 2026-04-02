@@ -130,13 +130,33 @@ export default async function handler(req, res) {
         max_tokens: 4000,
         messages: [{
           role: 'user',
-          content: `You are an expert digital marketing analyst for CC Hair & Beauty Leeds — a UK hair and beauty retailer with 23,000+ products, 3 branches (Chapeltown LS7, Roundhay LS8, City Centre), and a Shopify store.
+          content: `You are an expert digital marketing analyst for CC Hair & Beauty Leeds — a UK hair and beauty retailer with 23,000+ products, 3 branches (Chapeltown LS7 3DU, Roundhay LS8 5RL, City Centre LS2 6BY), and a Shopify store at cchairandbeauty.com.
+
+CRITICAL RULE: Every single recommendation MUST be 100% specific and actionable. Never say vague things like "fix the product page" or "improve your title". Always say EXACTLY what to change, what to write, what number to set, what keyword to use.
+
+EXAMPLES OF BAD (vague) recommendations — NEVER do this:
+- "Fix Cherish French Curl product page"
+- "Improve your meta descriptions"  
+- "Increase bids in Wolverhampton"
+- "Add more blog content"
+
+EXAMPLES OF GOOD (specific) recommendations — ALWAYS do this:
+- "Change Cherish French Curl Shopify product title to: 'Cherish French Curl Braiding Hair | CC Hair & Beauty Leeds' — this will move it from position #8.7 to top 5 and triple CTR from 1.7%"
+- "Change Wigs collection meta description to: 'Shop 500+ wigs at CC Hair & Beauty Leeds. Lace fronts, synthetic & human hair wigs. In-store Chapeltown, Roundhay & City Centre. Free UK delivery over £50.' — target keyword: wigs leeds"
+- "Set Wolverhampton location bid to +50% in Google Ads — currently spending £14 at £1.60 CPA which is your best performing city"
+- "Publish blog post titled: 'Where to Buy Braiding Hair in Leeds 2026 — CC Hair & Beauty' targeting keyword 'where to buy braiding hair in leeds' — you're already ranking #1.8 for 'braiding hair leeds', this blog will capture 180+ monthly question searches"
+
+For EVERY blog topic: provide the EXACT title, EXACT target keyword, EXACT first paragraph to write, and EXACT meta description.
+For EVERY product fix: provide the EXACT new title and EXACT new meta description to paste into Shopify.
+For EVERY GBP post: provide the COMPLETE post text ready to copy and paste.
+For EVERY bid change: provide the EXACT percentage and EXACT campaign/location name.
+For EVERY negative keyword: provide the EXACT term to add.
 
 Here is this week's data across all channels:
 
 ${dataText.substring(0, 14000)}
 
-Generate a comprehensive Monday Morning Intelligence Report. Return ONLY valid JSON:
+Generate a comprehensive Weekly Intelligence Report. Return ONLY valid JSON:
 {
   "weekSummary": "2-3 sentence overview of overall performance this week",
   "dateRange": "date range from data",
@@ -158,10 +178,10 @@ Generate a comprehensive Monday Morning Intelligence Report. Return ONLY valid J
     "headline": "one line summary",
     "topKeywords": [{"keyword":"","clicks":0,"position":0,"opportunity":""}],
     "blogTopics": [
-      {"title":"blog post title","keyword":"target keyword","type":"local|national|product","priority":"urgent|high|medium","reason":"why this will rank"}
+      {"title":"EXACT blog post title","keyword":"exact target keyword","type":"local|national|product","priority":"urgent|high|medium","reason":"specific reason with real data","metaDescription":"EXACT meta description 155 chars max","firstParagraph":"EXACT first paragraph with keyword naturally included"}
     ],
     "keywordGaps": ["keyword we should rank for but dont"],
-    "quickWins": ["specific SEO action to take this week"],
+    "quickWins": ["EXACT action — e.g. Change Cherish French Curl Shopify title to: [exact title] — this will improve CTR from 1.7% to 5%+"],
     "contentCalendar": [
       {"day":"Mon","topic":"blog title","keyword":"keyword","type":"local|product|brand"}
     ]
