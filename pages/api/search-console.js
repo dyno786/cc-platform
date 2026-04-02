@@ -51,7 +51,7 @@ export default async function handler(req, res) {
     const endDate   = end.toISOString().split('T')[0]
 
     const scRes = await fetch(
-      'https://searchconsole.googleapis.com/webmasters/v3/sites/https%3A%2F%2Fcchairandbeauty.com%2F/searchAnalytics/query',
+      'https://searchconsole.googleapis.com/webmasters/v3/sites/sc-domain%3Acchairandbeauty.com/searchAnalytics/query',
       {
         method: 'POST',
         headers: {
