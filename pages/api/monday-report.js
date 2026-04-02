@@ -1,6 +1,6 @@
 export const config = { maxDuration: 60 }
 
-const SHEET_IDS = {
+const DEFAULT_SHEET_IDS = {
   campaigns:    '1qULuI_YAOIZRM5tebrz9VAss5BT4RO21DU_zg9Yfy7M',
   devices:      '1QxkUwDLGjq-W8GhWH-9QFlhX9D5Ly8fXdc6hsq96IBk',
   locations:    '1pU7GUJkCuJ2CIbVbPDDfqOlF1-7fjFzbC0q3pRII1qc',
@@ -83,6 +83,15 @@ export default async function handler(req, res) {
   try {
     const token = await getAccessToken()
     if (!token) return res.status(200).json({ ok: false, error: 'Auth failed' })
+
+    // Use sheet IDs from query params if provided, otherwise use defaults
+    const SHEET_IDS = {
+      campaigns:   req.query.campaigns   || DEFAULT_SHEET_IDS.campaigns,
+      devices:     req.query.devices     || DEFAULT_SHEET_IDS.devices,
+      locations:   req.query.locations   || DEFAULT_SHEET_IDS.locations,
+      shopping:    req.query.shopping    || DEFAULT_SHEET_IDS.shopping,
+      searchTerms: req.query.searchTerms || DEFAULT_SHEET_IDS.searchTerms,
+    }
 
     // Read all 5 sheets in parallel
     const [campaigns, devices, locations, shopping, searchTerms] = await Promise.all([
