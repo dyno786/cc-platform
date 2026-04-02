@@ -1,4 +1,5 @@
 import Head from 'next/head'
+import Nav from '../components/Nav'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
@@ -385,55 +386,5 @@ export default function Home() {
         `}</style>
       </Head>
 
-      {/* Top header */}
-      <div style={{background:C.surface,borderBottom:'1px solid '+C.border,padding:'0 16px',display:'flex',alignItems:'center',gap:12,height:52,position:'sticky',top:0,zIndex:200}}>
-        {/* Logo */}
-        <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
-          <div style={{width:28,height:28,borderRadius:8,background:'linear-gradient(135deg,#6366f1,#a855f7)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:800,color:'#fff'}}>CC</div>
-          <span style={{fontWeight:700,fontSize:13,display:'none'}}>CC Intelligence</span>
-        </div>
-
-        {/* Nav — visible tabs (built pages + key inline) */}
-        <div style={{display:'flex',gap:2,flex:1,overflowX:'auto',scrollbarWidth:'none'}}>
-          {/* Overview and Reviews inline */}
-          {[{id:'overview',icon:'⬡',label:'Overview'},{id:'reviews',icon:'⭐',label:'Reviews'}].map(t => (
-            <button key={t.id} onClick={()=>setActiveTab(t.id)} className="nav-link" style={{
-              padding:'0 12px', height:52, background:'none', border:'none', cursor:'pointer',
-              borderBottom: activeTab===t.id ? '2px solid '+C.accent2 : '2px solid transparent',
-              color: activeTab===t.id ? C.accent2 : C.text2,
-              fontSize:13, fontWeight:activeTab===t.id?600:400,
-              whiteSpace:'nowrap', display:'flex', alignItems:'center', gap:6,
-              transition:'all .15s',
-            }}>{t.icon} {t.label}</button>
-          ))}
-          {/* Built page links */}
-          {builtPages.map(tab => (
-            <Link key={tab.id} href={tab.page} className="nav-link" style={{
-              padding:'0 12px', height:52, background:'none', border:'none',
-              borderBottom:'2px solid transparent', color:C.text2,
-              fontSize:13, fontWeight:400, whiteSpace:'nowrap',
-              display:'flex', alignItems:'center', gap:6,
-              textDecoration:'none', transition:'all .15s',
-            }}>{tab.icon} {tab.label}</Link>
-          ))}
-        </div>
-
-        {/* Status dots */}
-        <div style={{display:'flex',gap:10,alignItems:'center',flexShrink:0}}>
-          {STATUS_DOTS.map(s => (
-            <div key={s.label} style={{display:'flex',alignItems:'center',gap:4}}>
-              <div style={{width:6,height:6,borderRadius:'50%',background:s.color,boxShadow:'0 0 4px '+s.color}}/>
-              <span style={{fontSize:11,color:C.text3}}>{s.label}</span>
-            </div>
-          ))}
-          <a href="/debug" style={{fontSize:11,color:C.text3,textDecoration:'none',marginLeft:4}}>⚙</a>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div style={{maxWidth:1400,margin:'0 auto',padding:20}}>
-        {renderTab()}
-      </div>
-    </>
-  )
-}
+      <Nav activeInline={activeTab} onInlineClick={setActiveTab}/>
+      {/* content */}
