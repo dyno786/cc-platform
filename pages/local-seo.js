@@ -13,7 +13,7 @@ const BRANCHES = [
   {
     id:'chapeltown', name:'Chapeltown', area:'LS7',
     address:'119-129 Chapeltown Road, Leeds LS7 3DU',
-    rating:4.0, reviews:66, target:4.2, color:C.green, alertColor:C.amber,
+    rating:4.1, reviews:71, target:4.2, color:C.green, alertColor:C.amber,
     status:'⚠️ Post due today',
     reviewLink:'https://www.google.com/search?q=cc+hair+and+beauty+chapeltown&sca_esv=69b89b82830faa31&ei=yjvOabydLZmDhbIPjtub-Ac&oq=cc+hair+and+beauty+c',
     gbpLink:'https://business.google.com',
@@ -27,7 +27,7 @@ const BRANCHES = [
   {
     id:'roundhay', name:'Roundhay', area:'LS8',
     address:'256-258 Roundhay Road, Leeds LS8 5RL',
-    rating:3.8, reviews:119, target:4.2, color:C.amber, alertColor:C.red,
+    rating:3.8, reviews:120, target:4.2, color:C.amber, alertColor:C.red,
     status:'🔴 Post overdue',
     reviewLink:'https://www.google.com/search?gs_ssp=eJwVxkEOQDAQAMC48om9ONvVCvUEv9jttuVCiEr9Xsxp6qZLHd3xSWcxWM0tFjuNbpDJIalHsTJjcagy9qEnIiPexgW8h5W3C3hXkMD5fuE68q4r_2H9AEBjGsI&q=cc+hair+and+beauty+roundhay+road',
     gbpLink:'https://business.google.com',
@@ -41,7 +41,7 @@ const BRANCHES = [
   {
     id:'citycentre', name:'City Centre', area:'New York St',
     address:'1-19 New York Street, Leeds LS2 6BY',
-    rating:3.3, reviews:35, target:4.2, color:C.red, alertColor:C.red,
+    rating:3.5, reviews:40, target:4.2, color:C.red, alertColor:C.red,
     status:'🔴 Low rating — urgent',
     reviewLink:'https://www.google.com/search?q=CC+Hair+And+Beauty+-+City+Centre&stick=H4sIAAAAAAAA_-NgU1I1qDCxMLc0TTa0tDRKTjQ2S7S0MqgwTjQ0Nk8yNzNPMjZNsjA3XMSq4Oys4JGYWaTgmJei4JSaWFpSqaCr4JwJpJxT80qKUgEOkP78TAAAAA&hl=en&mat=Cd64hHkqvRApElcBTVDHnrOhGuUeBg2O6hxkh0-6mbYmSjenQqp5QY7sd28FxsVBtJB_e4bYNd1JpQtWp-lkXd0LTc_kP29Rz9Q6yBB7L4Jlx8MPaWVz9hJ02G8BefDv3oI&authuser=0',
     gbpLink:'https://business.google.com',

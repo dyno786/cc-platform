@@ -34,9 +34,9 @@ const PILLARS = [
 ]
 
 const BRANCHES = [
-  {name:'Chapeltown — LS7', rating:4.0, reviews:66,  lastPost:'2 days ago', alertColor:'#f59e0b', alerts:['Post due today','3 unanswered Q&A']},
-  {name:'Roundhay — LS8',   rating:3.8, reviews:119, lastPost:'5 days ago', alertColor:'#ef4444', alerts:['Post overdue 5 days']},
-  {name:'City Centre',      rating:3.3, reviews:35,  lastPost:'1 day ago',  alertColor:'#ef4444', alerts:['Low rating — needs reviews!']},
+  {name:'Chapeltown — LS7', rating:4.1, reviews:71,  lastPost:'2 days ago', alertColor:'#f59e0b', alerts:['Post due today','3 unanswered Q&A']},
+  {name:'Roundhay — LS8',   rating:3.8, reviews:120, lastPost:'5 days ago', alertColor:'#ef4444', alerts:['Post overdue 5 days']},
+  {name:'City Centre',      rating:3.5, reviews:40,  lastPost:'1 day ago',  alertColor:'#ef4444', alerts:['Low rating — needs reviews!']},
 ]
 
 const TEAM_TASKS = [
