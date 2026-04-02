@@ -114,6 +114,7 @@ function SettingsPanel({ sheets, onSave, onClose }) {
 export default function MondayReport() {
   const [report, setReport] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [loadingStep, setLoadingStep] = useState('')
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('overview')
   const [showSettings, setShowSettings] = useState(false)
@@ -158,21 +159,34 @@ export default function MondayReport() {
 
   async function fetchReport() {
     setLoading(true)
+    setLoadingStep('Reading Google Sheets...')
     setError(null)
     try {
-      // Pass sheet IDs as query params
-      const params = new URLSearchParams(sheets)
-      const res = await fetch(`/api/monday-report?${params}`)
-      const d = await res.json()
-      if (d.ok) { 
-        setReport(d)
+      // Step 1 — read all 5 sheets (~10s)
+      const params = new URLSearchParams({ ...sheets, step: 'sheets' })
+      const r1 = await fetch(`/api/monday-report?${params}`)
+      const d1 = await r1.json()
+      if (!d1.ok) { setError(d1.error || 'Failed to read sheets'); setLoading(false); setLoadingStep(''); return }
+
+      // Step 2 — AI analysis (~20s)
+      setLoadingStep('AI analysing Paid Ads + Organic SEO + Local SEO...')
+      const r2 = await fetch('/api/monday-report?step=analyse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sheets: d1.sheets }),
+      })
+      const d2 = await r2.json()
+      if (d2.ok) {
+        const full = { ...d2, dataFreshness: d1.freshness }
+        setReport(full)
         setLastFetched(new Date())
-        // Cache the report so it loads instantly next time
-        localStorage.setItem('cc_report_cache', JSON.stringify({ report: d, savedAt: Date.now() }))
+        localStorage.setItem('cc_report_cache', JSON.stringify({ report: full, savedAt: Date.now() }))
+      } else {
+        setError(d2.error || 'AI analysis failed')
       }
-      else setError(d.error || 'Failed to generate report')
     } catch(e) { setError(e.message) }
     setLoading(false)
+    setLoadingStep('')
   }
 
   const tabs = [
@@ -272,7 +286,7 @@ export default function MondayReport() {
         {loading && (
           <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:40,textAlign:'center',marginBottom:20}}>
             <div style={{fontSize:36,marginBottom:12}}>⟳</div>
-            <div style={{fontWeight:700,color:C.text,fontSize:16,marginBottom:6}}>Generating Intelligence Report...</div>
+            <div style={{fontWeight:700,color:C.text,fontSize:16,marginBottom:6}}>{loadingStep || 'Generating Intelligence Report...'}</div>
             <div style={{color:C.text3,fontSize:13,marginBottom:16}}>Reading Google Ads Sheets + Search Console + GBP data</div>
             <div style={{display:'flex',gap:8,justifyContent:'center',flexWrap:'wrap'}}>
               {Object.entries(SHEET_LABELS).map(([key,meta]) => (
