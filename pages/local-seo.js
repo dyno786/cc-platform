@@ -16,7 +16,7 @@ const BRANCHES = [
     rating:4.0, reviews:66, target:4.2, color:'#22c55e', alertColor:'#f59e0b',
     status:'⚠️ Post due today',
     // Real Google URLs from Mohammed
-    reviewLink:'https://www.google.com/search?q=CC+Hair+And+Beauty+Chapeltown&hl=en#lrd=0x48795bc7b7b29d41:0xa08b2bfe45d47194,1',
+    reviewLink:'https://www.google.com/search?q=cc+hair+and+beauty+chapeltown&sca_esv=69b89b82830faa31&sxsrf=ANbL-n46WJg9e1zcfKpKEL6iDccIYyPESA%3A1775123402749&ei=yjvOabydLZmDhbIPjtub-Ac&biw=1728&bih=958&oq=cc+hair+and+beauty+c&gs_lp=Egxnd3Mtd2l6LXNlcnAiFGNjIGhhaXIgYW5kIGJlYXV0eSBjKgIIADIKECMYgAQYJxiKBTIEECMYJzIEECMYJzIGEAAYFhgeMgYQABgWGB4yBhAAGBYYHjIIEAAYFhgKGB4yBhAAGBYYHjIGEAAYFhgeMgYQABgWGB5IihBQ-wFY-wFwAXgBkAEAmAGCAaABggGqAQMwLjG4AQHIAQD4AQGYAgKgAo0BwgIHECMYsAMYJ8ICChAAGLADGNYEGEeYAwCIBgGQBgmSBwMxLjGgB6kLsgcDMC4xuAeKAcIHBTAuMS4xyAcHgAgA&sclient=gws-wiz-serp',
     postLink:'https://business.google.com/posts/create',
     gbpLink:'https://business.google.com',
     tasks:[
@@ -31,7 +31,7 @@ const BRANCHES = [
     address:'256-258 Roundhay Road, Leeds LS8 5RL',
     rating:3.8, reviews:119, target:4.2, color:'#f59e0b', alertColor:'#ef4444',
     status:'🔴 Post overdue',
-    reviewLink:'https://www.google.com/search?q=CC+Hair+And+Beauty+Roundhay&hl=en#lrd=0x48790e90e82bace3:0xf29d39083a6a1a,1',
+    reviewLink:'https://www.google.com/search?gs_ssp=eJwVxkEOQDAQAMC48om9ONvVCvUEv9jttuVCiEr9Xsxp6qZLHd3xSWcxWM0tFjuNbpDJIalHsTJjcagy9qEnIiPexgW8h5W3C3hXkMD5fuE68q4r_2H9AEBjGsI&q=cc+hair+and+beauty+roundhay+road&oq=cchair+aND+BEAUTY+round&gs_lcrp=EgZjaHJvbWUqDwgBEC4YDRivARjHARiABDIGCAAQRRg5Mg8IARAuGA0YrwEYxwEYgAQyCAgCEAAYFhgeMggIAxAAGBYYHjIICAQQABgWGB4yBggFEEUYPDIGCAYQRRg8MgYIBxBFGD3SAQg4NDc0ajBqNKgCA7ACAfEF8b8iTYjuLQQ&sourceid=chrome&ie=UTF-8#mpd=~16035079984380978849/customers/reviews',
     postLink:'https://business.google.com/posts/create',
     gbpLink:'https://business.google.com',
     tasks:[
