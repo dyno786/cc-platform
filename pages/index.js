@@ -1,7 +1,6 @@
 import Head from 'next/head'
-import Nav from '../components/Nav'
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import Nav from '../components/Nav'
 
 const C = {
   bg:'#0f1117', surface:'#1a1d27', surface2:'#22263a',
@@ -9,39 +8,6 @@ const C = {
   green:'#22c55e', amber:'#f59e0b', red:'#ef4444',
   blue:'#3b82f6', accent:'#6366f1', accent2:'#818cf8',
 }
-
-const NAV = [
-  { id:'overview',     label:'Overview',           icon:'⬡',  page:null,               group:'main' },
-  { id:'tasks',        label:'Tasks',              icon:'✅', page:'/tasks',           group:'main' },
-  { id:'local-seo',    label:'Local SEO',          icon:'📍', page:'/local-seo',       group:'seo' },
-  { id:'organic-seo',  label:'Organic SEO',        icon:'🔍', page:'/organic-seo',     group:'seo' },
-  { id:'paid-ads',     label:'Paid Ads',           icon:'📊', page:'/paid-ads',        group:'ads' },
-  { id:'reviews',      label:'Reviews',            icon:'⭐', page:null,               group:'main' },
-  { id:'carts',        label:'Abandoned Carts',    icon:'🛒', page:'/abandoned-carts', group:'main' },
-  { id:'launch',       label:'New Product Launch', icon:'🚀', page:null,               group:'shopify' },
-  { id:'shopify',      label:'Shopify Content',    icon:'🛍', page:'/shopify-content', group:'shopify' },
-  { id:'ispy',         label:'i-Spy Competitors',  icon:'🕵️', page:null,               group:'intel' },
-  { id:'audit',        label:'Audit',              icon:'📋', page:null,               group:'intel' },
-  { id:'content',      label:'Content Studio',     icon:'✍️', page:'/content-studio',  group:'content' },
-  { id:'performance',  label:'Performance',        icon:'📈', page:'/performance',     group:'main' },
-]
-
-const GROUPS = [
-  { id:'main',    label:'Dashboard' },
-  { id:'seo',     label:'SEO' },
-  { id:'ads',     label:'Advertising' },
-  { id:'shopify', label:'Shopify' },
-  { id:'content', label:'Content' },
-  { id:'intel',   label:'Intelligence' },
-]
-
-const STATUS_DOTS = [
-  { label:'Shopify',  color:'#22c55e' },
-  { label:'SC',       color:'#22c55e' },
-  { label:'Ads CSV',  color:'#f59e0b' },
-  { label:'WhatsApp', color:'#22c55e' },
-  { label:'GBP',      color:'#22c55e' },
-]
 
 const PILLARS = [
   { id:'local', label:'Local SEO', color:'#22c55e', badge:'2 urgent', badgeColor:'#ef4444',
@@ -56,7 +22,7 @@ const PILLARS = [
       {text:'Publish blog: "Best relaxers in Leeds 2026"', done:false, when:'Today'},
       {text:'Fix Wigs collection meta title', done:true, when:''},
       {text:'Add COLOUR10 banner to Hair Dye page', done:false, when:'Today'},
-      {text:'Update 5 product descriptions — SEO Audit', done:false, when:'This week'},
+      {text:'Update 5 product descriptions', done:false, when:'This week'},
     ]},
   { id:'paid', label:'Paid Ads', color:'#f59e0b', badge:'3 urgent', badgeColor:'#ef4444',
     tasks:[
@@ -90,27 +56,27 @@ const BRAND_ADS = [
 ]
 
 const KEYWORDS = [
-  {kw:'cc hair beauty',    vol:1150},
-  {kw:'hair shop leeds',   vol:220},
+  {kw:'cc hair beauty',     vol:1150},
+  {kw:'hair shop leeds',    vol:220},
   {kw:'braiding hair leeds',vol:180},
-  {kw:'wigs leeds',        vol:95},
+  {kw:'wigs leeds',         vol:95},
 ]
 
 const REVIEWS_DATA = {
   chapeltown:{name:'Chapeltown — LS7',rating:4.0,total:66,color:'#22c55e',reviews:[
-    {author:'Sarah M.',  rating:5,time:'2h ago', text:'Absolutely love this shop! Always have exactly what I need for my natural hair. Staff are so helpful and knowledgeable.'},
-    {author:'Priya K.',  rating:5,time:'1d ago', text:'Best hair shop in Leeds! Huge selection of professional products. I drive from Bradford just to shop here.'},
-    {author:'Tanya B.',  rating:4,time:'3d ago', text:'Great range of products. Staff helped me find the right relaxer. Will definitely be back.'},
+    {author:'Sarah M.',  rating:5,time:'2h ago', text:'Absolutely love this shop! Always have exactly what I need for my natural hair. Staff are so helpful.'},
+    {author:'Priya K.',  rating:5,time:'1d ago', text:'Best hair shop in Leeds! Huge selection. I drive from Bradford just to shop here.'},
+    {author:'Tanya B.',  rating:4,time:'3d ago', text:'Great range. Staff helped me find the right relaxer. Will definitely be back.'},
   ]},
   roundhay:{name:'Roundhay — LS8',rating:3.8,total:119,color:'#f59e0b',reviews:[
-    {author:'Anonymous',rating:2,time:'4h ago', text:'Prices are higher than expected and staff seemed busy.'},
-    {author:'Diane F.',  rating:5,time:'2d ago', text:'Love this local branch! Always has everything I need and the staff are really friendly.'},
+    {author:'Anonymous', rating:2,time:'4h ago', text:'Prices are higher than expected and staff seemed busy.'},
+    {author:'Diane F.',  rating:5,time:'2d ago', text:'Love this local branch! Always has everything I need and staff are really friendly.'},
     {author:'Marcus H.', rating:3,time:'5d ago', text:'OK selection but could do with more braiding hair options.'},
   ]},
   citycentre:{name:'City Centre — New York St',rating:3.3,total:35,color:'#ef4444',reviews:[
-    {author:'James T.', rating:3,time:'1d ago', text:'Decent selection but the shop felt a bit disorganised. Would visit again though.'},
-    {author:'Fiona R.', rating:2,time:'3d ago', text:"Couldn't find what I was looking for and staff weren't very helpful."},
-    {author:'Amara O.', rating:5,time:'1w ago', text:'Hidden gem in Leeds city centre! Great for natural and afro hair products.'},
+    {author:'James T.',  rating:3,time:'1d ago', text:'Decent selection but the shop felt a bit disorganised. Would visit again.'},
+    {author:'Fiona R.',  rating:2,time:'3d ago', text:"Couldn't find what I was looking for and staff weren't very helpful."},
+    {author:'Amara O.',  rating:5,time:'1w ago', text:'Hidden gem in Leeds city centre! Great for natural and afro hair products.'},
   ]},
 }
 
@@ -119,7 +85,7 @@ function genReply(rating, branch) {
     5:`Thank you so much for your wonderful review! We're thrilled you had such a great experience at our ${branch} store. We look forward to seeing you again soon!`,
     4:`Thank you for your kind review and for visiting our ${branch} branch! We're glad you had a positive experience. Please don't hesitate to ask our staff for help anytime.`,
     3:`Thank you for taking the time to leave a review. We appreciate your honest feedback about our ${branch} branch. We'd love the opportunity to give you an even better experience next time!`,
-    2:`Thank you for your feedback. We're sorry to hear your visit to our ${branch} branch didn't fully meet your expectations. We stock specialist professional brands not available in supermarkets. Please do come back!`,
+    2:`Thank you for your feedback. We're sorry your visit to our ${branch} branch didn't fully meet your expectations. We stock specialist professional brands not available in supermarkets. Please visit us again!`,
     1:`Thank you for your feedback. We're very sorry about your experience at our ${branch} branch. Please contact us directly so we can resolve this for you.`,
   }
   return t[rating] || t[3]
@@ -134,7 +100,7 @@ function ReviewCard({review, branchName}) {
   async function regenerate() {
     setRegen(true)
     try {
-      const res = await fetch('/api/ai-reply', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({review:review.text,branch:branchName,rating:review.rating})})
+      const res = await fetch('/api/ai-reply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({review:review.text,branch:branchName,rating:review.rating})})
       const d = await res.json()
       if (d.reply) setReply(d.reply)
     } catch(e) {}
@@ -152,21 +118,17 @@ function ReviewCard({review, branchName}) {
       <div style={{background:'rgba(99,102,241,0.08)',border:'1px solid rgba(99,102,241,0.2)',borderRadius:8,padding:12,marginBottom:10}}>
         <div style={{fontSize:11,fontWeight:700,color:C.accent2,marginBottom:6,textTransform:'uppercase',letterSpacing:'.05em'}}>✨ AI Reply</div>
         {editing
-          ? <textarea value={reply} onChange={e=>setReply(e.target.value)} rows={3} style={{width:'100%',background:C.surface2,border:'1px solid '+C.border,borderRadius:6,color:C.text,fontSize:13,padding:8,resize:'vertical'}}/>
+          ? <textarea value={reply} onChange={e=>setReply(e.target.value)} rows={3} style={{width:'100%',background:C.surface2,border:'1px solid '+C.border,borderRadius:6,color:C.text,fontSize:13,padding:8,resize:'vertical',fontFamily:'inherit'}}/>
           : <p style={{color:C.text,fontSize:13,lineHeight:1.6,margin:0}}>{reply}</p>
         }
       </div>
-      <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+      <div style={{display:'flex',gap:8}}>
         <button onClick={()=>{navigator.clipboard.writeText(reply);setCopied(true);setTimeout(()=>setCopied(false),2000)}} style={{padding:'6px 12px',borderRadius:6,border:'1px solid '+C.border,background:C.surface2,color:C.text,cursor:'pointer',fontSize:12,fontFamily:'inherit'}}>
           {copied?'✓ Copied!':'📋 Copy reply'}
         </button>
-        <a href="https://business.google.com/reviews" target="_blank" rel="noreferrer" style={{padding:'6px 12px',borderRadius:6,border:'1px solid '+C.border,background:C.surface2,color:C.accent2,fontSize:12,textDecoration:'none',display:'inline-flex',alignItems:'center'}}>
-          Open in Google →
-        </a>
+        <a href="https://business.google.com/reviews" target="_blank" rel="noreferrer" style={{padding:'6px 12px',borderRadius:6,border:'1px solid '+C.border,background:C.surface2,color:C.accent2,fontSize:12,textDecoration:'none',display:'inline-flex',alignItems:'center'}}>Open in Google →</a>
         <button onClick={()=>setEditing(!editing)} style={{padding:'6px 12px',borderRadius:6,border:'1px solid '+C.border,background:C.surface2,color:C.text,cursor:'pointer',fontSize:12,fontFamily:'inherit'}}>{editing?'Done':'Edit'}</button>
-        <button onClick={regenerate} disabled={regen} style={{padding:'6px 12px',borderRadius:6,border:'1px solid '+C.border,background:C.surface2,color:C.text,cursor:'pointer',fontSize:12,marginLeft:'auto',fontFamily:'inherit'}}>
-          {regen?'...':'↺ Regenerate'}
-        </button>
+        <button onClick={regenerate} disabled={regen} style={{padding:'6px 12px',borderRadius:6,border:'1px solid '+C.border,background:C.surface2,color:C.text,cursor:'pointer',fontSize:12,marginLeft:'auto',fontFamily:'inherit'}}>{regen?'...':'↺ Regenerate'}</button>
       </div>
     </div>
   )
@@ -182,16 +144,16 @@ function OverviewTab({shopifyData, shopifyLoading}) {
   const metrics = [
     {label:'Online revenue',  val:shopifyLoading?'...':(p?p.revenueFormatted:'—'), sub:shopifyLoading?'Loading from Shopify...':(p?p.orders+' orders':'—'), color:C.green, live:true},
     {label:'Total products',  val:shopifyLoading?'...':(shopifyData?.productCount?.toLocaleString()||'—'), sub:'Live from Shopify', color:C.blue, live:true},
-    {label:'Ads cost/sale',   val:'£9.35', sub:'Target: £8.00 — upload CSV',    color:C.amber, live:false},
-    {label:'Avg GBP rating',  val:'3.8★',  sub:'220 reviews · 3 branches',      color:C.amber, live:false},
+    {label:'Ads cost/sale',   val:'£9.35', sub:'Target: £8.00 — upload CSV', color:C.amber, live:false},
+    {label:'Avg GBP rating',  val:'3.8★',  sub:'220 reviews · 3 branches',   color:C.amber, live:false},
   ]
 
   return (
     <div>
       <div style={{display:'flex',gap:8,marginBottom:20}}>
-        {['today','week','month','year'].map(p=>(
-          <button key={p} onClick={()=>setPeriod(p)} style={{padding:'7px 14px',borderRadius:8,border:period===p?'none':'1px solid '+C.border,background:period===p?C.accent:C.surface,color:C.text,cursor:'pointer',fontSize:13,fontWeight:500,fontFamily:'inherit'}}>
-            {{today:'Today',week:'This Week',month:'This Month',year:'This Year'}[p]}
+        {['today','week','month','year'].map(pp=>(
+          <button key={pp} onClick={()=>setPeriod(pp)} style={{padding:'7px 14px',borderRadius:8,border:period===pp?'none':'1px solid '+C.border,background:period===pp?C.accent:C.surface,color:C.text,cursor:'pointer',fontSize:13,fontWeight:500,fontFamily:'inherit'}}>
+            {{today:'Today',week:'This Week',month:'This Month',year:'This Year'}[pp]}
           </button>
         ))}
       </div>
@@ -330,27 +292,8 @@ function ReviewsTab() {
   )
 }
 
-function ComingSoon({tab}) {
-  const info = {
-    'local-seo':{icon:'📍',desc:'Live GBP monitoring for all 3 branches, AI review replies, post scheduler, 309 keyword tracker.'},
-    launch:     {icon:'🚀',desc:'8-step pipeline from USA trend detection to Google cache for new product launches.'},
-    ispy:       {icon:'🕵️',desc:'Monitor competitors by URL — GBP ratings, keyword rankings, social follower counts.'},
-    audit:      {icon:'📋',desc:'Automated audit schedule: product SEO weekly, GBP daily, Ads monthly, blogs quarterly.'},
-  }
-  const t = info[tab]||{icon:'⬡',desc:'Coming soon.'}
-  return (
-    <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'80px 20px',gap:16}}>
-      <div style={{fontSize:56}}>{t.icon}</div>
-      <div style={{fontWeight:700,fontSize:22,color:C.text,textTransform:'capitalize'}}>{tab.replace(/-/g,' ')}</div>
-      <p style={{color:C.text2,maxWidth:400,textAlign:'center',lineHeight:1.6}}>{t.desc}</p>
-      <span style={{background:'rgba(168,85,247,.15)',color:'#a855f7',padding:'4px 12px',borderRadius:99,fontSize:12,fontWeight:700}}>BUILDING NEXT</span>
-    </div>
-  )
-}
-
 export default function Home() {
   const [activeTab, setActiveTab] = useState('overview')
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [shopifyData, setShopifyData] = useState(null)
   const [shopifyLoading, setShopifyLoading] = useState(true)
 
@@ -360,15 +303,6 @@ export default function Home() {
       .then(d=>{ setShopifyData(d); setShopifyLoading(false) })
       .catch(()=>setShopifyLoading(false))
   }, [])
-
-  function renderTab() {
-    if (activeTab==='overview') return <OverviewTab shopifyData={shopifyData} shopifyLoading={shopifyLoading}/>
-    if (activeTab==='reviews')  return <ReviewsTab/>
-    return <ComingSoon tab={activeTab}/>
-  }
-
-  const builtPages = NAV.filter(n => n.page)
-  const inlineTabs = NAV.filter(n => !n.page)
 
   return (
     <>
@@ -382,9 +316,15 @@ export default function Home() {
           button{font-family:inherit}
           ::-webkit-scrollbar{width:6px;height:6px}
           ::-webkit-scrollbar-thumb{background:${C.border};border-radius:3px}
-          .nav-link:hover{background:rgba(99,102,241,.1)!important;color:#818cf8!important}
         `}</style>
       </Head>
 
       <Nav activeInline={activeTab} onInlineClick={setActiveTab}/>
-      {/* content */}
+
+      <div style={{maxWidth:1400,margin:'0 auto',padding:20}}>
+        {activeTab==='overview' && <OverviewTab shopifyData={shopifyData} shopifyLoading={shopifyLoading}/>}
+        {activeTab==='reviews'  && <ReviewsTab/>}
+      </div>
+    </>
+  )
+}
