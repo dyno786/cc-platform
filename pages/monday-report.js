@@ -489,7 +489,19 @@ export default function MondayReport() {
                               <span style={{background:`${typeColor(b.type)}15`,color:typeColor(b.type),padding:'1px 7px',borderRadius:99,fontSize:11}}>{b.type}</span>
                               <span style={{color:C.text3,fontSize:12}}>Target: <strong style={{color:C.text2}}>{b.keyword}</strong></span>
                             </div>
-                            <div style={{color:C.text3,fontSize:12}}>{b.reason}</div>
+                            <div style={{color:C.text3,fontSize:12,marginBottom:b.metaDescription?6:0}}>{b.reason}</div>
+                            {b.metaDescription && (
+                              <div style={{background:`${C.blue}10`,border:`1px solid ${C.blue}20`,borderRadius:6,padding:'6px 8px',marginBottom:4}}>
+                                <div style={{fontSize:10,color:C.blue,fontWeight:700,marginBottom:2}}>META DESCRIPTION — paste into Shopify:</div>
+                                <div style={{fontSize:11,color:C.text2}}>{b.metaDescription}</div>
+                              </div>
+                            )}
+                            {b.firstParagraph && (
+                              <div style={{background:`${C.teal}10`,border:`1px solid ${C.teal}20`,borderRadius:6,padding:'6px 8px'}}>
+                                <div style={{fontSize:10,color:C.teal,fontWeight:700,marginBottom:2}}>FIRST PARAGRAPH — copy and start writing:</div>
+                                <div style={{fontSize:11,color:C.text2,lineHeight:1.5}}>{b.firstParagraph}</div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
