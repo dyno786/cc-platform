@@ -122,8 +122,18 @@ export default function MondayReport() {
   useEffect(() => {
     const saved = localStorage.getItem('cc_ads_sheets')
     if (saved) try { const p=JSON.parse(saved); const e={}; Object.keys(p).forEach(k=>{e[k]=extractSheetId(p[k])}); setSheets(s=>({...s,...e})) } catch(e){}
+    // Load cache but only if less than 6 hours old
     const cached = localStorage.getItem('cc_report_cache')
-    if (cached) try { const c=JSON.parse(cached); if(Date.now()-c.savedAt<3600000) { setReport(c.report); setLastFetched(new Date(c.savedAt)) } } catch(e){}
+    if (cached) try { 
+      const c = JSON.parse(cached)
+      const age = Date.now() - c.savedAt
+      if (age < 21600000) { // 6 hours
+        setReport(c.report)
+        setLastFetched(new Date(c.savedAt))
+      } else {
+        localStorage.removeItem('cc_report_cache') // Auto-clear stale cache
+      }
+    } catch(e) { localStorage.removeItem('cc_report_cache') }
   }, [])
 
   async function fetchReport() {
@@ -180,7 +190,10 @@ export default function MondayReport() {
           <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
             {lastFetched && <span style={{ fontSize:11, color:C.text3 }}>Updated {lastFetched.toLocaleTimeString('en-GB')}</span>}
             <button onClick={()=>setShowSettings(true)} style={{ padding:'7px 12px', borderRadius:7, border:`1px solid ${C.border}`, background:C.surface2, color:C.text2, fontWeight:600, fontSize:12, cursor:'pointer' }}>⚙️ Sheet URLs</button>
-            <button onClick={fetchReport} disabled={loading} style={{ padding:'8px 18px', borderRadius:8, border:'none', background:loading?C.surface2:C.accent, color:loading?C.text3:'#fff', fontWeight:700, fontSize:13, cursor:'pointer' }}>
+            {report && !loading && (
+              <button onClick={()=>{localStorage.removeItem('cc_report_cache');setReport(null)}} style={{ padding:'8px 12px', borderRadius:8, border:`1px solid ${C.border}`, background:'none', color:C.text3, fontWeight:600, fontSize:12, cursor:'pointer' }}>🗑 Clear</button>
+            )}
+            <button onClick={()=>{localStorage.removeItem('cc_report_cache');fetchReport()}} disabled={loading} style={{ padding:'8px 18px', borderRadius:8, border:'none', background:loading?C.surface2:C.accent, color:loading?C.text3:'#fff', fontWeight:700, fontSize:13, cursor:'pointer' }}>
               {loading ? `⟳ ${loadingStep}` : '🔄 Generate Report'}
             </button>
           </div>
