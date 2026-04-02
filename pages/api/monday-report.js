@@ -75,7 +75,7 @@ function parseAI(text) {
   }
 }
 
-async function callAI(prompt) {
+async function callAI(prompt, maxTokens = 2000) {
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -85,7 +85,7 @@ async function callAI(prompt) {
     },
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2000,
+      max_tokens: maxTokens,
       system: 'You are a digital marketing analyst. Always respond with ONLY valid JSON. No preamble, no explanation, no markdown. Start your response with { and end with }.',
       messages: [{ role: 'user', content: prompt }]
     })
@@ -138,7 +138,7 @@ export default async function handler(req, res) {
       const context = `CC Hair & Beauty Leeds. 3 branches: Chapeltown LS7 (4.1★), Roundhay LS8 (3.8★), City Centre LS2 (3.5★). cchairandbeauty.com. Be specific — exact titles, exact £ amounts, exact %, exact keywords.`
 
       // Run all 3 pillars in parallel — each small prompt
-      const [p1text, p2text, p3text] = await Promise.all([
+      const [p1text, p2text, p2btext, p3text] = await Promise.all([
 
         callAI(`${context}
 
@@ -159,16 +159,29 @@ Return JSON for Paid Ads pillar:
 
         callAI(`${context}
 
-CC Hair & Beauty sells: human hair extensions, synthetic hair extensions, lace front wigs, full cap wigs, cancer/medical wigs, braiding hair (kanekalon, marley, crochet), clip-in extensions, hair dyes (Dark & Lovely, ORS, Schwarzkopf, L'Oreal, Garnier), relaxers (ORS Olive Oil, Dark & Lovely, TCB), edge control, hair growth oils (Mielle Rosemary, ORS Fertilising), Cantu range, Aunt Jackies, natural hair products, wigs for cancer patients, afro hair products, makeup, skincare (Nivea, Shea Moisture), nail products, cosmetics. Serving Leeds (Chapeltown LS7, Roundhay LS8, City Centre LS2) and UK nationwide via cchairandbeauty.com.
+CC Hair & Beauty sells: human hair extensions, synthetic hair extensions, lace front wigs, full cap wigs, cancer/medical wigs, braiding hair (kanekalon, marley, crochet), clip-in extensions, hair dyes (Dark & Lovely, ORS, L'Oreal, Garnier), relaxers (ORS Olive Oil, Dark & Lovely), edge control, hair growth oils (Mielle Rosemary, ORS), Cantu, Aunt Jackies, makeup, skincare, nail products. Leeds and UK nationwide.
 
-SEARCH CONSOLE KEYWORDS (what we already rank for — keyword, clicks, position):
-${(sheets.searchConsole||'').substring(0,700)}
+SEARCH CONSOLE (keyword, clicks, position):
+${(sheets.searchConsole||'').substring(0,500)}
 
-SEARCH TERMS FROM GOOGLE ADS (what customers actually search for — real demand):
-${(sheets.searchTerms||'').substring(0,1200)}
+SEARCH TERMS:
+${(sheets.searchTerms||'').substring(0,700)}
 
-Analyse the real data above. Find keyword opportunities specific to our products. Return JSON for Organic SEO pillar with 7 blog topics covering: local Leeds searches, product reviews, cancer wigs, hair extensions guides, natural hair, wigs, and hair dye. Each blog must have exact Shopify-ready titles and meta descriptions:
-{"headline":"one line with real keyword positions from Search Console","topKeywords":[{"keyword":"exact keyword from SC data","clicks":0,"position":0.0,"opportunity":"exact action e.g. change Shopify collection title to X"}],"blogTopics":[{"title":"EXACT blog post title including target keyword","keyword":"exact target keyword","type":"local|national|product","priority":"urgent|high|medium","reason":"exact reason with real data numbers","metaDescription":"EXACT meta description under 155 chars — include keyword and Leeds or UK","firstParagraph":"EXACT first 2 sentences — include keyword, mention Leeds branches or cchairandbeauty.com"}],"keywordGaps":["specific product+location keyword we should rank for e.g. lace front wigs leeds, cancer wig supplier uk, human hair extensions leeds"],"quickWins":["EXACT action e.g. In Shopify Admin go to Collections > Wigs > Edit SEO title to: Best Wigs Leeds | CC Hair and Beauty — Human Hair and Synthetic Wigs"],"contentCalendar":[{"day":"Mon","topic":"exact blog title","keyword":"exact target keyword","type":"local|product|national"}]}`),
+Return JSON with keywords, gaps and quick wins only — NO blogTopics, NO contentCalendar:
+{"headline":"one line with real keyword positions","topKeywords":[{"keyword":"exact keyword","clicks":0,"position":0.0,"opportunity":"exact Shopify action to take"}],"keywordGaps":["specific product+location keyword e.g. lace front wigs leeds, cancer wig supplier uk, human hair extensions leeds"],"quickWins":["EXACT action e.g. In Shopify Admin go to Collections > Wigs > Edit SEO title to: Best Wigs Leeds | CC Hair and Beauty"]}`, 1500),
+
+        callAI(`${context}
+
+CC Hair & Beauty sells: human hair extensions, synthetic wigs, lace fronts, cancer/medical wigs, braiding hair, hair dyes, relaxers, natural hair products, makeup, skincare. Leeds and UK nationwide via cchairandbeauty.com.
+
+SEARCH TERMS customers use (real demand data):
+${(sheets.searchTerms||'').substring(0,800)}
+
+SEARCH CONSOLE (what we rank for):
+${(sheets.searchConsole||'').substring(0,400)}
+
+Return JSON with ONLY blogTopics (7 topics) and contentCalendar (7 days). Cover: local Leeds wigs, cancer wigs UK, human hair extensions, braiding hair, natural hair products, hair dye guide, and one seasonal/trending topic:
+{"blogTopics":[{"title":"EXACT title with keyword","keyword":"exact keyword","type":"local|national|product","priority":"urgent|high|medium","reason":"real data reason","metaDescription":"EXACT meta under 155 chars with Leeds or UK","firstParagraph":"EXACT 2 sentences with keyword and cchairandbeauty.com"}],"contentCalendar":[{"day":"Mon","topic":"exact title","keyword":"keyword","type":"local|product|national"}]}`,
 
         callAI(`${context}
 
@@ -182,8 +195,16 @@ Return JSON for Local SEO pillar. GBP posts must be complete ready-to-paste text
       ])
 
       const p1 = parseAI(p1text)
-      const p2 = parseAI(p2text)
+      const p2raw = parseAI(p2text)
+      const p2b = parseAI(p2btext)
       const p3 = parseAI(p3text)
+      
+      // Merge organic SEO parts
+      const p2 = p2raw ? {
+        ...p2raw,
+        blogTopics: p2b?.blogTopics || [],
+        contentCalendar: p2b?.contentCalendar || [],
+      } : p2b
 
       if (!p1 && !p2 && !p3) {
         return res.status(200).json({ ok: false, error: 'AI returned invalid JSON for all 3 pillars', raw: p1text.substring(0,200) })
