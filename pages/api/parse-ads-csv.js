@@ -2,7 +2,7 @@ export const config = { maxDuration: 60 }
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
-  const { csv, reportType } = req.body
+  const { csv, reportType, filesCount, fileNames } = req.body
   if (!csv) return res.status(400).json({ error: 'No CSV data' })
 
   try {
@@ -15,25 +15,31 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 2000,
+        max_tokens: 4000,
         messages: [{
           role: 'user',
-          content: `You are analysing a Google Ads CSV report for CC Hair & Beauty Leeds.
-Report type: ${reportType}
-CSV data:
-${csv.substring(0, 8000)}
+          content: `You are a Google Ads expert analysing account data for CC Hair & Beauty Leeds — a hair and beauty retailer with 23,000+ products.
 
-Return ONLY a JSON object with this structure (no markdown, no backticks):
+Files uploaded: ${fileNames?.join(', ') || 'unknown'}
+Total files: ${filesCount || 1}
+
+CSV DATA:
+${csv.substring(0, 12000)}
+
+Analyse ALL the data across all files. Return ONLY valid JSON (no markdown, no backticks, no explanation):
 {
-  "reportType": "${reportType}",
   "summary": {
     "totalSpend": "£X,XXX",
     "totalRevenue": "£X,XXX",
     "totalConversions": 0,
     "overallROAS": "0.0x",
     "overallCPA": "£0.00",
-    "dateRange": "extracted from data"
+    "dateRange": "X Mar - X Apr 2026"
   },
+  "insights": "3-4 sentence expert summary covering biggest wins and opportunities",
+  "urgentActions": [
+    "Specific action — specific reason with numbers"
+  ],
   "campaigns": [
     {
       "name": "campaign name",
@@ -43,24 +49,45 @@ Return ONLY a JSON object with this structure (no markdown, no backticks):
       "cpa": "£0.00",
       "roas": "0.0x",
       "status": "SCALE|GROW|REDUCE|PAUSE",
-      "action": "specific action to take"
+      "action": "specific action to take now"
     }
   ],
-  "topKeywords": [
-    { "keyword": "keyword text", "clicks": 0, "spend": "£0", "conversions": 0, "cpa": "£0" }
+  "devicePerformance": [
+    {
+      "device": "Mobile|Desktop|Tablet",
+      "spend": "£000",
+      "conversions": 0,
+      "roas": "0.0x",
+      "cpa": "£0.00",
+      "recommendation": "Increase bid +X%|Reduce bid X%|Keep current"
+    }
+  ],
+  "bestTimes": [
+    { "time": "Mon-Fri 9am-12pm", "roas": "0.0x", "conversions": 0 }
+  ],
+  "topLocations": [
+    { "location": "Leeds", "conversions": 0, "spend": "£000", "roas": "0.0x" }
+  ],
+  "keywordOpportunities": [
+    {
+      "keyword": "keyword text",
+      "clicks": 0,
+      "conversions": 0,
+      "cpa": "£0.00",
+      "opportunity": "Low CPA — scale|High impression share — expand|Low competition"
+    }
   ],
   "wastedSpend": [
-    { "term": "search term", "spend": "£0", "conversions": 0, "action": "Exclude as negative keyword" }
+    { "term": "irrelevant search term", "spend": "£000", "conversions": 0, "action": "Add as negative keyword" }
   ],
-  "urgentActions": [
-    "Action 1 — reason",
-    "Action 2 — reason"
-  ],
-  "insights": "2-3 sentence summary of overall account performance and biggest opportunities"
+  "topProducts": [
+    { "product": "product name", "clicks": 0, "conversions": 0, "revenue": "£000", "roas": "0.0x" }
+  ]
 }`
         }]
       })
     })
+
     const d = await r.json()
     const text = d.content?.[0]?.text || '{}'
     const clean = text.replace(/```json|```/g, '').trim()
