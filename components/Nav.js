@@ -13,7 +13,7 @@ const NAV = [
   { id:'/local-seo',      label:'Local SEO',       icon:'📍' },
   { id:'/organic-seo',    label:'Organic SEO',     icon:'🔍' },
   { id:'/paid-ads',       label:'Paid Ads',        icon:'📊' },
-  { id:'reviews',         label:'Reviews',         icon:'⭐', inline:true },
+  { id:'/local-seo',      label:'Reviews',         icon:'⭐' },
   { id:'/abandoned-carts',label:'Abandoned Carts', icon:'🛒' },
   { id:'/shopify-content',label:'Shopify',         icon:'🛍' },
   { id:'/content-studio', label:'Content Studio',  icon:'✍️' },
