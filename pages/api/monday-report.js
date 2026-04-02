@@ -127,7 +127,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 4000,
+        max_tokens: 6000,
         messages: [{
           role: 'user',
           content: `You are an expert digital marketing analyst for CC Hair & Beauty Leeds — a UK hair and beauty retailer with 23,000+ products, 3 branches (Chapeltown LS7 3DU, Roundhay LS8 5RL, City Centre LS2 6BY), and a Shopify store at cchairandbeauty.com.
@@ -213,13 +213,42 @@ Generate a comprehensive Weekly Intelligence Report. Return ONLY valid JSON:
 
     const aiData = await aiRes.json()
     const text = aiData.content?.[0]?.text || '{}'
-    const clean = text.replace(/```json|```/g, '').trim()
+    
+    // Clean the response — remove markdown, fix common JSON issues
+    let clean = text
+      .replace(/```json\n?/g, '')
+      .replace(/```\n?/g, '')
+      .trim()
+
+    // Extract just the JSON object
+    const startIdx = clean.indexOf('{')
+    const endIdx = clean.lastIndexOf('}')
+    if (startIdx !== -1 && endIdx !== -1) {
+      clean = clean.substring(startIdx, endIdx + 1)
+    }
+
     let report
-    try { report = JSON.parse(clean) }
-    catch(e) {
-      const match = clean.match(/\{[\s\S]*\}/)
-      if (match) report = JSON.parse(match[0])
-      else return res.status(200).json({ ok: false, error: 'Parse failed', raw: clean.substring(0, 300) })
+    try {
+      report = JSON.parse(clean)
+    } catch(e) {
+      // Try to fix truncated JSON by finding the last valid closing brace
+      try {
+        // Count open braces/brackets to find where it was cut
+        let depth = 0
+        let lastValidPos = 0
+        for (let i = 0; i < clean.length; i++) {
+          if (clean[i] === '{' || clean[i] === '[') depth++
+          if (clean[i] === '}' || clean[i] === ']') { depth--; if (depth === 0) lastValidPos = i }
+        }
+        const truncated = clean.substring(0, lastValidPos + 1)
+        report = JSON.parse(truncated)
+      } catch(e2) {
+        return res.status(200).json({ 
+          ok: false, 
+          error: `JSON parse error: ${e.message}`,
+          raw: clean.substring(0, 500) 
+        })
+      }
     }
 
     res.status(200).json({
