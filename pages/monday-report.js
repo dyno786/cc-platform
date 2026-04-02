@@ -121,17 +121,29 @@ export default function MondayReport() {
   const [copiedPost, setCopiedPost] = useState(null)
   const [lastFetched, setLastFetched] = useState(null)
 
-  // Load saved sheet URLs from localStorage on mount
+  // Load saved sheet URLs AND cached report from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem('cc_ads_sheets')
-    if (saved) {
+    // Load saved sheet URLs
+    const savedSheets = localStorage.getItem('cc_ads_sheets')
+    if (savedSheets) {
       try {
-        const parsed = JSON.parse(saved)
+        const parsed = JSON.parse(savedSheets)
         const extracted = {}
-        Object.keys(parsed).forEach(k => {
-          extracted[k] = extractSheetId(parsed[k])
-        })
+        Object.keys(parsed).forEach(k => { extracted[k] = extractSheetId(parsed[k]) })
         setSheets(prev => ({ ...prev, ...extracted }))
+      } catch(e) {}
+    }
+
+    // Load cached report — shows instantly
+    const cached = localStorage.getItem('cc_report_cache')
+    if (cached) {
+      try {
+        const { report, savedAt } = JSON.parse(cached)
+        const ageHours = (Date.now() - savedAt) / 1000 / 60 / 60
+        if (report && ageHours < 25) {
+          setReport(report)
+          setLastFetched(new Date(savedAt))
+        }
       } catch(e) {}
     }
   }, [])
@@ -152,7 +164,12 @@ export default function MondayReport() {
       const params = new URLSearchParams(sheets)
       const res = await fetch(`/api/monday-report?${params}`)
       const d = await res.json()
-      if (d.ok) { setReport(d); setLastFetched(new Date()) }
+      if (d.ok) { 
+        setReport(d)
+        setLastFetched(new Date())
+        // Cache the report so it loads instantly next time
+        localStorage.setItem('cc_report_cache', JSON.stringify({ report: d, savedAt: Date.now() }))
+      }
       else setError(d.error || 'Failed to generate report')
     } catch(e) { setError(e.message) }
     setLoading(false)
@@ -196,17 +213,22 @@ export default function MondayReport() {
             </div>
           </div>
           <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
-            {lastFetched && <span style={{fontSize:12,color:C.text3}}>Updated: {lastFetched.toLocaleTimeString('en-GB')}</span>}
+            {lastFetched && (
+              <span style={{fontSize:12,color:C.text3,background:C.surface2,padding:'3px 8px',borderRadius:6}}>
+                📅 {lastFetched.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})} {lastFetched.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}
+              </span>
+            )}
             <button onClick={() => setShowSettings(true)} style={{padding:'8px 14px',borderRadius:8,border:`1px solid ${C.border}`,background:C.surface2,color:C.text2,fontWeight:600,fontSize:12,cursor:'pointer'}}>
               ⚙️ Sheet URLs
             </button>
-            <button onClick={fetchReport} disabled={loading} style={{padding:'8px 18px',borderRadius:9,border:'none',background:loading?C.surface2:C.accent,color:loading?C.text3:'#fff',fontWeight:700,fontSize:13,cursor:'pointer',display:'flex',alignItems:'center',gap:6}}>
-              {loading ? (
-                <><span style={{display:'inline-block',animation:'spin 1s linear infinite'}}>⟳</span> Generating...</>
-              ) : (
-                '🔄 Generate Report'
-              )}
+            <button onClick={fetchReport} disabled={loading} style={{padding:'8px 18px',borderRadius:9,border:'none',background:loading?C.surface2:C.accent,color:loading?C.text3:'#fff',fontWeight:700,fontSize:13,cursor:'pointer'}}>
+              {loading ? '⟳ Loading...' : report?.fromCache ? '⟳ Load Report' : '🔄 Generate Report'}
             </button>
+            {report?.fromCache && (
+              <button onClick={forceRefresh} disabled={loading} style={{padding:'8px 14px',borderRadius:9,border:`1px solid ${C.border}`,background:'none',color:C.text3,fontWeight:600,fontSize:12,cursor:'pointer'}}>
+                🔄 Force refresh
+              </button>
+            )}
           </div>
         </div>
 
