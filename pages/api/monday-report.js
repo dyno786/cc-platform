@@ -159,22 +159,26 @@ Return JSON for Paid Ads pillar:
 
         callAI(`${context}
 
-SEARCH CONSOLE KEYWORDS:
-${(sheets.searchConsole||'').substring(0,600)}
+CC Hair & Beauty sells: human hair extensions, synthetic hair extensions, lace front wigs, full cap wigs, cancer/medical wigs, braiding hair (kanekalon, marley, crochet), clip-in extensions, hair dyes (Dark & Lovely, ORS, Schwarzkopf, L'Oreal, Garnier), relaxers (ORS Olive Oil, Dark & Lovely, TCB), edge control, hair growth oils (Mielle Rosemary, ORS Fertilising), Cantu range, Aunt Jackies, natural hair products, wigs for cancer patients, afro hair products, makeup, skincare (Nivea, Shea Moisture), nail products, cosmetics. Serving Leeds (Chapeltown LS7, Roundhay LS8, City Centre LS2) and UK nationwide via cchairandbeauty.com.
 
-SEARCH TERMS:
-${(sheets.searchTerms||'').substring(0,800)}
+SEARCH CONSOLE KEYWORDS (what we already rank for — keyword, clicks, position):
+${(sheets.searchConsole||'').substring(0,700)}
 
-Return JSON for Organic SEO pillar:
-{"headline":"one line with real keyword data","topKeywords":[{"keyword":"","clicks":0,"position":0,"opportunity":"exact action"}],"blogTopics":[{"title":"EXACT title","keyword":"exact keyword","type":"local|national|product","priority":"urgent|high|medium","reason":"with real data","metaDescription":"EXACT 155 char meta","firstParagraph":"EXACT 2 sentence opener"}],"keywordGaps":["gap with reason"],"quickWins":["EXACT action with Shopify path"],"contentCalendar":[{"day":"Mon","topic":"exact title","keyword":"keyword","type":"local|product|national"}]}`),
+SEARCH TERMS FROM GOOGLE ADS (what customers actually search for — real demand):
+${(sheets.searchTerms||'').substring(0,1200)}
+
+Analyse the real data above. Find keyword opportunities specific to our products. Return JSON for Organic SEO pillar with 7 blog topics covering: local Leeds searches, product reviews, cancer wigs, hair extensions guides, natural hair, wigs, and hair dye. Each blog must have exact Shopify-ready titles and meta descriptions:
+{"headline":"one line with real keyword positions from Search Console","topKeywords":[{"keyword":"exact keyword from SC data","clicks":0,"position":0.0,"opportunity":"exact action e.g. change Shopify collection title to X"}],"blogTopics":[{"title":"EXACT blog post title including target keyword","keyword":"exact target keyword","type":"local|national|product","priority":"urgent|high|medium","reason":"exact reason with real data numbers","metaDescription":"EXACT meta description under 155 chars — include keyword and Leeds or UK","firstParagraph":"EXACT first 2 sentences — include keyword, mention Leeds branches or cchairandbeauty.com"}],"keywordGaps":["specific product+location keyword we should rank for e.g. lace front wigs leeds, cancer wig supplier uk, human hair extensions leeds"],"quickWins":["EXACT action e.g. In Shopify Admin go to Collections > Wigs > Edit SEO title to: Best Wigs Leeds | CC Hair and Beauty — Human Hair and Synthetic Wigs"],"contentCalendar":[{"day":"Mon","topic":"exact blog title","keyword":"exact target keyword","type":"local|product|national"}]}`),
 
         callAI(`${context}
 
-LOCATIONS (top converting):
+CC Hair & Beauty product specialisms: human hair extensions, synthetic wigs, lace fronts, cancer/medical wigs (sensitive topic — compassionate tone), braiding hair, hair dyes, relaxers, natural hair products, Cantu, ORS, Mielle, makeup and cosmetics.
+
+LOCATIONS DATA (cities spending on ads, with conversions):
 ${(sheets.locations||'').substring(0,600)}
 
-Return JSON for Local SEO pillar:
-{"headline":"with branch ratings and specific issue","gbpActions":[{"branch":"Chapeltown|Roundhay|City Centre|All branches","action":"exact steps","priority":"urgent|high|medium"}],"gbpPostIdeas":[{"branch":"Chapeltown|Roundhay|City Centre","product":"product name","postText":"COMPLETE ready-to-paste post with address, URL, emoji, CTA"}],"reviewStrategy":"exact strategy with numbers","localKeywordOpportunities":["exact keyword + reason"]}`)
+Return JSON for Local SEO pillar. GBP posts must be complete ready-to-paste text. Include one sensitive but compassionate post about cancer/medical wigs. Local keywords must match real products we sell:
+{"headline":"with all 3 branch star ratings and biggest issue","gbpActions":[{"branch":"Chapeltown|Roundhay|City Centre|All branches","action":"exact steps to take this week","priority":"urgent|high|medium"}],"gbpPostIdeas":[{"branch":"Chapeltown|Roundhay|City Centre","product":"specific product name we stock","postText":"COMPLETE ready-to-paste GBP post — 150-200 words, include product benefit, branch address, cchairandbeauty.com URL, emoji, strong call to action"}],"reviewStrategy":"exact strategy — which branch, how many reviews to target, exact script to say to customers at till","localKeywordOpportunities":["exact local keyword + why it will rank e.g. wigs for cancer patients leeds — compassionate search term, zero competition, we stock medical wigs"]}`)
       ])
 
       const p1 = parseAI(p1text)
