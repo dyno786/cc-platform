@@ -1,4 +1,5 @@
 import Head from 'next/head'
+import Nav from '../components/Nav'
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 
@@ -112,16 +113,7 @@ export default function ContentStudioPage() {
         `}</style>
       </Head>
 
-      {/* Header */}
-      <div style={{background:C.surface,borderBottom:'1px solid '+C.border,padding:'0 20px',display:'flex',alignItems:'center',height:52,gap:16,position:'sticky',top:0,zIndex:100}}>
-        <Link href="/" style={{color:C.text2,textDecoration:'none',fontSize:13}}>← Dashboard</Link>
-        <span style={{color:C.border}}>|</span>
-        <span style={{fontWeight:700,fontSize:14}}>✍️ Content Studio</span>
-        <span style={{background:'rgba(99,102,241,.15)',color:C.accent2,padding:'2px 10px',borderRadius:99,fontSize:11,fontWeight:700}}>Claude AI · All platforms</span>
-        {history.length > 0 && (
-          <span style={{color:C.text3,fontSize:12}}>{history.length} generated today</span>
-        )}
-      </div>
+      <Nav/>
 
       <div style={{display:'grid',gridTemplateColumns:'1fr 360px',height:'calc(100vh - 52px)'}}>
 

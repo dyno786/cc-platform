@@ -1,4 +1,5 @@
 import Head from 'next/head'
+import Nav from '../components/Nav'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
@@ -53,21 +54,7 @@ export default function AbandonedCartsPage() {
         `}</style>
       </Head>
 
-      {/* Header */}
-      <div style={{background:C.surface,borderBottom:'1px solid '+C.border,padding:'0 20px',display:'flex',alignItems:'center',height:52,gap:16,position:'sticky',top:0,zIndex:100}}>
-        <Link href="/" style={{color:C.text2,textDecoration:'none',fontSize:13}}>← Dashboard</Link>
-        <span style={{color:C.border}}>|</span>
-        <span style={{fontWeight:700,fontSize:14}}>🛒 Abandoned Carts &amp; Retention</span>
-        {data && <span style={{background:C.red+'20',color:C.red,padding:'2px 10px',borderRadius:99,fontSize:11,fontWeight:700}}>{data.totalAbandoned} carts · {data.totalAbandonedValue}</span>}
-        <div style={{marginLeft:'auto',display:'flex',gap:6}}>
-          <button onClick={()=>setSection('carts')} style={{padding:'5px 14px',borderRadius:6,border:section==='carts'?'none':'1px solid '+C.border,background:section==='carts'?C.accent:C.surface2,color:C.text,cursor:'pointer',fontSize:12}}>
-            🛒 Abandoned Carts
-          </button>
-          <button onClick={()=>setSection('reviews')} style={{padding:'5px 14px',borderRadius:6,border:section==='reviews'?'none':'1px solid '+C.border,background:section==='reviews'?C.accent:C.surface2,color:C.text,cursor:'pointer',fontSize:12}}>
-            ⭐ Review Requests
-          </button>
-        </div>
-      </div>
+      <Nav/>
 
       <div style={{maxWidth:1200,margin:'0 auto',padding:20}}>
 

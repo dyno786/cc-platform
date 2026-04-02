@@ -1,4 +1,5 @@
 import Head from 'next/head'
+import Nav from '../components/Nav'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
@@ -207,24 +208,7 @@ export default function LocalSEOPage() {
         `}</style>
       </Head>
 
-      {/* Header */}
-      <div style={{background:C.surface,borderBottom:'1px solid '+C.border,padding:'0 20px',display:'flex',alignItems:'center',height:52,gap:16,position:'sticky',top:0,zIndex:100}}>
-        <Link href="/" style={{color:C.text2,textDecoration:'none',fontSize:13}}>← Dashboard</Link>
-        <span style={{color:C.border}}>|</span>
-        <span style={{fontWeight:700,fontSize:14}}>📍 Local SEO — Google Business Profile</span>
-        <div style={{marginLeft:'auto',display:'flex',gap:6}}>
-          {SECTIONS.map(s => (
-            <button key={s} onClick={() => setSection(s)} style={{
-              padding:'5px 14px', borderRadius:6, fontSize:12, cursor:'pointer',
-              border: section===s ? 'none' : '1px solid '+C.border,
-              background: section===s ? C.accent : C.surface2,
-              color: C.text,
-            }}>
-              {s==='monitor'?'📊 Monitor':s==='reviews'?'⭐ Reviews':s==='posts'?'📝 Post Scheduler':'🔑 Keywords'}
-            </button>
-          ))}
-        </div>
-      </div>
+      <Nav/>
 
       <div style={{maxWidth:1300,margin:'0 auto',padding:20}}>
 

@@ -1,6 +1,7 @@
 import Head from 'next/head'
+import Nav from '../components/Nav'
 import { useState } from 'react'
-import Link from 'next/link'
+
 
 const C = {
   bg:'#0f1117', surface:'#1a1d27', surface2:'#22263a',
@@ -124,25 +125,7 @@ export default function TasksPage() {
         `}</style>
       </Head>
 
-      {/* Header */}
-      <div style={{background:C.surface,borderBottom:'1px solid '+C.border,padding:'0 20px',display:'flex',alignItems:'center',height:52,gap:16,position:'sticky',top:0,zIndex:100}}>
-        <Link href="/" style={{color:C.text2,textDecoration:'none',fontSize:13}}>← Dashboard</Link>
-        <span style={{color:C.border}}>|</span>
-        <span style={{fontWeight:700,fontSize:14}}>✅ Daily Tasks</span>
-        {urgentCount > 0 && (
-          <span style={{background:C.red+'20',color:C.red,padding:'2px 10px',borderRadius:99,fontSize:11,fontWeight:700}}>
-            {urgentCount} urgent
-          </span>
-        )}
-        <div style={{marginLeft:'auto',display:'flex',gap:8}}>
-          <button onClick={generateAITasks} disabled={generating} style={{padding:'6px 14px',borderRadius:7,border:'none',background:C.accent,color:'#fff',fontWeight:600,fontSize:12,cursor:'pointer'}}>
-            {generating ? '⟳ Generating...' : '✨ AI Generate Tasks'}
-          </button>
-          <button onClick={() => setShowAdd(true)} style={{padding:'6px 14px',borderRadius:7,border:'1px solid '+C.border,background:C.surface2,color:C.text,fontWeight:600,fontSize:12,cursor:'pointer'}}>
-            + Add task
-          </button>
-        </div>
-      </div>
+      <Nav/>
 
       <div style={{maxWidth:1100,margin:'0 auto',padding:20}}>
 

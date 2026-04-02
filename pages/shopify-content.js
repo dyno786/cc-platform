@@ -1,4 +1,5 @@
 import Head from 'next/head'
+import Nav from '../components/Nav'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
@@ -85,21 +86,7 @@ export default function ShopifyContentPage() {
         `}</style>
       </Head>
 
-      {/* Header */}
-      <div style={{background:C.surface,borderBottom:'1px solid '+C.border,padding:'0 20px',display:'flex',alignItems:'center',height:52,gap:16,position:'sticky',top:0,zIndex:100}}>
-        <Link href="/" style={{color:C.text2,textDecoration:'none',fontSize:13}}>← Dashboard</Link>
-        <span style={{color:C.border}}>|</span>
-        <span style={{fontWeight:700,fontSize:14}}>🛍 Shopify — 1-Click Content Creator</span>
-        <span style={{background:'rgba(99,102,241,.15)',color:C.accent2,padding:'2px 10px',borderRadius:99,fontSize:11,fontWeight:700}}>Powered by Claude AI</span>
-        <div style={{marginLeft:'auto',display:'flex',gap:6}}>
-          <button onClick={() => setType('products')} style={{padding:'5px 14px',borderRadius:6,border:type==='products'?'none':'1px solid '+C.border,background:type==='products'?C.accent:C.surface2,color:C.text,cursor:'pointer',fontSize:12}}>
-            📦 Products
-          </button>
-          <button onClick={() => setType('collections')} style={{padding:'5px 14px',borderRadius:6,border:type==='collections'?'none':'1px solid '+C.border,background:type==='collections'?C.accent:C.surface2,color:C.text,cursor:'pointer',fontSize:12}}>
-            📂 Collections
-          </button>
-        </div>
-      </div>
+      <Nav/>
 
       <div style={{display:'grid',gridTemplateColumns:'300px 1fr',height:'calc(100vh - 52px)'}}>
 
