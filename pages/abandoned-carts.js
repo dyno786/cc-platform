@@ -4,6 +4,7 @@ import Shell from '../components/Shell'
 import { T } from '../lib/theme'
 
 const STORE_URL = 'https://cchairandbeauty.com'
+const CC_EMAIL = 'cchndorders@gmail.com'
 const TRUSTPILOT = 'https://uk.trustpilot.com/review/www.cchairandbeauty.com'
 const COMMUNITY_BLOG = 'https://cchairandbeauty.com/blogs/news'
 const ROYAL_MAIL_BASE = 'https://www.royalmail.com/track-your-item#/tracking-results/'
@@ -77,7 +78,7 @@ function cartEmail(cart) {
     `CC Hair and Beauty Leeds`,
     `Chapeltown LS7 | Roundhay LS8 | City Centre`,
   ].join('\n')
-  return `mailto:${cart.email}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`
+  return `mailto:${CC_EMAIL}?to=${encodeURIComponent(cart.email)}&subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`
 }
 
 function reorderWhatsApp(order, inStockItems) {
@@ -86,15 +87,27 @@ function reorderWhatsApp(order, inStockItems) {
   const msg = [
     `Hi ${name},`,
     ``,
-    `This is CC Hair and Beauty Leeds. It has been about a month since your last order and we wanted to check in.`,
+    `This is CC Hair and Beauty Leeds.`,
     ``,
-    `You ordered: ${item}`,
+    `It has been about a month since you ordered ${item}.`,
     ``,
-    `Running low? Shop again here: ${STORE_URL}`,
+    `Running low? Shop here: ${STORE_URL}`,
     ``,
-    `As a valued returning customer, use code LOYAL10 for 10% off your next order.`,
+    `CC Hair and Beauty Leeds`,
+  ].join('\n')
+  return `https://wa.me/${order.phone?.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`
+}
+
+function reorderCommunityWhatsApp(order) {
+  const name = firstName(order.customer)
+  const msg = [
+    `Hi ${name},`,
     ``,
-    `We also wanted to say a genuine thank you for your support. As a Leeds community business since 1979, your loyalty helps us continue supporting the local community in Chapeltown, Roundhay and across the city. You can read more about what we do here: ${COMMUNITY_BLOG}`,
+    `We also wanted to say a genuine thank you for your continued support.`,
+    ``,
+    `As a Leeds community business since 1979, your loyalty helps us support the local community in Chapeltown, Roundhay and across the city.`,
+    ``,
+    `You can read more about what we do here: ${COMMUNITY_BLOG}`,
     ``,
     `CC Hair and Beauty Leeds`,
   ].join('\n')
@@ -104,7 +117,7 @@ function reorderWhatsApp(order, inStockItems) {
 function reorderEmail(order, inStockItems) {
   const name = firstName(order.customer)
   const item = inStockItems[0]?.title?.slice(0,80) || order.items?.slice(0,80)
-  const subj = `Time to restock? Plus a thank you from CC Hair and Beauty Leeds`
+  const subj = `Checking in from CC Hair and Beauty Leeds`
   const body = [
     `Hi ${name},`,
     ``,
@@ -114,11 +127,9 @@ function reorderEmail(order, inStockItems) {
     ``,
     `Running low? Shop again here: ${STORE_URL}`,
     ``,
-    `As a valued returning customer, use code LOYAL10 for 10% off your next order.`,
+    `We also wanted to say a genuine thank you for your support. As a Leeds community business since 1979, your loyalty makes a real difference to us and to the communities we serve across Chapeltown, Roundhay and the wider city.`,
     ``,
-    `We also wanted to take a moment to say a genuine thank you for your support. As a Leeds community business that has been serving customers since 1979, your loyalty makes a real difference. We are proud to support local events, celebrate the diversity of our city, and give back to the communities of Chapeltown, Roundhay and beyond.`,
-    ``,
-    `You can read more about our community work and what we get up to here: ${COMMUNITY_BLOG}`,
+    `You can read more about our community work here: ${COMMUNITY_BLOG}`,
     ``,
     `Thank you again. We hope to see you soon.`,
     ``,
@@ -127,7 +138,7 @@ function reorderEmail(order, inStockItems) {
     `Chapeltown LS7 | Roundhay LS8 | City Centre`,
     `cchairandbeauty.com`,
   ].join('\n')
-  return `mailto:${order.email}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`
+  return `mailto:${CC_EMAIL}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`
 }
 
 function reviewWhatsApp(order) {
@@ -178,7 +189,7 @@ function reviewEmail(order) {
     `Chapeltown LS7 | Roundhay LS8 | City Centre`,
     `cchairandbeauty.com`,
   ].filter(l => l !== null).join('\n')
-  return `mailto:${order.email}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`
+  return `mailto:${CC_EMAIL}?to=${encodeURIComponent(order.email)}&subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`
 }
 
 // ── MAIN COMPONENT ──
@@ -439,6 +450,9 @@ export default function AbandonedCarts() {
                         <span style={{fontSize:13,fontWeight:700,color:T.text}}>{order.customer}</span>
                         <span style={{fontSize:11,fontWeight:700,color:T.green}}>{order.total}</span>
                         <span style={{fontSize:11,color:T.textMuted}}>{order.name} · {new Date(order.createdAt).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</span>
+                        <span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:4,background:T.blueBg,color:T.blue}}>
+                          {order.orderCountThisYear === 1 ? '1 order this year' : `${order.orderCountThisYear} orders this year`}
+                        </span>
                         {done && <span style={{fontSize:10,color:'#1a7f37',background:'#dafbe1',padding:'2px 7px',borderRadius:4,fontWeight:600}}>Contacted</span>}
                       </div>
 
@@ -543,13 +557,19 @@ export default function AbandonedCarts() {
 
                     {/* Reorder buttons — only show if any items in stock */}
                     {canReorder && (
-                      <div style={{display:'flex',flexDirection:'column',gap:5,flexShrink:0}}>
+                      <div style={{display:'flex',flexDirection:'column',gap:5,flexShrink:0,minWidth:160}}>
                         {order.phone && (
-                          <a href={reorderWhatsApp(order,inStock)} target="_blank" rel="noreferrer"
-                            onClick={()=>markContacted(`reorder_${order.id}`,'WhatsApp')}
-                            style={{padding:'6px 12px',fontSize:11,fontWeight:700,color:'#fff',background:'#25D366',borderRadius:7,textDecoration:'none',whiteSpace:'nowrap'}}>
-                            WhatsApp reminder
-                          </a>
+                          <>
+                            <a href={reorderWhatsApp(order,inStock)} target="_blank" rel="noreferrer"
+                              onClick={()=>markContacted(`reorder_${order.id}`,'WhatsApp')}
+                              style={{padding:'6px 12px',fontSize:11,fontWeight:700,color:'#fff',background:'#25D366',borderRadius:7,textDecoration:'none',whiteSpace:'nowrap'}}>
+                              WhatsApp — restock reminder
+                            </a>
+                            <a href={reorderCommunityWhatsApp(order)} target="_blank" rel="noreferrer"
+                              style={{padding:'6px 12px',fontSize:11,fontWeight:600,color:'#fff',background:'#128C7E',borderRadius:7,textDecoration:'none',whiteSpace:'nowrap'}}>
+                              WhatsApp — thank you message
+                            </a>
+                          </>
                         )}
                         {order.email && (
                           <a href={reorderEmail(order,inStock)} target="_blank" rel="noreferrer"
@@ -627,12 +647,16 @@ export default function AbandonedCarts() {
                       {/* Tracking info — shown on dashboard for staff */}
                       <div style={{background:T.bg,border:`1px solid ${T.border}`,borderRadius:6,padding:'8px 10px'}}>
                         <div style={{fontSize:10,fontWeight:700,color:T.textMuted,textTransform:'uppercase',marginBottom:5}}>Tracking</div>
-                        <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+                        <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',marginBottom:6}}>
                           {order.trackingNumber ? (
                             <>
                               <span style={{fontSize:12,fontFamily:'monospace',fontWeight:700,color:T.text,background:T.surface,padding:'3px 8px',borderRadius:4,border:`1px solid ${T.border}`}}>
                                 {order.trackingNumber}
                               </span>
+                              <button onClick={()=>navigator.clipboard.writeText(order.trackingNumber)}
+                                style={{padding:'2px 8px',fontSize:10,fontWeight:600,background:T.surface,color:T.blue,border:`1px solid ${T.border}`,borderRadius:4,cursor:'pointer'}}>
+                                Copy
+                              </button>
                               <span style={{fontSize:11,color:T.textMuted}}>{order.trackingCompany || 'Royal Mail'}</span>
                               {trackUrl && (
                                 <a href={trackUrl} target="_blank" rel="noreferrer"
@@ -646,8 +670,21 @@ export default function AbandonedCarts() {
                           )}
                         </div>
 
+                        {/* Postcode for Royal Mail login */}
+                        {order.postcode && (
+                          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,padding:'5px 8px',background:'#fff8e1',borderRadius:5,border:'1px solid #f0c04040'}}>
+                            <span style={{fontSize:10,fontWeight:700,color:T.textMuted,textTransform:'uppercase'}}>Postcode:</span>
+                            <span style={{fontSize:13,fontFamily:'monospace',fontWeight:700,color:T.text}}>{order.postcode}</span>
+                            <button onClick={()=>navigator.clipboard.writeText(order.postcode)}
+                              style={{padding:'2px 8px',fontSize:10,fontWeight:600,background:T.surface,color:T.blue,border:`1px solid ${T.border}`,borderRadius:4,cursor:'pointer'}}>
+                              Copy
+                            </button>
+                            <span style={{fontSize:10,color:T.textMuted}}>Use this to log into Royal Mail tracking</span>
+                          </div>
+                        )}
+
                         {/* Staff manually confirms delivery */}
-                        <div style={{marginTop:8,display:'flex',alignItems:'center',gap:8}}>
+                        <div style={{display:'flex',alignItems:'center',gap:8}}>
                           <span style={{fontSize:11,color:T.textMuted}}>Delivery confirmed?</span>
                           {isDelivered ? (
                             <span style={{fontSize:11,fontWeight:700,color:'#1a7f37'}}>Yes — confirmed delivered</span>
