@@ -52,7 +52,7 @@ export default async function handler(req, res) {
 
     const article = articleData.article
     log.push(`✓ Article created! ID: ${article.id}`)
-    log.push(`Admin URL: https://admin.shopify.com/store/cchairnbeauty/blogs/${blog.id}/articles/${article.id}`)
+    log.push(`Admin URL: https://admin.shopify.com/store/cchairandbeauty/blogs/${blog.id}/articles/${article.id}`)
     log.push(`Status: ${article.published_at ? 'Published' : 'Draft (not live)'}`)
     log.push('✓ DELETE THIS TEST POST from Shopify admin when done')
 
@@ -63,7 +63,7 @@ export default async function handler(req, res) {
         id: article.id,
         title: article.title,
         blog: blog.title,
-        adminUrl: `https://admin.shopify.com/store/cchairnbeauty/blogs/${blog.id}/articles/${article.id}`,
+        adminUrl: `https://admin.shopify.com/store/cchairandbeauty/blogs/${blog.id}/articles/${article.id}`,
         status: 'draft',
       }
     })

@@ -38,7 +38,7 @@ export default async function handler(req, res) {
       name: c.title,
       handle: c.handle,
       type: c.type,
-      adminUrl: `https://admin.shopify.com/store/cchairnbeauty/collections/${c.id}`,
+      adminUrl: `https://admin.shopify.com/store/cchairandbeauty/collections/${c.id}`,
       storeUrl: `https://cchairandbeauty.com/collections/${c.handle}`,
     }))
 

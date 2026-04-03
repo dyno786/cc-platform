@@ -192,7 +192,7 @@ export default async function handler(req, res) {
         handle: c.handle,
         productCount: c.products_count,
         published: !!c.published_at,
-        shopifyAdminLink: `https://admin.shopify.com/store/cchairnbeauty/collections/${c.id}`,
+        shopifyAdminLink: `https://admin.shopify.com/store/cchairandbeauty/collections/${c.id}`,
       }))
 
       res.status(200).json({ ok: true, collections })
