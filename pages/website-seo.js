@@ -63,6 +63,32 @@ export default function WebsiteSEO() {
   const [pushed, setPushed] = useState({})
   const [errors, setErrors] = useState({})
   const [editValues, setEditValues] = useState({})
+  const [shopifyCollections, setShopifyCollections] = useState({}) // handle -> {id, adminUrl}
+  const [loadingCollections, setLoadingCollections] = useState(true)
+
+  useEffect(() => {
+    async function loadCollections() {
+      try {
+        const r = await fetch('/api/shopify-collections-search')
+        const d = await r.json()
+        if (d.ok) {
+          // Build handle -> collection map
+          const map = {}
+          d.collections.forEach(c => { map[c.handle] = c })
+          setShopifyCollections(map)
+        }
+      } catch(e) { console.error('Failed to load collections:', e) }
+      setLoadingCollections(false)
+    }
+    loadCollections()
+  }, [])
+
+  function getAdminUrl(col) {
+    const live = shopifyCollections[col.handle]
+    if (live) return live.adminUrl
+    // Fallback — direct collections list
+    return 'https://admin.shopify.com/store/cchairnbeauty/collections'
+  }
 
   function startEdit(col) {
     setEditValues(v => ({
@@ -77,13 +103,14 @@ export default function WebsiteSEO() {
 
   async function pushToShopify(col) {
     const vals = editValues[col.handle] || { title: col.suggestedTitle, desc: col.suggestedDesc }
+    const liveCol = shopifyCollections[col.handle]
     setPushing(p => ({...p, [col.handle]: true}))
     setErrors(e => ({...e, [col.handle]: null}))
     try {
       const r = await fetch('/api/update-collection-seo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ handle: col.handle, metaTitle: vals.title, metaDesc: vals.desc })
+        body: JSON.stringify({ handle: col.handle, collectionId: liveCol?.id, metaTitle: vals.title, metaDesc: vals.desc })
       })
       const d = await r.json()
       if (d.ok) {
@@ -144,6 +171,9 @@ export default function WebsiteSEO() {
                         {col.priority}
                       </span>
                       <span style={{fontSize:13,fontWeight:700,color:T.text}}>{col.name}</span>
+                      {!loadingCollections && !shopifyCollections[col.handle] && (
+                        <span style={{fontSize:10,color:'#cf222e',fontWeight:600}}>⚠ Handle not found in Shopify — check handle</span>
+                      )}
                       <span style={{fontSize:10,color:T.textMuted}}>
                         {col.impr.toLocaleString()} impr · {col.clicks} clicks · pos {col.pos} · CTR {col.ctr}%
                       </span>
@@ -166,9 +196,9 @@ export default function WebsiteSEO() {
                               {isPushing ? '⟳ Pushing...' : '🚀 Push to Shopify'}
                             </button>
                           )}
-                          <a href={`${SHOPIFY_ADMIN}/collections?search=${col.handle}`} target="_blank" rel="noreferrer"
+                          <a href={getAdminUrl(col)} target="_blank" rel="noreferrer"
                             style={{padding:'5px 10px',fontSize:11,color:T.blue,background:T.bg,border:`0.5px solid ${T.border}`,borderRadius:6,textDecoration:'none'}}>
-                            View in Shopify →
+                            {loadingCollections ? 'Loading...' : shopifyCollections[col.handle] ? 'View in Shopify →' : '⚠ Not found'}
                           </a>
                         </>
                       )}
