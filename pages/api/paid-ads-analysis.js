@@ -54,16 +54,16 @@ ${(sheets.campaigns||'').substring(0, 800)}
 SEARCH TERMS (term, clicks, cost, conversions — sorted by cost):
 ${(sheets.searchTerms||'').substring(0, 1500)}
 
-Return JSON:
+Return JSON — write summary and text fields FIRST before any arrays:
 {
-  "summary": "2-3 sentence expert account summary with real £ numbers and main issue",
+  "summary": "2-3 sentences with real £ numbers e.g. Account spent £2,339 generating £4,113 revenue at 1.76x ROAS. All By Brands at 2.47x ROAS is the star — Human Hair Brands spent £38 with zero conversions and must be paused immediately.",
+  "bestCampaign": "All By Brands — 2.47x ROAS, £522 spend, £1,289 revenue",
+  "worstCampaign": "Human Hair - Brands — £38 spend, 0 conversions, 0% ROI",
   "totalSpend": "£X,XXX",
   "totalRevenue": "£X,XXX",
   "overallROAS": "X.Xx",
   "overallCPA": "£X.XX",
   "totalConversions": "XXX",
-  "bestCampaign": "campaign name — ROAS and why",
-  "worstCampaign": "campaign name — why losing money",
   "topUrgentActions": [
     "1. EXACT action — campaign name, exact £ amount, exact % change",
     "2. EXACT action",
@@ -96,7 +96,7 @@ Return JSON:
   "badCampaigns": ["campaign name — exact reason with £ amount, exact action"],
   "badKeywords": ["search term — exact spend wasted, exact reason"],
   "badMatchTypes": ["specific match type issue with exact recommendation"]
-}`, 3000),
+}`, 4000),
 
       // CALL 2 — Devices + Device by Campaign
       callAI(`${BIZ}
@@ -142,6 +142,10 @@ ${(sheets.shopping||'').substring(0, 600)}
 
 Analyse locations by ROI. Identify top 10 by ROI and bottom locations with zero conversions. Return JSON:
 {
+  "bestLocation": "city — £X.XX CPA with X conversions e.g. Wolverhampton — £1.60 CPA with 9 conversions",
+  "locationInsights": "2-3 sentences about geographic performance",
+  "bestLocation": "city name — £X.XX CPA with X conversions",
+  "locationInsights": "2-3 sentences about geographic performance and biggest opportunity",
   "topLocationsByROI": [
     {
       "city": "city name",
