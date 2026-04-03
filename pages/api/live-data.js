@@ -8,8 +8,8 @@ export default async function handler(req, res) {
 
   try {
     if (source === 'shopify') {
-      const shop = process.env.SHOPIFY_STORE_URL
-      const token = process.env.SHOPIFY_ACCESS_TOKEN
+      const shop = process.env.SHOPIFY_STORE
+      const token = process.env.SHOPIFY_TOKEN
       const headers = { 'X-Shopify-Access-Token': token, 'Content-Type': 'application/json' }
 
       // Parallel fetch everything
@@ -47,8 +47,8 @@ export default async function handler(req, res) {
       })
 
     } else if (source === 'searchconsole') {
-      const base = 'https://www.googleapis.com/webmasters/v3'
-      const site = 'sc-domain:cchairandbeauty.com'
+      const base = 'https://searchconsole.googleapis.com/webmasters/v3'
+      const site = 'sc-domain%3Acchairandbeauty.com'
 
       // Get access token
       const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
@@ -68,17 +68,17 @@ export default async function handler(req, res) {
 
       // Fetch keywords and pages in parallel
       const [kwRes, pageRes, summaryRes] = await Promise.all([
-        fetch(`${base}/sites/${encodeURIComponent(site)}/searchAnalytics/query`, {
+        fetch(`${base}/sites/${site}/searchAnalytics/query`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ startDate, endDate, dimensions: ['query'], rowLimit: 100, startRow: 0 })
         }),
-        fetch(`${base}/sites/${encodeURIComponent(site)}/searchAnalytics/query`, {
+        fetch(`${base}/sites/${site}/searchAnalytics/query`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ startDate, endDate, dimensions: ['page'], rowLimit: 25 })
         }),
-        fetch(`${base}/sites/${encodeURIComponent(site)}/searchAnalytics/query`, {
+        fetch(`${base}/sites/${site}/searchAnalytics/query`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ startDate, endDate, dimensions: ['date'], rowLimit: 90 })
@@ -176,8 +176,8 @@ export default async function handler(req, res) {
       res.status(200).json({ ok: true, branches: results })
 
     } else if (source === 'shopify-collections') {
-      const shop = process.env.SHOPIFY_STORE_URL
-      const token = process.env.SHOPIFY_ACCESS_TOKEN
+      const shop = process.env.SHOPIFY_STORE
+      const token = process.env.SHOPIFY_TOKEN
       const headers = { 'X-Shopify-Access-Token': token, 'Content-Type': 'application/json' }
 
       const res2 = await fetch(
