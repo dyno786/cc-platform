@@ -4,7 +4,8 @@ import Shell from '../components/Shell'
 import { T } from '../lib/theme'
 
 const STORE_URL = 'https://cchairandbeauty.com'
-const TRUSTPILOT = 'https://uk.trustpilot.com/review/cchairandbeauty.com'
+const TRUSTPILOT = 'https://uk.trustpilot.com/review/www.cchairandbeauty.com'
+const COMMUNITY_BLOG = 'https://cchairandbeauty.com/blogs/news'
 const ROYAL_MAIL_BASE = 'https://www.royalmail.com/track-your-item#/tracking-results/'
 
 function getMonthOptions() {
@@ -85,13 +86,15 @@ function reorderWhatsApp(order, inStockItems) {
   const msg = [
     `Hi ${name},`,
     ``,
-    `This is CC Hair and Beauty Leeds. It has been about a month since your last order.`,
+    `This is CC Hair and Beauty Leeds. It has been about a month since your last order and we wanted to check in.`,
     ``,
     `You ordered: ${item}`,
     ``,
     `Running low? Shop again here: ${STORE_URL}`,
     ``,
-    `As a returning customer, use code LOYAL10 for 10% off.`,
+    `As a valued returning customer, use code LOYAL10 for 10% off your next order.`,
+    ``,
+    `We also wanted to say a genuine thank you for your support. As a Leeds community business since 1979, your loyalty helps us continue supporting the local community in Chapeltown, Roundhay and across the city. You can read more about what we do here: ${COMMUNITY_BLOG}`,
     ``,
     `CC Hair and Beauty Leeds`,
   ].join('\n')
@@ -101,61 +104,80 @@ function reorderWhatsApp(order, inStockItems) {
 function reorderEmail(order, inStockItems) {
   const name = firstName(order.customer)
   const item = inStockItems[0]?.title?.slice(0,80) || order.items?.slice(0,80)
-  const subj = `Time to restock? Your CC Hair and Beauty order was a month ago`
+  const subj = `Time to restock? Plus a thank you from CC Hair and Beauty Leeds`
   const body = [
     `Hi ${name},`,
     ``,
-    `It has been about a month since your last order from CC Hair and Beauty.`,
+    `It has been about a month since your last order from CC Hair and Beauty and we just wanted to check in.`,
     ``,
     `You ordered: ${item}`,
     ``,
     `Running low? Shop again here: ${STORE_URL}`,
     ``,
-    `Use code LOYAL10 for 10% off as a returning customer.`,
+    `As a valued returning customer, use code LOYAL10 for 10% off your next order.`,
     ``,
+    `We also wanted to take a moment to say a genuine thank you for your support. As a Leeds community business that has been serving customers since 1979, your loyalty makes a real difference. We are proud to support local events, celebrate the diversity of our city, and give back to the communities of Chapeltown, Roundhay and beyond.`,
+    ``,
+    `You can read more about our community work and what we get up to here: ${COMMUNITY_BLOG}`,
+    ``,
+    `Thank you again. We hope to see you soon.`,
+    ``,
+    `Warm regards,`,
     `CC Hair and Beauty Leeds`,
     `Chapeltown LS7 | Roundhay LS8 | City Centre`,
+    `cchairandbeauty.com`,
   ].join('\n')
   return `mailto:${order.email}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`
 }
 
 function reviewWhatsApp(order) {
   const name = firstName(order.customer)
-  const tracking = order.trackingNumber ? `\n\nYour tracking reference was: ${order.trackingNumber}` : ''
+  const tracking = order.trackingNumber ? `Your tracking reference: ${order.trackingNumber}` : ''
   const msg = [
     `Hi ${name},`,
     ``,
-    `This is CC Hair and Beauty Leeds. Your recent order has been delivered.${tracking}`,
+    `This is CC Hair and Beauty Leeds. Your recent order has been delivered.`,
+    tracking ? tracking : null,
     ``,
-    `We hope you are happy with your products. Would you mind leaving us a quick review on Trustpilot? It takes less than 2 minutes and really helps us.`,
+    `We hope you are happy with your products.`,
+    ``,
+    `We would really appreciate it if you could leave us a quick review on Trustpilot. It takes less than 2 minutes and means the world to a family business that has been serving the Leeds community since 1979.`,
     ``,
     `Leave a review here: ${TRUSTPILOT}`,
     ``,
-    `Thank you for your support.`,
+    `As a Leeds community business, we are proud to support local causes and events across Chapeltown, Roundhay and the wider city. You can read more about what we do here: ${COMMUNITY_BLOG}`,
+    ``,
+    `Thank you so much for your support. It means everything to us.`,
     `CC Hair and Beauty Leeds`,
-  ].join('\n')
+  ].filter(l => l !== null).join('\n')
   return `https://wa.me/${order.phone?.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`
 }
 
 function reviewEmail(order) {
   const name = firstName(order.customer)
-  const tracking = order.trackingNumber ? `\n\nTracking reference: ${order.trackingNumber}` : ''
-  const subj = `How was your CC Hair and Beauty order? Please leave us a review`
+  const tracking = order.trackingNumber ? `Tracking reference: ${order.trackingNumber}` : ''
+  const subj = `How was your CC Hair and Beauty order? We would love your review`
   const body = [
     `Hi ${name},`,
     ``,
-    `Your recent order from CC Hair and Beauty has been delivered.${tracking}`,
+    `Your recent order from CC Hair and Beauty has been delivered.`,
+    tracking ? tracking : null,
     ``,
-    `We hope you are happy with your products.`,
+    `We hope you are absolutely happy with your products.`,
     ``,
-    `Would you mind leaving us a quick review on Trustpilot? It really helps small businesses like ours grow.`,
+    `We would really appreciate it if you could spare 2 minutes to leave us a review on Trustpilot. As a family business serving the Leeds community since 1979, every review genuinely helps us grow and continue doing what we love.`,
     ``,
     `Leave a review here: ${TRUSTPILOT}`,
     ``,
-    `Thank you for your support.`,
+    `We are proud to be a Leeds community business. From supporting local events in Chapeltown and Roundhay to celebrating the incredible diversity of our city, community is at the heart of everything we do. You can read more about our community work and the latest news here: ${COMMUNITY_BLOG}`,
+    ``,
+    `Thank you so much for your continued support. It truly means everything to us.`,
+    ``,
+    `Warm regards,`,
     `CC Hair and Beauty Leeds`,
+    `Chapeltown LS7 | Roundhay LS8 | City Centre`,
     `cchairandbeauty.com`,
-  ].join('\n')
+  ].filter(l => l !== null).join('\n')
   return `mailto:${order.email}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`
 }
 
@@ -658,8 +680,12 @@ export default function AbandonedCarts() {
                             </a>
                           )}
                           <a href={TRUSTPILOT} target="_blank" rel="noreferrer"
+                            style={{padding:'5px 10px',fontSize:10,color:'#00b67a',textDecoration:'none',textAlign:'center',border:'1px solid #00b67a',borderRadius:5,fontWeight:600}}>
+                            View our Trustpilot page
+                          </a>
+                          <a href={COMMUNITY_BLOG} target="_blank" rel="noreferrer"
                             style={{padding:'5px 10px',fontSize:10,color:T.blue,textDecoration:'none',textAlign:'center',border:`0.5px solid ${T.border}`,borderRadius:5}}>
-                            Trustpilot page
+                            Community blog
                           </a>
                         </>
                       ) : (
