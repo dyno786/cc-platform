@@ -1,5 +1,5 @@
 import Head from 'next/head'
-import Nav from '../components/Nav'
+import Shell from '../components/Shell'
 import { useState, useEffect } from 'react'
 
 const C = {
@@ -237,13 +237,9 @@ export default function BlogPlanner() {
 
   return (
     <>
-      <Head>
-        <title>Blog Planner — CC Intelligence</title>
-        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
-        <style>{`*{box-sizing:border-box;margin:0;padding:0}body{background:${C.bg};color:${C.text};font-family:'DM Sans',system-ui,sans-serif;font-size:14px}button,input{font-family:inherit}textarea{font-family:monospace}::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:${C.border};border-radius:3px}`}</style>
-      </Head>
-      <Nav />
-      <div style={{maxWidth:1300,margin:'0 auto',padding:20}}>
+      <Head><title>Blog Planner — CC Intelligence</title></Head>
+      <Shell title="Blog Planner" subtitle="90 blog posts + 24 GBP posts · AI generates full content · just copy and paste">
+      <div style={{maxWidth:'100%'}}>
 
         {/* HEADER */}
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:16,flexWrap:'wrap',gap:10}}>
@@ -515,6 +511,7 @@ export default function BlogPlanner() {
           </div>
         )}
       </div>
+      </Shell>
     </>
   )
 }

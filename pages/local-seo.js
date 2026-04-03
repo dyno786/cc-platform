@@ -38,6 +38,15 @@ const REVIEW_TEMPLATES = {
 
 export default function LocalSEO() {
   const [tab, setTab] = useState('Branches')
+  const [liveBranches, setLiveBranches] = useState(null)
+  const [loadingGBP, setLoadingGBP] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/live-data?source=gbp')
+      .then(r => r.json())
+      .then(d => { if(d.ok && d.branches) setLiveBranches(d.branches) })
+      .finally(() => setLoadingGBP(false))
+  }, [])
   const [tasks, setTasks] = useState({})
   const [replyRating, setReplyRating] = useState(null)
   const [copiedReply, setCopiedReply] = useState(null)
@@ -86,9 +95,22 @@ export default function LocalSEO() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{b.name}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ fontSize: 14 }}>⭐</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: b.rating >= 4 ? T.green : b.rating >= 3.5 ? T.amber : T.red }}>{b.rating}</span>
-                  <span style={{ fontSize: 10, color: T.textMuted }}>({b.reviews})</span>
+                  {loadingGBP ? (
+                    <span style={{ fontSize: 10, color: T.textMuted }}>Loading...</span>
+                  ) : (() => {
+                    const live = liveBranches?.find(lb => lb.name === b.name)
+                    const rating = live?.rating || b.rating
+                    const reviews = live?.reviewCount || b.reviews
+                    const isLive = !!live?.rating
+                    return (
+                      <>
+                        <span style={{ fontSize: 14 }}>⭐</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: rating >= 4 ? T.green : rating >= 3.5 ? T.amber : T.red }}>{rating}</span>
+                        <span style={{ fontSize: 10, color: T.textMuted }}>({reviews})</span>
+                        {isLive && <span style={{ fontSize: 9, color: T.green, background: T.greenBg, borderRadius: 3, padding: '1px 4px' }}>LIVE</span>}
+                      </>
+                    )
+                  })()}
                 </div>
               </div>
               <div style={{ fontSize: 10, color: T.textMuted, marginBottom: 10 }}>{b.addr}</div>

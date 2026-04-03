@@ -2,6 +2,7 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 import Shell from '../components/Shell'
 import { useAuth } from '../components/Auth'
+import { useState, useEffect } from 'react'
 import { T } from '../lib/theme'
 
 const DAILY_STEPS = [
@@ -54,6 +55,23 @@ function ProgBar({ label, val, max, color }) {
 export default function Overview() {
   const { isManager } = useAuth()
   const router = useRouter()
+  const [shopify, setShopify] = useState(null)
+  const [seo, setSeo] = useState(null)
+  const [loadingShopify, setLoadingShopify] = useState(true)
+  const [loadingSeo, setLoadingSeo] = useState(true)
+
+  useEffect(() => {
+    // Load live Shopify data
+    fetch('/api/live-data?source=shopify')
+      .then(r => r.json())
+      .then(d => { if(d.ok) setShopify(d) })
+      .finally(() => setLoadingShopify(false))
+    // Load live Search Console data  
+    fetch('/api/live-data?source=searchconsole')
+      .then(r => r.json())
+      .then(d => { if(d.ok) setSeo(d) })
+      .finally(() => setLoadingSeo(false))
+  }, [])
   const doneSteps = 2
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
@@ -91,10 +109,10 @@ export default function Overview() {
 
         {/* Stats */}
         <div style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:10,marginBottom:16}}>
-          <StatCard label="2yr Ads spend" value="£34,697" sub="93% wasted — act now" subColor={T.amber} blur={!isManager}/>
-          <StatCard label="2yr revenue" value="£61,952" sub="1.79x ROAS overall" subColor={T.green} blur={!isManager}/>
-          <StatCard label="Blogs published" value="0/90" sub="Start today — Day 1" subColor={T.red}/>
-          <StatCard label="Tasks done today" value="2/7" sub="5 remaining" subColor={T.amber}/>
+          <StatCard label="Revenue today" value={loadingShopify?'...':(shopify?shopify.today.formatted:'—')} sub={shopify?`${shopify.today.orders} orders today`:'Loading Shopify...'} subColor={T.green} blur={!isManager}/>
+          <StatCard label="Revenue this week" value={loadingShopify?'...':(shopify?shopify.week.formatted:'—')} sub={shopify?`${shopify.week.orders} orders this week`:'Loading...'} subColor={T.green} blur={!isManager}/>
+          <StatCard label="Avg position" value={loadingSeo?'...':(seo?seo.totals.avgPosition:'—')} sub={seo?`${seo.totals.clicks.toLocaleString()} clicks last 90 days`:'Loading Search Console...'} subColor={T.amber}/>
+          <StatCard label="Products live" value={loadingShopify?'...':(shopify?shopify.productCount.toLocaleString():'—')} sub="On cchairandbeauty.com" subColor={T.textMuted}/>
         </div>
 
         {/* Quick links */}
@@ -116,7 +134,18 @@ export default function Overview() {
               <span style={{fontSize:13,fontWeight:600,color:T.text}}>Today's tasks</span>
               <button onClick={()=>router.push('/tasks')} style={{fontSize:11,color:T.blue,background:'none',border:'none'}}>View all →</button>
             </div>
-            <div style={{padding:'4px 0'}}>
+            {shopify && shopify.recentOrders.length > 0 && (
+            <div style={{padding:'8px 16px',borderBottom:`0.5px solid ${T.border}`,background:T.blueBg}}>
+              <div style={{fontSize:10,fontWeight:600,color:T.blue,marginBottom:4}}>LATEST ORDERS — LIVE</div>
+              {shopify.recentOrders.slice(0,3).map((o,i)=>(
+                <div key={i} style={{display:'flex',justifyContent:'space-between',fontSize:11,color:T.blue,padding:'2px 0'}}>
+                  <span>{o.name} · {o.customer}</span>
+                  <span style={{fontWeight:600}}>{o.total}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{padding:'4px 0'}}>
               {TODAY_TASKS.filter(t => !t.managerOnly || isManager).map((t,i) => (
                 <div key={i} style={{display:'flex',alignItems:'center',gap:9,padding:'7px 16px',borderBottom:`0.5px solid ${T.borderLight}`}}>
                   <div style={{width:15,height:15,borderRadius:4,border:`1.5px solid ${t.done?T.green:T.border}`,background:t.done?T.green:'transparent',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
