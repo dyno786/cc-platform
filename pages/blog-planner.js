@@ -130,6 +130,9 @@ export default function BlogPlanner() {
   const [generating, setGenerating] = useState({})
   const [generated, setGenerated] = useState({})
   const [copied, setCopied] = useState({})
+  const [images, setImages] = useState({})
+  const [imgGenerating, setImgGenerating] = useState({})
+  const [imgCopied, setImgCopied] = useState({})
   const [gbpGenerating, setGbpGenerating] = useState({})
   const [gbpContent, setGbpContent] = useState({})
   const [gbpCopied, setGbpCopied] = useState({})
@@ -138,6 +141,7 @@ export default function BlogPlanner() {
     try {
       const s = localStorage.getItem('cc_blog_pub'); if(s) setPublished(JSON.parse(s))
       const g = localStorage.getItem('cc_blog_gen'); if(g) setGenerated(JSON.parse(g))
+      const img = localStorage.getItem('cc_blog_images'); if(img) setImages(JSON.parse(img))
       const gc = localStorage.getItem('cc_gbp_content'); if(gc) setGbpContent(JSON.parse(gc))
     } catch(e){}
   }, [])
@@ -168,6 +172,28 @@ export default function BlogPlanner() {
       })
     } catch(e) {}
     setGenerating(g => { const u = {...g}; delete u[post.slug]; return u })
+  }
+
+  async function generateImage(post) {
+    setImgGenerating(g => ({ ...g, [post.slug]: true }))
+    try {
+      const r = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: post.title, cat: post.cat, keywords: post.keywords })
+      })
+      const d = await r.json()
+      if (d.ok) {
+        setImages(prev => {
+          const u = { ...prev, [post.slug]: { url: d.imageUrl, alt: d.altText, filename: d.filename } }
+          try { localStorage.setItem('cc_blog_images', JSON.stringify(u)) } catch(e) {}
+          return u
+        })
+      } else {
+        alert('Image generation failed: ' + (d.error || 'Unknown error'))
+      }
+    } catch(e) { alert('Error: ' + e.message) }
+    setImgGenerating(g => { const u = {...g}; delete u[post.slug]; return u })
   }
 
   function copyBlog(slug) {
@@ -369,6 +395,54 @@ export default function BlogPlanner() {
                             style={{width:'100%',padding:'10px',borderRadius:8,border:`2px dashed ${col}`,background:`${col}08`,color:col,fontWeight:700,fontSize:13,cursor:'pointer'}}>
                             ✨ Click to Generate Full Blog Post (700-900 words, formatted, ready to paste into Shopify)
                           </button>
+                        )}
+                        {/* IMAGE SECTION — shows after blog is generated */}
+                        {hasGen && !isGen && (
+                          <div style={{marginTop:14,borderTop:`1px solid ${C.border}`,paddingTop:14}}>
+                            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10,flexWrap:'wrap',gap:8}}>
+                              <div>
+                                <div style={{fontWeight:700,color:C.text,fontSize:13}}>🖼️ Blog Header Image</div>
+                                <div style={{fontSize:11,color:C.text3}}>DALL-E 3 · 1792×1024px · tailored to this post</div>
+                              </div>
+                              {!images[post.slug] && !imgGenerating[post.slug] && (
+                                <button onClick={()=>generateImage(post)}
+                                  style={{padding:'7px 18px',borderRadius:7,border:'none',background:'#7c3aed',color:'#fff',fontWeight:700,fontSize:12,cursor:'pointer'}}>
+                                  🎨 Generate Image
+                                </button>
+                              )}
+                            </div>
+                            {imgGenerating[post.slug] && (
+                              <div style={{background:`#7c3aed10`,border:`1px solid #7c3aed30`,borderRadius:8,padding:20,textAlign:'center',color:'#a78bfa',fontSize:13}}>
+                                🎨 DALL-E 3 is creating your bespoke blog header image... about 15 seconds
+                              </div>
+                            )}
+                            {images[post.slug] && !imgGenerating[post.slug] && (
+                              <div>
+                                <img src={images[post.slug].url} alt={images[post.slug].alt}
+                                  style={{width:'100%',borderRadius:9,border:`1px solid ${C.border}`,marginBottom:10,display:'block'}}/>
+                                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
+                                  <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:7,padding:'8px 10px'}}>
+                                    <div style={{fontSize:9,fontWeight:700,color:C.text3,textTransform:'uppercase',marginBottom:3}}>Alt text — paste into Shopify image field</div>
+                                    <div style={{fontSize:12,color:C.text2,lineHeight:1.4}}>{images[post.slug].alt}</div>
+                                  </div>
+                                  <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:7,padding:'8px 10px'}}>
+                                    <div style={{fontSize:9,fontWeight:700,color:C.text3,textTransform:'uppercase',marginBottom:3}}>Save file as (for SEO)</div>
+                                    <div style={{fontSize:11,color:'#7c3aed',fontFamily:'monospace'}}>{images[post.slug].filename}</div>
+                                  </div>
+                                </div>
+                                <div style={{display:'flex',gap:6}}>
+                                  <a href={images[post.slug].url} target="_blank" rel="noreferrer"
+                                    style={{flex:1,padding:'8px',borderRadius:6,border:'none',background:'#7c3aed',color:'#fff',fontWeight:700,fontSize:12,cursor:'pointer',textAlign:'center',textDecoration:'none',display:'block'}}>
+                                    ⬇️ Download Image
+                                  </a>
+                                  <button onClick={()=>generateImage(post)}
+                                    style={{padding:'8px 14px',borderRadius:6,border:`1px solid ${C.border}`,background:C.surface2,color:C.text3,fontWeight:600,fontSize:11,cursor:'pointer'}}>
+                                    ↺ New Image
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
                     )}
