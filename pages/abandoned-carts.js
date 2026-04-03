@@ -4,130 +4,162 @@ import Shell from '../components/Shell'
 import { T } from '../lib/theme'
 
 const STORE_URL = 'https://cchairandbeauty.com'
-const TRUSTPILOT_URL = 'https://uk.trustpilot.com/review/cchairandbeauty.com'
+const TRUSTPILOT = 'https://uk.trustpilot.com/review/cchairandbeauty.com'
+const ROYAL_MAIL_BASE = 'https://www.royalmail.com/track-your-item#/tracking-results/'
 
-// Generate month options — last 18 months
 function getMonthOptions() {
   const opts = []
   const now = new Date()
   for (let i = 1; i <= 18; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
     opts.push({
-      value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+      value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`,
       label: d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }),
-      year: d.getFullYear(),
-      month: d.getMonth() + 1,
+      year: d.getFullYear(), month: d.getMonth() + 1,
     })
   }
   return opts
 }
 
 function timeAgo(hours) {
-  if (hours < 2) return `${Math.round(hours * 60)}m ago`
   if (hours < 24) return `${Math.round(hours)}h ago`
-  return `${Math.round(hours / 24)}d ago`
+  return `${Math.round(hours/24)}d ago`
 }
 
-function urgencyColor(hours) {
-  if (hours < 24) return { bg: '#fff0f0', border: '#cf222e', text: '#cf222e', label: 'HOT' }
-  if (hours < 72) return { bg: '#fff8e1', border: '#9a6700', text: '#9a6700', label: 'WARM' }
-  return { bg: '#f6f8fa', border: '#57606a', text: '#57606a', label: 'COLD' }
+function urgency(hours) {
+  if (hours < 24) return { bg:'#fff0f0', border:'#cf222e', text:'#cf222e', label:'HOT' }
+  if (hours < 72) return { bg:'#fff8e1', border:'#9a6700', text:'#9a6700', label:'WARM' }
+  return { bg:'#f6f8fa', border:'#57606a', text:'#57606a', label:'COLD' }
 }
 
-function buildWhatsAppMsg(cart) {
-  const firstName = cart.customer?.split(' ')[0]?.replace('null', '') || 'there'
-  const item = cart.items?.split(',')[0]?.trim()?.slice(0, 60) || 'your items'
-  // Line breaks via %0A, formatting with icons
+function firstName(customer) {
+  return customer?.replace(/null/g,'').trim().split(' ')[0] || 'there'
+}
+
+// ── MESSAGES — plain text, no emojis ──
+function cartWhatsApp(cart) {
+  const name = firstName(cart.customer)
+  const item = cart.items?.split(',')[0]?.trim()?.slice(0,60) || 'your items'
   const msg = [
-    `Hi ${firstName}! 👋`,
+    `Hi ${name},`,
     ``,
-    `I'm from *CC Hair and Beauty Leeds* — I noticed you left something in your cart! 🛒`,
+    `This is CC Hair and Beauty Leeds. We noticed you left ${item} in your cart (${cart.total}).`,
     ``,
-    `🛍️ *${item}*`,
-    `💰 Cart value: *${cart.total}*`,
+    `Can we help you complete your order? We have 3 stores in Leeds - Chapeltown LS7, Roundhay LS8 and City Centre.`,
     ``,
-    `Can we help you complete your order? We have 3 stores across Leeds:`,
-    `📍 Chapeltown LS7 | Roundhay LS8 | City Centre`,
+    `Complete your order here: ${STORE_URL}/cart`,
     ``,
-    `👉 Complete your order here:`,
-    `${STORE_URL}/cart`,
+    `Use code SAVE10 for 10% off today only.`,
     ``,
-    `🎁 Use code *SAVE10* for 10% off — today only!`,
-    ``,
-    `Any questions, just reply here 😊`,
-    `— CC Hair & Beauty Team`,
+    `CC Hair and Beauty Leeds`,
   ].join('\n')
-  return `https://wa.me/${cart.phone?.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`
+  return `https://wa.me/${cart.phone?.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`
 }
 
-function buildCartEmailMsg(cart) {
-  const firstName = cart.customer?.split(' ')[0]?.replace('null', '') || 'there'
-  const subject = `You left ${cart.total} in your CC Hair & Beauty cart 🛒`
-  const body = `Hi ${firstName},\n\nYou left some items in your cart at CC Hair and Beauty!\n\n🛍️ Items: ${cart.items}\n💰 Cart total: ${cart.total}\n\n👉 Complete your order: ${STORE_URL}/cart\n\n🎁 Use code SAVE10 for 10% off — today only!\n\nNeed help? Just reply to this email or visit us in store:\n📍 Chapeltown LS7 | Roundhay LS8 | City Centre\n🌐 cchairandbeauty.com\n\nKind regards,\nCC Hair & Beauty Team`
-  return `mailto:${cart.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+function cartEmail(cart) {
+  const name = firstName(cart.customer)
+  const subj = `You left ${cart.total} in your CC Hair and Beauty cart`
+  const body = [
+    `Hi ${name},`,
+    ``,
+    `You left some items in your cart at CC Hair and Beauty.`,
+    ``,
+    `Items: ${cart.items}`,
+    `Cart total: ${cart.total}`,
+    ``,
+    `Complete your order here: ${STORE_URL}/cart`,
+    ``,
+    `Use code SAVE10 for 10% off today only.`,
+    ``,
+    `If you need any help, just reply to this email.`,
+    ``,
+    `CC Hair and Beauty Leeds`,
+    `Chapeltown LS7 | Roundhay LS8 | City Centre`,
+  ].join('\n')
+  return `mailto:${cart.email}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`
 }
 
-function buildReorderWhatsApp(order) {
-  const firstName = order.customer?.split(' ')[0] || 'there'
-  const item = order.items?.split(',')[0]?.trim()?.slice(0, 50) || 'your products'
+function reorderWhatsApp(order, inStockItems) {
+  const name = firstName(order.customer)
+  const item = inStockItems[0]?.title?.slice(0,50) || order.items?.split(',')[0]?.trim()
   const msg = [
-    `Hi ${firstName}! 👋`,
+    `Hi ${name},`,
     ``,
-    `It's been about a month since your last order from *CC Hair and Beauty*!`,
+    `This is CC Hair and Beauty Leeds. It has been about a month since your last order.`,
     ``,
-    `🛍️ You ordered: *${item}*`,
+    `You ordered: ${item}`,
     ``,
-    `Running low? Time to restock! 💁‍♀️`,
+    `Running low? Shop again here: ${STORE_URL}`,
     ``,
-    `👉 Shop again: ${STORE_URL}`,
+    `As a returning customer, use code LOYAL10 for 10% off.`,
     ``,
-    `🎁 As a returning customer, use *LOYAL10* for 10% off!`,
-    ``,
-    `— CC Hair & Beauty Team`,
+    `CC Hair and Beauty Leeds`,
   ].join('\n')
-  return `https://wa.me/${order.phone?.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`
+  return `https://wa.me/${order.phone?.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`
 }
 
-function buildReorderEmail(order) {
-  const firstName = order.customer?.split(' ')[0] || 'there'
-  const subject = `Time to restock? Your CC Hair & Beauty order was a month ago 💁‍♀️`
-  const body = `Hi ${firstName},\n\nIt's been about a month since your last order!\n\n🛍️ You ordered: ${order.items?.slice(0, 100)}\n\nRunning low? Shop again here: ${STORE_URL}\n\n🎁 Use code LOYAL10 for 10% off as a returning customer!\n\nKind regards,\nCC Hair & Beauty Team\n📍 Chapeltown LS7 | Roundhay LS8 | City Centre`
-  return `mailto:${order.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+function reorderEmail(order, inStockItems) {
+  const name = firstName(order.customer)
+  const item = inStockItems[0]?.title?.slice(0,80) || order.items?.slice(0,80)
+  const subj = `Time to restock? Your CC Hair and Beauty order was a month ago`
+  const body = [
+    `Hi ${name},`,
+    ``,
+    `It has been about a month since your last order from CC Hair and Beauty.`,
+    ``,
+    `You ordered: ${item}`,
+    ``,
+    `Running low? Shop again here: ${STORE_URL}`,
+    ``,
+    `Use code LOYAL10 for 10% off as a returning customer.`,
+    ``,
+    `CC Hair and Beauty Leeds`,
+    `Chapeltown LS7 | Roundhay LS8 | City Centre`,
+  ].join('\n')
+  return `mailto:${order.email}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`
 }
 
-function buildReviewWhatsApp(order) {
-  const firstName = order.customer?.split(' ')[0] || 'there'
+function reviewWhatsApp(order) {
+  const name = firstName(order.customer)
+  const tracking = order.trackingNumber ? `\n\nYour tracking reference was: ${order.trackingNumber}` : ''
   const msg = [
-    `Hi ${firstName}! 👋`,
+    `Hi ${name},`,
     ``,
-    `Your order from CC Hair and Beauty has been delivered! 📦✅`,
+    `This is CC Hair and Beauty Leeds. Your recent order has been delivered.${tracking}`,
     ``,
-    `We hope you love your products! 💕`,
+    `We hope you are happy with your products. Would you mind leaving us a quick review on Trustpilot? It takes less than 2 minutes and really helps us.`,
     ``,
-    `Would you mind leaving us a quick review on Trustpilot?`,
-    `It really helps small businesses like ours! 🙏`,
+    `Leave a review here: ${TRUSTPILOT}`,
     ``,
-    `⭐ Leave a review here:`,
-    `${TRUSTPILOT_URL}`,
-    ``,
-    `Thank you so much!`,
-    `— CC Hair & Beauty Team`,
+    `Thank you for your support.`,
+    `CC Hair and Beauty Leeds`,
   ].join('\n')
-  return `https://wa.me/${order.phone?.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`
+  return `https://wa.me/${order.phone?.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`
 }
 
-function buildReviewEmail(order) {
-  const firstName = order.customer?.split(' ')[0] || 'there'
-  const subject = `How was your CC Hair & Beauty order? ⭐ Leave us a review!`
-  const body = `Hi ${firstName},\n\nYour recent order from CC Hair and Beauty has been delivered! 📦\n\nWe hope you're loving your products!\n\nWould you mind leaving us a quick review on Trustpilot? It takes less than 2 minutes and really helps us grow:\n\n⭐ ${TRUSTPILOT_URL}\n\nThank you so much for your support!\n\nKind regards,\nCC Hair & Beauty Team\n📍 Chapeltown LS7 | Roundhay LS8 | City Centre\n🌐 cchairandbeauty.com`
-  return `mailto:${order.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+function reviewEmail(order) {
+  const name = firstName(order.customer)
+  const tracking = order.trackingNumber ? `\n\nTracking reference: ${order.trackingNumber}` : ''
+  const subj = `How was your CC Hair and Beauty order? Please leave us a review`
+  const body = [
+    `Hi ${name},`,
+    ``,
+    `Your recent order from CC Hair and Beauty has been delivered.${tracking}`,
+    ``,
+    `We hope you are happy with your products.`,
+    ``,
+    `Would you mind leaving us a quick review on Trustpilot? It really helps small businesses like ours grow.`,
+    ``,
+    `Leave a review here: ${TRUSTPILOT}`,
+    ``,
+    `Thank you for your support.`,
+    `CC Hair and Beauty Leeds`,
+    `cchairandbeauty.com`,
+  ].join('\n')
+  return `mailto:${order.email}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`
 }
 
-function getRoyalMailTrackingUrl(trackingNumber) {
-  if (!trackingNumber) return null
-  return `https://www.royalmail.com/track-your-item#/tracking-results/${trackingNumber}`
-}
-
+// ── MAIN COMPONENT ──
 export default function AbandonedCarts() {
   const [tab, setTab] = useState('Abandoned')
   const [carts, setCarts] = useState([])
@@ -138,32 +170,36 @@ export default function AbandonedCarts() {
   const [filter, setFilter] = useState('all')
   const [sort, setSort] = useState('value')
 
-  // Reorder / tracking state
   const MONTH_OPTS = getMonthOptions()
   const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTS[0].value)
   const [monthOrders, setMonthOrders] = useState([])
   const [monthLoading, setMonthLoading] = useState(false)
-  const [trackingView, setTrackingView] = useState('reorder') // reorder | tracking
+
+  // Alternative suggestion state
+  const [altLoading, setAltLoading] = useState({})
+  const [altData, setAltData] = useState({})
+  const [altMsg, setAltMsg] = useState({}) // which message type shown: 'ai' | 'generic'
+
+  // Delivery confirmed state — staff manually marks as delivered
+  const [delivered, setDelivered] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('cc_delivered') || '{}') } catch(e) { return {} }
+  })
 
   useEffect(() => {
-    async function load() {
-      try {
-        const r = await fetch('/api/abandoned-carts')
-        const d = await r.json()
-        if (d.ok) setCarts(d.abandonedCarts || [])
-      } catch(e) {}
-      setLoading(false)
-    }
-    load()
+    fetch('/api/abandoned-carts')
+      .then(r => r.json())
+      .then(d => { if (d.ok) setCarts(d.abandonedCarts || []) })
+      .catch(() => {})
+      .finally(() => setLoading(false))
   }, [])
 
-  async function loadMonthOrders(val) {
+  async function loadMonth(val) {
     setSelectedMonth(val)
     setMonthLoading(true)
     setMonthOrders([])
-    const [year, month] = val.split('-')
+    const [y, m] = val.split('-')
     try {
-      const r = await fetch(`/api/shopify-orders-by-month?year=${year}&month=${month}`)
+      const r = await fetch(`/api/shopify-orders-by-month?year=${y}&month=${m}`)
       const d = await r.json()
       if (d.ok) setMonthOrders(d.orders || [])
     } catch(e) {}
@@ -176,145 +212,158 @@ export default function AbandonedCarts() {
     try { localStorage.setItem('cc_contacted', JSON.stringify(u)) } catch(e) {}
   }
 
+  function markDelivered(orderId) {
+    const u = { ...delivered, [orderId]: true }
+    setDelivered(u)
+    try { localStorage.setItem('cc_delivered', JSON.stringify(u)) } catch(e) {}
+  }
+
+  async function loadAlternative(item, customer) {
+    const key = item.title
+    setAltLoading(a => ({...a, [key]: true}))
+    try {
+      const r = await fetch('/api/suggest-alternative', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ outOfStockItem: item.title, customerName: customer })
+      })
+      const d = await r.json()
+      if (d.ok) {
+        setAltData(a => ({...a, [key]: d}))
+        setAltMsg(a => ({...a, [key]: d.aiMessage ? 'ai' : 'generic'}))
+      }
+    } catch(e) {}
+    setAltLoading(a => ({...a, [key]: false}))
+  }
+
   const filtered = carts
     .filter(c => {
       if (filter === 'whatsapp') return c.phone
       if (filter === 'email') return c.email
-      if (filter === 'high-value') return c.totalRaw >= 30
-      if (filter === 'not-contacted') return !contacted[c.id]
+      if (filter === 'high') return c.totalRaw >= 30
+      if (filter === 'todo') return !contacted[c.id]
       return true
     })
-    .sort((a, b) => sort === 'value' ? b.totalRaw - a.totalRaw : a.abandonedHoursAgo - b.abandonedHoursAgo)
+    .sort((a,b) => sort === 'value' ? b.totalRaw - a.totalRaw : a.abandonedHoursAgo - b.abandonedHoursAgo)
 
-  const totalValue = carts.reduce((s, c) => s + (c.totalRaw || 0), 0)
   const withPhone = carts.filter(c => c.phone).length
   const withEmail = carts.filter(c => c.email && !c.phone).length
-  const contactedCount = Object.keys(contacted).length
-  const highValue = carts.filter(c => (c.totalRaw || 0) >= 30).length
+  const highVal = carts.filter(c => c.totalRaw >= 30).length
+  const doneCount = Object.keys(contacted).length
+  const totalVal = carts.reduce((s,c) => s + (c.totalRaw||0), 0)
 
   const fulfilled = monthOrders.filter(o => o.fulfilled)
   const unfulfilled = monthOrders.filter(o => !o.fulfilled)
-  const hasTracking = fulfilled.filter(o => o.trackingNumber)
+
+  const TABS = ['Abandoned', 'Reorder Reminders', 'Order Tracking & Reviews']
 
   return (
     <>
       <Head><title>Abandoned Carts — CC Intelligence</title></Head>
-      <Shell title="Abandoned Carts & Recovery" subtitle="Recover lost revenue · WhatsApp & email · reorder reminders · Trustpilot reviews">
+      <Shell title="Abandoned Carts & Recovery" subtitle="Recover lost sales · reorder reminders · delivery tracking · Trustpilot reviews">
 
-        {/* Summary stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginBottom: 16 }}>
+        {/* Stats */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:8,marginBottom:16}}>
           {[
-            { label: 'Total abandoned', value: `£${totalValue.toFixed(0)}`, sub: `${carts.length} carts`, color: T.red },
-            { label: 'WhatsApp ready', value: withPhone, sub: 'have phone number', color: '#25D366' },
-            { label: 'Email only', value: withEmail, sub: 'no phone number', color: T.blue },
-            { label: 'High value (£30+)', value: highValue, sub: 'priority carts', color: T.amber },
-            { label: 'Contacted', value: contactedCount, sub: `${carts.length - contactedCount} remaining`, color: T.green },
-          ].map((s, i) => (
-            <div key={i} style={{ background: T.surface, border: `0.5px solid ${T.border}`, borderRadius: 8, padding: '12px 14px' }}>
-              <div style={{ fontSize: 10, color: T.textMuted, textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>{s.label}</div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.value}</div>
-              <div style={{ fontSize: 11, color: T.textMuted }}>{s.sub}</div>
+            {label:'Total abandoned', value:`£${totalVal.toFixed(0)}`, sub:`${carts.length} carts`, color:T.red},
+            {label:'WhatsApp ready', value:withPhone, sub:'have phone number', color:'#25D366'},
+            {label:'Email only', value:withEmail, sub:'no phone number', color:T.blue},
+            {label:'High value 30+', value:highVal, sub:'priority carts', color:T.amber},
+            {label:'Contacted', value:doneCount, sub:`${carts.length-doneCount} remaining`, color:T.green},
+          ].map((s,i) => (
+            <div key={i} style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'12px 14px'}}>
+              <div style={{fontSize:10,color:T.textMuted,textTransform:'uppercase',fontWeight:600,marginBottom:4}}>{s.label}</div>
+              <div style={{fontSize:22,fontWeight:700,color:s.color}}>{s.value}</div>
+              <div style={{fontSize:11,color:T.textMuted}}>{s.sub}</div>
             </div>
           ))}
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 14, borderBottom: `1px solid ${T.border}` }}>
-          {['Abandoned', 'Reorder & Tracking'].map(t => (
-            <button key={t} onClick={() => setTab(t)} style={{
-              padding: '7px 16px', fontSize: 12, fontWeight: 600, border: 'none', background: 'none',
-              borderBottom: tab === t ? `2px solid ${T.blue}` : '2px solid transparent',
-              color: tab === t ? T.blue : T.textMuted, cursor: 'pointer',
+        <div style={{display:'flex',gap:4,marginBottom:14,borderBottom:`1px solid ${T.border}`}}>
+          {TABS.map(t => (
+            <button key={t} onClick={()=>setTab(t)} style={{
+              padding:'7px 16px',fontSize:12,fontWeight:600,border:'none',background:'none',
+              borderBottom:tab===t?`2px solid ${T.blue}`:'2px solid transparent',
+              color:tab===t?T.blue:T.textMuted,cursor:'pointer',
             }}>{t}</button>
           ))}
         </div>
 
         {/* ── ABANDONED CARTS ── */}
-        {tab === 'Abandoned' && (
+        {tab==='Abandoned' && (
           <div>
-            <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-              <span style={{ fontSize: 11, color: T.textMuted, fontWeight: 600 }}>Filter:</span>
+            <div style={{display:'flex',gap:6,marginBottom:12,flexWrap:'wrap',alignItems:'center'}}>
               {[
-                { id: 'all', label: `All (${carts.length})` },
-                { id: 'whatsapp', label: `📱 WhatsApp (${withPhone})` },
-                { id: 'email', label: `✉️ Email (${withEmail})` },
-                { id: 'high-value', label: `💰 £30+ (${highValue})` },
-                { id: 'not-contacted', label: `⏳ Not yet (${carts.length - contactedCount})` },
+                {id:'all',label:`All (${carts.length})`},
+                {id:'whatsapp',label:`WhatsApp (${withPhone})`},
+                {id:'email',label:`Email (${withEmail})`},
+                {id:'high',label:`30+ (${highVal})`},
+                {id:'todo',label:`Not contacted (${carts.length-doneCount})`},
               ].map(f => (
-                <button key={f.id} onClick={() => setFilter(f.id)} style={{
-                  padding: '4px 12px', fontSize: 11, fontWeight: 600, borderRadius: 20,
-                  border: `1px solid ${filter === f.id ? T.blue : T.border}`,
-                  background: filter === f.id ? T.blueBg : T.bg,
-                  color: filter === f.id ? T.blue : T.textMuted, cursor: 'pointer',
+                <button key={f.id} onClick={()=>setFilter(f.id)} style={{
+                  padding:'4px 12px',fontSize:11,fontWeight:600,borderRadius:20,
+                  border:`1px solid ${filter===f.id?T.blue:T.border}`,
+                  background:filter===f.id?T.blueBg:T.bg,
+                  color:filter===f.id?T.blue:T.textMuted,cursor:'pointer',
                 }}>{f.label}</button>
               ))}
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: 5 }}>
-                {['value', 'time'].map(s => (
-                  <button key={s} onClick={() => setSort(s)} style={{
-                    padding: '4px 10px', fontSize: 11, borderRadius: 4,
-                    border: `1px solid ${sort === s ? T.blue : T.border}`,
-                    background: sort === s ? T.blueBg : T.bg,
-                    color: sort === s ? T.blue : T.textMuted, cursor: 'pointer'
-                  }}>{s === 'value' ? '£ Value' : '🕐 Recent'}</button>
+              <div style={{marginLeft:'auto',display:'flex',gap:5}}>
+                {[['value','Value'],['time','Recent']].map(([id,label]) => (
+                  <button key={id} onClick={()=>setSort(id)} style={{
+                    padding:'4px 10px',fontSize:11,borderRadius:4,
+                    border:`1px solid ${sort===id?T.blue:T.border}`,
+                    background:sort===id?T.blueBg:T.bg,
+                    color:sort===id?T.blue:T.textMuted,cursor:'pointer'
+                  }}>{label}</button>
                 ))}
               </div>
             </div>
 
-            {loading && <div style={{ padding: 30, textAlign: 'center', color: T.textMuted }}>Loading carts...</div>}
+            {loading && <div style={{padding:30,textAlign:'center',color:T.textMuted}}>Loading...</div>}
 
             {filtered.map(cart => {
-              const urg = urgencyColor(cart.abandonedHoursAgo)
-              const isContacted = contacted[cart.id]
-              const hasPhone = !!cart.phone
-              const hasEmail = !!cart.email
-              const firstName = cart.customer?.replace(/null/g, '').trim().split(' ')[0] || ''
-              const displayName = cart.customer?.replace(/null/g, '').trim() || '(No name)'
-
+              const urg = urgency(cart.abandonedHoursAgo)
+              const done = contacted[cart.id]
+              const name = firstName(cart.customer)
+              const displayName = cart.customer?.replace(/null/g,'').trim() || 'No name'
               return (
                 <div key={cart.id} style={{
-                  background: isContacted ? '#f6fbf7' : T.surface,
-                  border: `1px solid ${isContacted ? '#1a7f3740' : urg.border + '40'}`,
-                  borderLeft: `4px solid ${isContacted ? T.green : urg.border}`,
-                  borderRadius: 8, padding: '12px 14px', marginBottom: 7,
+                  background:done?'#f6fbf7':T.surface,
+                  border:`1px solid ${done?'#1a7f3740':urg.border+'40'}`,
+                  borderLeft:`4px solid ${done?T.green:urg.border}`,
+                  borderRadius:8,padding:'12px 14px',marginBottom:7,
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{displayName}</span>
-                        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: urg.bg, color: urg.text }}>
-                          {urg.label} · {timeAgo(cart.abandonedHoursAgo)}
-                        </span>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: T.green }}>{cart.total}</span>
-                        {isContacted && (
-                          <span style={{ fontSize: 10, color: '#1a7f37', background: '#dafbe1', padding: '2px 7px', borderRadius: 4, fontWeight: 600 }}>
-                            ✓ {isContacted.method} · {new Date(isContacted.time).toLocaleDateString('en-GB')}
-                          </span>
-                        )}
+                  <div style={{display:'flex',alignItems:'flex-start',gap:12}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:5,flexWrap:'wrap'}}>
+                        <span style={{fontSize:13,fontWeight:700,color:T.text}}>{displayName}</span>
+                        <span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:4,background:urg.bg,color:urg.text}}>{urg.label} · {timeAgo(cart.abandonedHoursAgo)}</span>
+                        <span style={{fontSize:14,fontWeight:700,color:T.green}}>{cart.total}</span>
+                        {done && <span style={{fontSize:10,color:'#1a7f37',background:'#dafbe1',padding:'2px 7px',borderRadius:4,fontWeight:600}}>Contacted via {done.method} · {new Date(done.time).toLocaleDateString('en-GB')}</span>}
                       </div>
-                      <div style={{ fontSize: 11, color: T.text, marginBottom: 4, lineHeight: 1.5 }}>
-                        🛍️ {cart.items?.slice(0, 120)}{cart.items?.length > 120 ? '...' : ''}
-                        {cart.itemCount > 1 && <span style={{ color: T.textMuted }}> ({cart.itemCount} items)</span>}
+                      <div style={{fontSize:11,color:T.text,marginBottom:4,lineHeight:1.5}}>
+                        {cart.items?.slice(0,120)}{cart.items?.length>120?'...':''}
+                        {cart.itemCount>1 && <span style={{color:T.textMuted}}> ({cart.itemCount} items)</span>}
                       </div>
-                      <div style={{ display: 'flex', gap: 12, fontSize: 11 }}>
-                        {hasPhone && <span style={{ color: '#25D366', fontWeight: 600 }}>📱 {cart.phone}</span>}
-                        {hasEmail && <span style={{ color: T.textMuted }}>✉️ {cart.email}</span>}
-                        {!hasPhone && !hasEmail && <span style={{ color: T.red, fontWeight: 600 }}>⚠ No contact info</span>}
+                      <div style={{display:'flex',gap:12,fontSize:11}}>
+                        {cart.phone && <span style={{color:'#25D366',fontWeight:600}}>{cart.phone}</span>}
+                        {cart.email && <span style={{color:T.textMuted}}>{cart.email}</span>}
+                        {!cart.phone && !cart.email && <span style={{color:T.red,fontWeight:600}}>No contact info</span>}
                       </div>
                     </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flexShrink: 0 }}>
-                      {hasPhone && (
-                        <a href={buildWhatsAppMsg(cart)} target="_blank" rel="noreferrer"
-                          onClick={() => markContacted(cart.id, 'WhatsApp')}
-                          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', fontSize: 12, fontWeight: 700, color: '#fff', background: '#25D366', borderRadius: 7, textDecoration: 'none' }}>
-                          📱 WhatsApp {firstName}
+                    <div style={{display:'flex',flexDirection:'column',gap:5,flexShrink:0}}>
+                      {cart.phone && (
+                        <a href={cartWhatsApp(cart)} target="_blank" rel="noreferrer"
+                          onClick={()=>markContacted(cart.id,'WhatsApp')}
+                          style={{padding:'7px 14px',fontSize:12,fontWeight:700,color:'#fff',background:'#25D366',borderRadius:7,textDecoration:'none'}}>
+                          WhatsApp {name}
                         </a>
                       )}
-                      {hasEmail && (
-                        <a href={buildCartEmailMsg(cart)} target="_blank" rel="noreferrer"
-                          onClick={() => markContacted(cart.id, 'Email')}
-                          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', fontSize: 12, fontWeight: 700, color: '#fff', background: T.blue, borderRadius: 7, textDecoration: 'none' }}>
-                          ✉️ Email {firstName}
+                      {cart.email && (
+                        <a href={cartEmail(cart)} target="_blank" rel="noreferrer"
+                          onClick={()=>markContacted(cart.id,'Email')}
+                          style={{padding:'7px 14px',fontSize:12,fontWeight:700,color:'#fff',background:T.blue,borderRadius:7,textDecoration:'none'}}>
+                          Email {name}
                         </a>
                       )}
                     </div>
@@ -322,184 +371,311 @@ export default function AbandonedCarts() {
                 </div>
               )
             })}
-            {!loading && filtered.length === 0 && (
-              <div style={{ padding: 30, textAlign: 'center', color: T.textMuted }}>No carts match this filter.</div>
-            )}
           </div>
         )}
 
-        {/* ── REORDER & TRACKING ── */}
-        {tab === 'Reorder & Tracking' && (
+        {/* ── REORDER REMINDERS ── */}
+        {tab==='Reorder Reminders' && (
           <div>
-            {/* Month selector */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: T.text }}>📅 Month:</span>
-              <select value={selectedMonth} onChange={e => loadMonthOrders(e.target.value)}
-                style={{ padding: '6px 12px', fontSize: 12, border: `1px solid ${T.border}`, borderRadius: 7, background: T.bg, color: T.text, cursor: 'pointer' }}>
-                {MONTH_OPTS.map(m => (
-                  <option key={m.value} value={m.value}>{m.label}</option>
-                ))}
+            <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:14,flexWrap:'wrap'}}>
+              <span style={{fontSize:12,fontWeight:600,color:T.text}}>Month:</span>
+              <select value={selectedMonth} onChange={e=>loadMonth(e.target.value)}
+                style={{padding:'6px 12px',fontSize:12,border:`1px solid ${T.border}`,borderRadius:7,background:T.bg,color:T.text}}>
+                {MONTH_OPTS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
               </select>
               {monthOrders.length > 0 && (
-                <span style={{ fontSize: 11, color: T.textMuted }}>
-                  {monthOrders.length} orders · £{monthOrders.reduce((s, o) => s + o.totalRaw, 0).toFixed(0)} total ·
-                  <span style={{ color: T.green }}> {fulfilled.length} fulfilled</span> ·
-                  <span style={{ color: T.red }}> {unfulfilled.length} unfulfilled</span>
+                <span style={{fontSize:11,color:T.textMuted}}>
+                  {monthOrders.length} orders · £{monthOrders.reduce((s,o)=>s+o.totalRaw,0).toFixed(0)} total
                 </span>
               )}
             </div>
 
-            {/* Sub-tabs */}
-            <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
-              {[
-                { id: 'reorder', label: `🔄 Reorder Reminders (${monthOrders.filter(o => o.email || o.phone).length})` },
-                { id: 'tracking', label: `📦 Order Tracking (${fulfilled.length})` },
-              ].map(t => (
-                <button key={t.id} onClick={() => setTrackingView(t.id)} style={{
-                  padding: '6px 14px', fontSize: 11, fontWeight: 600, borderRadius: 7,
-                  border: `1px solid ${trackingView === t.id ? T.blue : T.border}`,
-                  background: trackingView === t.id ? T.blueBg : T.bg,
-                  color: trackingView === t.id ? T.blue : T.textMuted, cursor: 'pointer'
-                }}>{t.label}</button>
-              ))}
-            </div>
-
-            {monthLoading && <div style={{ padding: 30, textAlign: 'center', color: T.textMuted }}>Loading orders...</div>}
+            {monthLoading && <div style={{padding:30,textAlign:'center',color:T.textMuted}}>Loading orders...</div>}
 
             {!monthLoading && monthOrders.length === 0 && (
-              <div style={{ padding: 20, textAlign: 'center', color: T.textMuted, fontSize: 12, background: T.surface, borderRadius: 8, border: `0.5px solid ${T.border}` }}>
-                Select a month above to load orders
+              <div style={{padding:20,textAlign:'center',color:T.textMuted,background:T.surface,borderRadius:8,border:`0.5px solid ${T.border}`}}>
+                Select a month above to load orders for reorder reminders
               </div>
             )}
 
-            {/* REORDER VIEW */}
-            {trackingView === 'reorder' && !monthLoading && monthOrders.filter(o => o.email || o.phone).map(order => {
-              const isContacted = contacted[`reorder_${order.id}`]
+            {!monthLoading && monthOrders.filter(o=>o.email||o.phone).map(order => {
+              const done = contacted[`reorder_${order.id}`]
+              const inStock = (order.lineItems||[]).filter(i=>i.inStock)
+              const outOfStock = (order.lineItems||[]).filter(i=>!i.inStock)
+              const canReorder = inStock.length > 0
+
               return (
                 <div key={order.id} style={{
-                  background: isContacted ? '#f6fbf7' : T.surface,
-                  border: `0.5px solid ${isContacted ? '#1a7f3740' : T.border}`,
-                  borderLeft: `4px solid ${isContacted ? T.green : T.amber}`,
-                  borderRadius: 8, padding: '12px 14px', marginBottom: 7,
+                  background:done?'#f6fbf7':T.surface,
+                  border:`0.5px solid ${done?'#1a7f3740':T.border}`,
+                  borderLeft:`4px solid ${done?T.green:canReorder?T.amber:T.red}`,
+                  borderRadius:8,padding:'12px 14px',marginBottom:8,
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{order.customer}</span>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: T.green }}>{order.total}</span>
-                        <span style={{ fontSize: 11, color: T.textMuted }}>{order.name}</span>
-                        {isContacted && <span style={{ fontSize: 10, color: '#1a7f37', background: '#dafbe1', padding: '2px 7px', borderRadius: 4, fontWeight: 600 }}>✓ Contacted</span>}
+                  <div style={{display:'flex',alignItems:'flex-start',gap:12}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:5,flexWrap:'wrap'}}>
+                        <span style={{fontSize:13,fontWeight:700,color:T.text}}>{order.customer}</span>
+                        <span style={{fontSize:11,fontWeight:700,color:T.green}}>{order.total}</span>
+                        <span style={{fontSize:11,color:T.textMuted}}>{order.name} · {new Date(order.createdAt).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</span>
+                        {done && <span style={{fontSize:10,color:'#1a7f37',background:'#dafbe1',padding:'2px 7px',borderRadius:4,fontWeight:600}}>Contacted</span>}
                       </div>
-                      <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 4 }}>
-                        🛍️ {order.items?.slice(0, 100)}{order.items?.length > 100 ? '...' : ''}
+
+                      {/* Line items with stock status */}
+                      <div style={{marginBottom:6}}>
+                        {(order.lineItems||[]).map((item,i) => (
+                          <div key={i} style={{
+                            fontSize:11,
+                            color:item.inStock?T.text:T.textMuted,
+                            textDecoration:item.inStock?'none':'line-through',
+                            marginBottom:2,lineHeight:1.4,
+                          }}>
+                            {item.title}
+                            {!item.inStock && (
+                              <span style={{textDecoration:'none',marginLeft:6,fontSize:10,color:T.red,fontWeight:600}}>OUT OF STOCK</span>
+                            )}
+                          </div>
+                        ))}
                       </div>
-                      <div style={{ fontSize: 11, color: T.textMuted }}>
-                        📅 {new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        {order.phone && <span style={{ color: '#25D366', marginLeft: 12, fontWeight: 600 }}>📱 {order.phone}</span>}
-                        {order.email && <span style={{ color: T.textMuted, marginLeft: 12 }}>✉️ {order.email}</span>}
+
+                      {/* Out of stock alternatives */}
+                      {outOfStock.map(item => {
+                        const key = item.title
+                        const alt = altData[key]
+                        const isLoading = altLoading[key]
+                        const msgType = altMsg[key] || 'ai'
+                        const msg = alt ? (msgType === 'ai' ? alt.aiMessage : alt.genericMessage) : null
+
+                        return (
+                          <div key={key} style={{background:'#fff8f8',border:`1px solid ${T.red}20`,borderRadius:6,padding:'8px 10px',marginBottom:6}}>
+                            <div style={{fontSize:11,fontWeight:600,color:T.red,marginBottom:6}}>Out of stock: {item.title}</div>
+                            {!alt && (
+                              <button onClick={()=>loadAlternative(item,order.customer)} disabled={isLoading}
+                                style={{padding:'4px 12px',fontSize:11,fontWeight:600,background:isLoading?T.border:T.blue,color:'#fff',border:'none',borderRadius:5,cursor:'pointer'}}>
+                                {isLoading?'Finding alternatives...':'Find alternatives + write message'}
+                              </button>
+                            )}
+                            {alt && (
+                              <div>
+                                {alt.alternatives?.length > 0 && (
+                                  <div style={{marginBottom:6}}>
+                                    <div style={{fontSize:10,fontWeight:700,color:T.textMuted,textTransform:'uppercase',marginBottom:4}}>In stock alternatives:</div>
+                                    {alt.alternatives.map((a,i) => (
+                                      <div key={i} style={{fontSize:11,marginBottom:2}}>
+                                        <a href={a.url} target="_blank" rel="noreferrer" style={{color:T.blue}}>{a.title}</a>
+                                        <span style={{color:T.textMuted,marginLeft:6}}>{a.price}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                <div style={{display:'flex',gap:6,marginBottom:6}}>
+                                  {alt.aiMessage && (
+                                    <button onClick={()=>setAltMsg(a=>({...a,[key]:'ai'}))} style={{
+                                      padding:'3px 8px',fontSize:10,borderRadius:4,
+                                      border:`1px solid ${msgType==='ai'?T.blue:T.border}`,
+                                      background:msgType==='ai'?T.blueBg:T.bg,
+                                      color:msgType==='ai'?T.blue:T.textMuted,cursor:'pointer'
+                                    }}>AI message</button>
+                                  )}
+                                  <button onClick={()=>setAltMsg(a=>({...a,[key]:'generic'}))} style={{
+                                    padding:'3px 8px',fontSize:10,borderRadius:4,
+                                    border:`1px solid ${msgType==='generic'?T.blue:T.border}`,
+                                    background:msgType==='generic'?T.blueBg:T.bg,
+                                    color:msgType==='generic'?T.blue:T.textMuted,cursor:'pointer'
+                                  }}>Generic message</button>
+                                </div>
+                                {msg && (
+                                  <div>
+                                    <textarea readOnly value={msg} rows={4}
+                                      style={{width:'100%',fontSize:11,padding:'6px 8px',border:`1px solid ${T.border}`,borderRadius:5,background:T.bg,color:T.text,resize:'vertical',fontFamily:'inherit',lineHeight:1.5,marginBottom:6}}/>
+                                    <div style={{display:'flex',gap:6}}>
+                                      {order.phone && (
+                                        <a href={`https://wa.me/${order.phone?.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`}
+                                          target="_blank" rel="noreferrer"
+                                          onClick={()=>markContacted(`reorder_${order.id}`,'WhatsApp')}
+                                          style={{padding:'5px 12px',fontSize:11,fontWeight:700,color:'#fff',background:'#25D366',borderRadius:6,textDecoration:'none'}}>
+                                          Send via WhatsApp
+                                        </a>
+                                      )}
+                                      {order.email && (
+                                        <a href={`mailto:${order.email}?subject=${encodeURIComponent('Regarding your recent CC Hair and Beauty order')}&body=${encodeURIComponent(msg)}`}
+                                          target="_blank" rel="noreferrer"
+                                          onClick={()=>markContacted(`reorder_${order.id}`,'Email')}
+                                          style={{padding:'5px 12px',fontSize:11,fontWeight:700,color:'#fff',background:T.blue,borderRadius:6,textDecoration:'none'}}>
+                                          Send via Email
+                                        </a>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+
+                      <div style={{fontSize:11,color:T.textMuted,marginTop:4}}>
+                        {order.phone && <span style={{marginRight:12}}>{order.phone}</span>}
+                        {order.email && <span>{order.email}</span>}
                       </div>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flexShrink: 0 }}>
-                      {order.phone && (
-                        <a href={buildReorderWhatsApp(order)} target="_blank" rel="noreferrer"
-                          onClick={() => markContacted(`reorder_${order.id}`, 'WhatsApp')}
-                          style={{ padding: '6px 12px', fontSize: 11, fontWeight: 700, color: '#fff', background: '#25D366', borderRadius: 7, textDecoration: 'none' }}>
-                          📱 WhatsApp reminder
-                        </a>
+
+                    {/* Reorder buttons — only show if any items in stock */}
+                    {canReorder && (
+                      <div style={{display:'flex',flexDirection:'column',gap:5,flexShrink:0}}>
+                        {order.phone && (
+                          <a href={reorderWhatsApp(order,inStock)} target="_blank" rel="noreferrer"
+                            onClick={()=>markContacted(`reorder_${order.id}`,'WhatsApp')}
+                            style={{padding:'6px 12px',fontSize:11,fontWeight:700,color:'#fff',background:'#25D366',borderRadius:7,textDecoration:'none',whiteSpace:'nowrap'}}>
+                            WhatsApp reminder
+                          </a>
+                        )}
+                        {order.email && (
+                          <a href={reorderEmail(order,inStock)} target="_blank" rel="noreferrer"
+                            onClick={()=>markContacted(`reorder_${order.id}`,'Email')}
+                            style={{padding:'6px 12px',fontSize:11,fontWeight:700,color:'#fff',background:T.blue,borderRadius:7,textDecoration:'none',whiteSpace:'nowrap'}}>
+                            Email reminder
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* ── ORDER TRACKING & REVIEWS ── */}
+        {tab==='Order Tracking & Reviews' && (
+          <div>
+            <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:14,flexWrap:'wrap'}}>
+              <span style={{fontSize:12,fontWeight:600,color:T.text}}>Month:</span>
+              <select value={selectedMonth} onChange={e=>loadMonth(e.target.value)}
+                style={{padding:'6px 12px',fontSize:12,border:`1px solid ${T.border}`,borderRadius:7,background:T.bg,color:T.text}}>
+                {MONTH_OPTS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+              </select>
+              {monthOrders.length > 0 && (
+                <div style={{display:'flex',gap:10,fontSize:11}}>
+                  <span style={{color:T.green,fontWeight:600}}>{fulfilled.length} fulfilled</span>
+                  <span style={{color:T.red,fontWeight:600}}>{unfulfilled.length} unfulfilled</span>
+                </div>
+              )}
+              {unfulfilled.length > 0 && (
+                <a href="https://admin.shopify.com/store/cchairandbeauty/orders?status=unfulfilled" target="_blank" rel="noreferrer"
+                  style={{padding:'5px 12px',fontSize:11,fontWeight:700,color:'#fff',background:T.red,borderRadius:6,textDecoration:'none'}}>
+                  {unfulfilled.length} unfulfilled orders in Shopify
+                </a>
+              )}
+            </div>
+
+            {monthLoading && <div style={{padding:30,textAlign:'center',color:T.textMuted}}>Loading orders...</div>}
+
+            {!monthLoading && monthOrders.length === 0 && (
+              <div style={{padding:20,textAlign:'center',color:T.textMuted,background:T.surface,borderRadius:8,border:`0.5px solid ${T.border}`}}>
+                Select a month above to load order tracking data
+              </div>
+            )}
+
+            {!monthLoading && fulfilled.map(order => {
+              const isDelivered = delivered[order.id]
+              const reviewDone = contacted[`review_${order.id}`]
+              const trackUrl = order.trackingUrl || (order.trackingNumber ? `${ROYAL_MAIL_BASE}${order.trackingNumber}` : null)
+
+              return (
+                <div key={order.id} style={{
+                  background:reviewDone?'#f6fbf7':T.surface,
+                  border:`0.5px solid ${T.border}`,
+                  borderLeft:`4px solid ${isDelivered?T.green:T.amber}`,
+                  borderRadius:8,padding:'12px 14px',marginBottom:7,
+                }}>
+                  <div style={{display:'flex',alignItems:'flex-start',gap:12}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:5,flexWrap:'wrap'}}>
+                        <span style={{fontSize:13,fontWeight:700,color:T.text}}>{order.customer}</span>
+                        <span style={{fontSize:11,fontWeight:700,color:T.green}}>{order.total}</span>
+                        <span style={{fontSize:11,color:T.textMuted}}>{order.name}</span>
+                        <span style={{fontSize:10,fontWeight:600,padding:'2px 7px',borderRadius:4,background:'#dafbe1',color:'#1a7f37'}}>Fulfilled</span>
+                        {reviewDone && <span style={{fontSize:10,color:'#1a7f37',background:'#dafbe1',padding:'2px 7px',borderRadius:4,fontWeight:600}}>Review requested</span>}
+                      </div>
+
+                      <div style={{fontSize:11,color:T.textMuted,marginBottom:8}}>
+                        {order.items?.slice(0,100)}{order.items?.length>100?'...':''}
+                      </div>
+
+                      {/* Tracking info — shown on dashboard for staff */}
+                      <div style={{background:T.bg,border:`1px solid ${T.border}`,borderRadius:6,padding:'8px 10px'}}>
+                        <div style={{fontSize:10,fontWeight:700,color:T.textMuted,textTransform:'uppercase',marginBottom:5}}>Tracking</div>
+                        <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+                          {order.trackingNumber ? (
+                            <>
+                              <span style={{fontSize:12,fontFamily:'monospace',fontWeight:700,color:T.text,background:T.surface,padding:'3px 8px',borderRadius:4,border:`1px solid ${T.border}`}}>
+                                {order.trackingNumber}
+                              </span>
+                              <span style={{fontSize:11,color:T.textMuted}}>{order.trackingCompany || 'Royal Mail'}</span>
+                              {trackUrl && (
+                                <a href={trackUrl} target="_blank" rel="noreferrer"
+                                  style={{fontSize:11,fontWeight:600,color:T.blue,textDecoration:'none'}}>
+                                  Check delivery status on Royal Mail
+                                </a>
+                              )}
+                            </>
+                          ) : (
+                            <span style={{fontSize:11,color:T.textMuted}}>No tracking number on this order</span>
+                          )}
+                        </div>
+
+                        {/* Staff manually confirms delivery */}
+                        <div style={{marginTop:8,display:'flex',alignItems:'center',gap:8}}>
+                          <span style={{fontSize:11,color:T.textMuted}}>Delivery confirmed?</span>
+                          {isDelivered ? (
+                            <span style={{fontSize:11,fontWeight:700,color:'#1a7f37'}}>Yes — confirmed delivered</span>
+                          ) : (
+                            <button onClick={()=>markDelivered(order.id)}
+                              style={{padding:'4px 12px',fontSize:11,fontWeight:600,background:T.green,color:'#fff',border:'none',borderRadius:5,cursor:'pointer'}}>
+                              Mark as delivered
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Review request — only if staff confirmed delivered */}
+                    <div style={{display:'flex',flexDirection:'column',gap:5,flexShrink:0}}>
+                      {isDelivered ? (
+                        <>
+                          {order.phone && (
+                            <a href={reviewWhatsApp(order)} target="_blank" rel="noreferrer"
+                              onClick={()=>markContacted(`review_${order.id}`,'WhatsApp')}
+                              style={{padding:'6px 12px',fontSize:11,fontWeight:700,color:'#fff',background:'#25D366',borderRadius:7,textDecoration:'none',whiteSpace:'nowrap'}}>
+                              WhatsApp review request
+                            </a>
+                          )}
+                          {order.email && (
+                            <a href={reviewEmail(order)} target="_blank" rel="noreferrer"
+                              onClick={()=>markContacted(`review_${order.id}`,'Email')}
+                              style={{padding:'6px 12px',fontSize:11,fontWeight:700,color:'#fff',background:'#7c3aed',borderRadius:7,textDecoration:'none',whiteSpace:'nowrap'}}>
+                              Email review request
+                            </a>
+                          )}
+                          <a href={TRUSTPILOT} target="_blank" rel="noreferrer"
+                            style={{padding:'5px 10px',fontSize:10,color:T.blue,textDecoration:'none',textAlign:'center',border:`0.5px solid ${T.border}`,borderRadius:5}}>
+                            Trustpilot page
+                          </a>
+                        </>
+                      ) : (
+                        <div style={{fontSize:11,color:T.textMuted,textAlign:'center',maxWidth:120,lineHeight:1.4}}>
+                          Confirm delivery first before sending review request
+                        </div>
                       )}
-                      {order.email && (
-                        <a href={buildReorderEmail(order)} target="_blank" rel="noreferrer"
-                          onClick={() => markContacted(`reorder_${order.id}`, 'Email')}
-                          style={{ padding: '6px 12px', fontSize: 11, fontWeight: 700, color: '#fff', background: T.blue, borderRadius: 7, textDecoration: 'none' }}>
-                          ✉️ Email reminder
-                        </a>
-                      )}
+                      <a href={order.adminUrl} target="_blank" rel="noreferrer"
+                        style={{padding:'5px 10px',fontSize:11,color:T.blue,background:T.bg,border:`0.5px solid ${T.border}`,borderRadius:6,textDecoration:'none',textAlign:'center'}}>
+                        View order
+                      </a>
                     </div>
                   </div>
                 </div>
               )
             })}
-
-            {/* TRACKING VIEW */}
-            {trackingView === 'tracking' && !monthLoading && (
-              <div>
-                {unfulfilled.length > 0 && (
-                  <div style={{ background: '#fff0f0', border: `1px solid ${T.red}30`, borderRadius: 7, padding: '8px 12px', marginBottom: 12, fontSize: 11, color: T.red, fontWeight: 600 }}>
-                    ⚠ {unfulfilled.length} orders still unfulfilled —
-                    <a href="https://admin.shopify.com/store/cchairandbeauty/orders?status=unfulfilled" target="_blank" rel="noreferrer"
-                      style={{ color: T.red, marginLeft: 6, textDecoration: 'underline' }}>View in Shopify →</a>
-                  </div>
-                )}
-
-                {fulfilled.map(order => {
-                  const isContacted = contacted[`review_${order.id}`]
-                  const trackUrl = order.trackingUrl || getRoyalMailTrackingUrl(order.trackingNumber)
-                  return (
-                    <div key={order.id} style={{
-                      background: isContacted ? '#f6fbf7' : T.surface,
-                      border: `0.5px solid ${T.border}`,
-                      borderLeft: `4px solid ${T.green}`,
-                      borderRadius: 8, padding: '12px 14px', marginBottom: 7,
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{order.customer}</span>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: T.green }}>{order.total}</span>
-                            <span style={{ fontSize: 11, color: T.textMuted }}>{order.name}</span>
-                            <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 4, background: '#dafbe1', color: '#1a7f37' }}>
-                              ✓ Fulfilled
-                            </span>
-                            {isContacted && <span style={{ fontSize: 10, color: '#1a7f37', background: '#dafbe1', padding: '2px 7px', borderRadius: 4, fontWeight: 600 }}>⭐ Review requested</span>}
-                          </div>
-                          <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 4 }}>
-                            🛍️ {order.items?.slice(0, 100)}{order.items?.length > 100 ? '...' : ''}
-                          </div>
-                          <div style={{ display: 'flex', gap: 12, fontSize: 11, flexWrap: 'wrap' }}>
-                            {order.trackingNumber && (
-                              <span style={{ fontFamily: 'monospace', color: T.blue }}>
-                                📦 {order.trackingCompany || 'Royal Mail'}: {order.trackingNumber}
-                              </span>
-                            )}
-                            {trackUrl && (
-                              <a href={trackUrl} target="_blank" rel="noreferrer"
-                                style={{ color: T.blue, fontWeight: 600, textDecoration: 'none' }}>
-                                Track parcel →
-                              </a>
-                            )}
-                            {!order.trackingNumber && <span style={{ color: T.textMuted }}>No tracking number</span>}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flexShrink: 0 }}>
-                          {order.phone && (
-                            <a href={buildReviewWhatsApp(order)} target="_blank" rel="noreferrer"
-                              onClick={() => markContacted(`review_${order.id}`, 'WhatsApp')}
-                              style={{ padding: '6px 12px', fontSize: 11, fontWeight: 700, color: '#fff', background: '#25D366', borderRadius: 7, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                              ⭐ WhatsApp review request
-                            </a>
-                          )}
-                          {order.email && (
-                            <a href={buildReviewEmail(order)} target="_blank" rel="noreferrer"
-                              onClick={() => markContacted(`review_${order.id}`, 'Email')}
-                              style={{ padding: '6px 12px', fontSize: 11, fontWeight: 700, color: '#fff', background: '#7c3aed', borderRadius: 7, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                              ⭐ Email review request
-                            </a>
-                          )}
-                          <a href={order.adminUrl} target="_blank" rel="noreferrer"
-                            style={{ padding: '5px 10px', fontSize: 11, color: T.blue, background: T.bg, border: `0.5px solid ${T.border}`, borderRadius: 6, textDecoration: 'none', textAlign: 'center' }}>
-                            View order →
-                          </a>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-
-                {fulfilled.length === 0 && !monthLoading && (
-                  <div style={{ padding: 20, textAlign: 'center', color: T.textMuted, fontSize: 12 }}>No fulfilled orders this month yet.</div>
-                )}
-              </div>
-            )}
           </div>
         )}
 
