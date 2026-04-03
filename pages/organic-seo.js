@@ -335,25 +335,51 @@ export default function OrganicSEO() {
                 {loading ? (
                   <tr><td colSpan={6} style={{ padding: 20, textAlign: 'center', color: T.textMuted }}>Loading...</td></tr>
                 ) : sortRows(pages).map((p, i) => {
-                  const handle = p.page.replace('/collections/', '').replace(/\//g, '')
-                  const isCollection = p.page.includes('/collections/')
+                  const rawPage = p.page.replace('https://www.cchairandbeauty.com','').replace('http://www.cchairandbeauty.com','')
+                  const handle = rawPage.replace('/collections/', '').replace(/\//g, '')
+                  const isCollection = rawPage.includes('/collections/')
+                  const isProduct = rawPage.includes('/products/')
+                  const isBlog = rawPage.includes('/blogs/')
+                  // Generate friendly name from URL
+                  const friendlyName = handle
+                    ? handle.split('-').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ')
+                    : 'Homepage'
+                  const ctr = parseFloat(p.ctr)
+                  const lowCtr = ctr < 1
                   return (
-                    <tr key={i}>
-                      <TD bold>{p.page}</TD>
+                    <tr key={i} style={{background: lowCtr ? '#fff8f8' : 'transparent'}}>
+                      <td style={{ padding: '8px 11px', borderBottom: `0.5px solid ${T.borderLight}` }}>
+                        <div style={{fontSize:12,fontWeight:700,color:T.text}}>{friendlyName}</div>
+                        <div style={{fontSize:10,color:T.textMuted,fontFamily:'monospace'}}>{rawPage.slice(0,45)}{rawPage.length>45?'...':''}</div>
+                        {lowCtr && <div style={{fontSize:10,color:'#cf222e',fontWeight:600,marginTop:2}}>⚠ Low CTR — fix meta title</div>}
+                      </td>
                       <TD c={T.green}>{p.clicks.toLocaleString()}</TD>
                       <TD c={T.textMuted}>{p.impressions.toLocaleString()}</TD>
                       <TD><PosBar pos={p.position} /></TD>
-                      <TD c={parseFloat(p.ctr) < 1 ? T.red : T.amber}>{p.ctr}</TD>
+                      <TD c={lowCtr ? T.red : T.amber}>{p.ctr}</TD>
                       <td style={{ padding: '8px 11px', borderBottom: `0.5px solid ${T.borderLight}` }}>
-                        {isCollection ? (
-                          <a href={`https://admin.shopify.com/store/cchairnbeauty/collections?search=${handle}`} target="_blank" rel="noreferrer"
-                            style={{ fontSize: 10, color: '#fff', background: T.blue, borderRadius: 4, padding: '2px 8px', textDecoration: 'none' }}>
-                            Edit in Shopify →
-                          </a>
-                        ) : (
-                          <a href={`https://cchairandbeauty.com${p.page}`} target="_blank" rel="noreferrer"
-                            style={{ fontSize: 10, color: T.blue, textDecoration: 'none' }}>View page →</a>
-                        )}
+                        <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                          {isCollection && (
+                            <a href={`https://admin.shopify.com/store/cchairnbeauty/collections?search=${handle}`} target="_blank" rel="noreferrer"
+                              style={{ fontSize: 10, color: '#fff', background: T.blue, borderRadius: 4, padding: '2px 8px', textDecoration: 'none', whiteSpace:'nowrap' }}>
+                              Edit SEO →
+                            </a>
+                          )}
+                          {isProduct && (
+                            <a href={`https://admin.shopify.com/store/cchairnbeauty/products?search=${handle}`} target="_blank" rel="noreferrer"
+                              style={{ fontSize: 10, color: '#fff', background: T.blue, borderRadius: 4, padding: '2px 8px', textDecoration: 'none', whiteSpace:'nowrap' }}>
+                              Edit product →
+                            </a>
+                          )}
+                          {isBlog && (
+                            <a href={`https://admin.shopify.com/store/cchairnbeauty/blogs`} target="_blank" rel="noreferrer"
+                              style={{ fontSize: 10, color: '#fff', background: '#7c3aed', borderRadius: 4, padding: '2px 8px', textDecoration: 'none', whiteSpace:'nowrap' }}>
+                              Edit blog →
+                            </a>
+                          )}
+                          <a href={`https://cchairandbeauty.com${rawPage}`} target="_blank" rel="noreferrer"
+                            style={{ fontSize: 10, color: T.blue, textDecoration: 'none', whiteSpace:'nowrap' }}>View →</a>
+                        </div>
                       </td>
                     </tr>
                   )

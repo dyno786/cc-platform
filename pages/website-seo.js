@@ -3,235 +3,260 @@ import { useState, useEffect } from 'react'
 import Shell from '../components/Shell'
 import { T } from '../lib/theme'
 
+const SHOPIFY_ADMIN = 'https://admin.shopify.com/store/cchairnbeauty'
+
 const COLLECTIONS = [
-  { name:'Relaxers & Texturisers', handle:'relaxers', impr:60000, clicks:312, pos:6.8, ctr:0.5, hasDesc:false, metaOk:false, priority:'critical' },
-  { name:'Edge Control',           handle:'edge-control', impr:8900, clicks:76, pos:4.2, ctr:0.9, hasDesc:false, metaOk:false, priority:'critical' },
-  { name:'Braiding Hair',          handle:'braiding-hair', impr:18900, clicks:54, pos:8.1, ctr:0.3, hasDesc:true, metaOk:false, priority:'high' },
-  { name:'Human Hair Wigs',        handle:'human-hair-wigs', impr:6700, clicks:48, pos:9.4, ctr:0.7, hasDesc:false, metaOk:false, priority:'high' },
-  { name:'Lace Front Wigs',        handle:'lace-front-wigs', impr:9800, clicks:24, pos:11.2, ctr:0.2, hasDesc:false, metaOk:false, priority:'high' },
-  { name:'Synthetic Wigs',         handle:'synthetic-hair-wigs', impr:4200, clicks:31, pos:7.8, ctr:0.7, hasDesc:true, metaOk:true, priority:'medium' },
-  { name:'Hair Extensions',        handle:'hair-extensions', impr:3800, clicks:28, pos:9.1, ctr:0.7, hasDesc:false, metaOk:false, priority:'medium' },
-  { name:'Natural Hair Products',  handle:'moisturisers', impr:2900, clicks:19, pos:12.4, ctr:0.7, hasDesc:false, metaOk:false, priority:'medium' },
-  { name:'Leave In Conditioner',   handle:'leavein-conditioner-hair-care', impr:2100, clicks:15, pos:8.9, ctr:0.7, hasDesc:false, metaOk:false, priority:'medium' },
-  { name:'Hair Gels',              handle:'hair-styling-gels', impr:1890, clicks:14, pos:11.8, ctr:0.7, hasDesc:true, metaOk:true, priority:'low' },
+  { name:'Relaxers & Texturisers', handle:'relaxers',                  impr:60000, clicks:312, pos:6.8,  ctr:0.5, hasDesc:false, priority:'critical',
+    suggestedTitle:'Buy Hair Relaxers UK — ORS, Dark & Lovely, TCB | CC Hair and Beauty Leeds',
+    suggestedDesc:'Shop hair relaxers and texturisers at CC Hair and Beauty Leeds. ORS, Dark & Lovely, TCB, Optimum and more. In store at Chapeltown LS7, Roundhay LS8 & City Centre or online with UK delivery.' },
+  { name:'Edge Control',           handle:'edge-control',               impr:8900,  clicks:76,  pos:4.2,  ctr:0.9, hasDesc:false, priority:'critical',
+    suggestedTitle:'Best Edge Control UK — Style Factor, Edge Booster | CC Hair and Beauty Leeds',
+    suggestedDesc:'Buy the best edge control in the UK at CC Hair and Beauty. Style Factor Edge Booster, Got2b, Eco Styler and more. 3 Leeds stores or shop online at cchairandbeauty.com.' },
+  { name:'Braiding Hair',          handle:'braiding-hair',              impr:18900, clicks:54,  pos:8.1,  ctr:0.3, hasDesc:true,  priority:'high',
+    suggestedTitle:'Braiding Hair UK — Xpression, Freetress, Outre | CC Hair and Beauty Leeds',
+    suggestedDesc:'Buy braiding hair in the UK at CC Hair and Beauty Leeds. Xpression, Freetress, Outre, Janet Collection and 1,000+ styles. In store at Chapeltown LS7, Roundhay LS8 and City Centre.' },
+  { name:'Lace Front Wigs',        handle:'lace-front-wigs',            impr:9800,  clicks:24,  pos:11.2, ctr:0.2, hasDesc:false, priority:'high',
+    suggestedTitle:'Lace Front Wigs UK — Human Hair & Synthetic | CC Hair and Beauty Leeds',
+    suggestedDesc:'Buy lace front wigs at CC Hair and Beauty Leeds. Human hair and synthetic lace fronts in every style and colour. Try before you buy in store across our 3 Leeds branches.' },
+  { name:'Human Hair Wigs',        handle:'human-hair-wigs',            impr:6700,  clicks:48,  pos:9.4,  ctr:0.7, hasDesc:false, priority:'high',
+    suggestedTitle:'Human Hair Wigs UK — Lace Front & Full Wigs | CC Hair and Beauty Leeds',
+    suggestedDesc:'Shop human hair wigs at CC Hair and Beauty Leeds. Brazilian, Peruvian and Indian remy hair wigs. Try in store at Chapeltown LS7, Roundhay LS8 or City Centre. UK delivery available.' },
+  { name:'Synthetic Wigs',         handle:'synthetic-hair-wigs',        impr:4200,  clicks:31,  pos:7.8,  ctr:0.7, hasDesc:true,  priority:'medium',
+    suggestedTitle:'Synthetic Wigs UK — Affordable Styles | CC Hair and Beauty Leeds',
+    suggestedDesc:'Shop synthetic wigs at CC Hair and Beauty Leeds. Affordable styles in every colour and length. Available in store at Chapeltown, Roundhay and City Centre or online with UK delivery.' },
+  { name:'Hair Extensions',        handle:'hair-extensions',            impr:3800,  clicks:28,  pos:9.1,  ctr:0.7, hasDesc:false, priority:'medium',
+    suggestedTitle:'Hair Extensions UK — Clip In, Weave & More | CC Hair and Beauty Leeds',
+    suggestedDesc:'Buy hair extensions at CC Hair and Beauty Leeds. Clip in, weave, tape and bonded extensions. Human hair and synthetic options available in store or online with UK delivery.' },
+  { name:'Natural Hair Products',  handle:'moisturisers',               impr:2900,  clicks:19,  pos:12.4, ctr:0.7, hasDesc:false, priority:'medium',
+    suggestedTitle:'Natural Hair Products UK — Moisturisers & Treatments | CC Hair and Beauty Leeds',
+    suggestedDesc:'Shop natural hair products at CC Hair and Beauty Leeds. Moisturisers, deep conditioners and treatments for natural afro hair. Available in store or online at cchairandbeauty.com.' },
+  { name:'Leave In Conditioner',   handle:'leavein-conditioner-hair-care', impr:2100, clicks:15, pos:8.9, ctr:0.7, hasDesc:false, priority:'medium',
+    suggestedTitle:'Leave In Conditioner UK — Best Products for Afro Hair | CC Hair and Beauty Leeds',
+    suggestedDesc:'Buy leave in conditioner at CC Hair and Beauty Leeds. Best leave in conditioners for afro, natural and relaxed hair. Shop in store or online at cchairandbeauty.com.' },
+  { name:'Hair Gels',              handle:'hair-styling-gels',          impr:1890,  clicks:14,  pos:11.8, ctr:0.7, hasDesc:true,  priority:'low',
+    suggestedTitle:'Hair Gels UK — Eco Styler, Got2b & More | CC Hair and Beauty Leeds',
+    suggestedDesc:'Buy hair gels at CC Hair and Beauty Leeds. Eco Styler, Got2b, Murray\'s and more. Perfect for slick edges, twist outs and sleek styles. Shop in 3 Leeds stores or online.' },
 ]
 
-const META_TEMPLATES = [
-  { collection:'Relaxers & Texturisers', current:'Relaxers & Texturisers', suggested:'Buy Hair Relaxers UK — ORS, Dark & Lovely, TCB | CC Hair and Beauty Leeds', metaDesc:'Shop hair relaxers and texturisers at CC Hair and Beauty Leeds. ORS, Dark & Lovely, TCB, Optimum and more. In store at Chapeltown, Roundhay & City Centre or online with UK delivery.' },
-  { collection:'Edge Control',           current:'Edge Control',           suggested:'Best Edge Control UK — Style Factor, Edge Booster | CC Hair and Beauty Leeds', metaDesc:'Buy the best edge control in the UK at CC Hair and Beauty. Style Factor Edge Booster, Got2b, Eco Styler and more. 3 Leeds stores or shop online at cchairandbeauty.com.' },
-  { collection:'Braiding Hair',          current:'Braiding Hair',          suggested:'Braiding Hair UK — Xpression, Freetress, Outre | CC Hair and Beauty Leeds',  metaDesc:'Buy braiding hair in the UK at CC Hair and Beauty Leeds. Xpression, Freetress, Outre, Janet Collection and 1,000+ styles. In store at Chapeltown LS7, Roundhay LS8 and City Centre.' },
-  { collection:'Human Hair Wigs',        current:'Human Hair Wigs',        suggested:'Human Hair Wigs UK — Lace Front & Full Wigs | CC Hair and Beauty Leeds',     metaDesc:'Shop human hair wigs at CC Hair and Beauty Leeds. Brazilian, Peruvian and Indian remy hair wigs. Try in store at Chapeltown LS7, Roundhay LS8 or City Centre. UK delivery available.' },
-  { collection:'Lace Front Wigs',        current:'Lace Front Wigs',        suggested:'Lace Front Wigs UK — Human Hair & Synthetic | CC Hair and Beauty Leeds',     metaDesc:'Buy lace front wigs at CC Hair and Beauty Leeds. Human hair and synthetic lace fronts in every style and colour. Try before you buy in store across our 3 Leeds branches.' },
+// Top pages from Search Console with friendly names
+const TOP_PAGES = [
+  { url:'/', name:'Homepage',                         clicks:1553, issue:'Title missing "Leeds" — add location keyword', fixUrl:`${SHOPIFY_ADMIN}/online_store/preferences` },
+  { url:'/collections/relaxers', name:'Relaxers Collection',   clicks:198,  issue:'Meta title is just "Relaxers" — no brand or location', fixUrl:`${SHOPIFY_ADMIN}/collections` },
+  { url:'http://www.cchairandbeauty.com/', name:'HTTP Homepage (redirect issue)', clicks:773, issue:'HTTP version indexed — set up 301 redirect to HTTPS', fixUrl:`${SHOPIFY_ADMIN}/domains` },
+  { url:'https://www.cchairandbeauty.com/', name:'HTTPS Homepage (canonical)',    clicks:282, issue:'Duplicate with / — consolidate canonical URL', fixUrl:`${SHOPIFY_ADMIN}/online_store/preferences` },
+  { url:'/collections/hair-extensions', name:'Hair Extensions Collection', clicks:129, issue:'Meta title needs brand + location keywords', fixUrl:`${SHOPIFY_ADMIN}/collections` },
+  { url:'/products/cherish-spiral-french-curl-3x-braid-pre-stretched-22', name:'Cherish Spiral Braid Product', clicks:149, issue:'Good traffic — check meta description is set', fixUrl:`${SHOPIFY_ADMIN}/products` },
+  { url:'/blogs/cantu-product-blog/the-ultimate-guide-to-cantu-hair-care-products-for-every-hair-type', name:'Cantu Hair Care Guide Blog', clicks:113, issue:'Blog driving traffic — add internal links to Cantu products', fixUrl:`${SHOPIFY_ADMIN}/blogs` },
+  { url:'/collections/afro-kinky-braids', name:'Afro Kinky Braids Collection', clicks:90, issue:'Meta title needs brand + location keywords', fixUrl:`${SHOPIFY_ADMIN}/collections` },
+  { url:'/collections/human-hair-wigs', name:'Human Hair Wigs Collection', clicks:67, issue:'Meta title needs brand + location keywords', fixUrl:`${SHOPIFY_ADMIN}/collections` },
+  { url:'/products/got2b-get-fresh-mist-150ml', name:'Got2b Fresh Mist Product', clicks:53, issue:'Good product traffic — ensure meta description set', fixUrl:`${SHOPIFY_ADMIN}/products` },
+  { url:'/products/casting-creme-gloss-semi-permanent-hair-dye', name:'Casting Creme Gloss Hair Dye', clicks:78, issue:'High traffic product — add discount code COLOUR10 to meta desc', fixUrl:`${SHOPIFY_ADMIN}/products` },
 ]
 
-const PAGES = [
-  { page:'Homepage',    url:'/', title:'CC Hair & Beauty', metaDesc: false, issue:'Store name uses & not "and". No location keyword in title.', fix:'CC Hair and Beauty Leeds — Afro Hair Shop Since 1979 | 23,000+ Products' },
-  { page:'About',       url:'/pages/about', title:'About CC Hair and Beauty Leeds', metaDesc: true, issue:'Good — already fixed', fix:'No change needed' },
-  { page:'Contact',     url:'/pages/contact', title:'Help & Contact', metaDesc: false, issue:'No location keyword. No brand name.', fix:'Contact CC Hair and Beauty Leeds — Find Your Nearest Branch' },
-  { page:'Blog index',  url:'/blogs/news', title:'Chapeltown and Leeds Community News — CC Hair and Beauty', metaDesc: true, issue:'Good — already correct', fix:'No change needed' },
-]
-
-const TASKS = [
-  { id:'wseo_t1', text:'Fix relaxers collection meta title and description', how:'Shopify → Online Store → Navigation → Catalog → Collections → Relaxers → Edit website SEO' },
-  { id:'wseo_t2', text:'Fix edge control collection meta title and description', how:'Shopify → Collections → Edge Control → Edit website SEO' },
-  { id:'wseo_t3', text:'Add 200-word description to Relaxers collection page', how:'Shopify → Collections → Relaxers → Description — include keywords: relaxer uk, ors relaxer, dark and lovely' },
-  { id:'wseo_t4', text:'Add 200-word description to Edge Control collection page', how:'Shopify → Collections → Edge Control → Description — include: best edge control uk, style factor, edge booster' },
-  { id:'wseo_t5', text:'Fix homepage meta title — add "Leeds" and "and"', how:'Shopify → Online Store → Preferences → Homepage title' },
-  { id:'wseo_t6', text:'Fix braiding hair collection meta title', how:'Shopify → Collections → Braiding Hair → Edit website SEO' },
-  { id:'wseo_t7', text:'Add 200-word description to Human Hair Wigs collection', how:'Shopify → Collections → Human Hair Wigs → Description' },
-]
+const PRIORITY_COLORS = { critical:'#cf222e', high:'#9a6700', medium:'#0969da', low:'#57606a' }
+const PRIORITY_BG = { critical:'#fff0f0', high:'#fff8e1', medium:'#ddf4ff', low:'#f6f8fa' }
 
 export default function WebsiteSEO() {
   const [tab, setTab] = useState('Collections')
-  const [tasks, setTasks] = useState({})
-  const [copied, setCopied] = useState(null)
-  const [sort, setSort] = useState({ key: 'impr', dir: 'desc' })
+  const [editing, setEditing] = useState({})
+  const [pushing, setPushing] = useState({})
+  const [pushed, setPushed] = useState({})
+  const [errors, setErrors] = useState({})
+  const [editValues, setEditValues] = useState({})
 
-  useEffect(() => {
-    try { const t = localStorage.getItem('cc_wseo_tasks'); if(t) setTasks(JSON.parse(t)) } catch(e){}
-  }, [])
-
-  function tick(id) {
-    const u = { ...tasks, [id]: !tasks[id] }
-    setTasks(u); localStorage.setItem('cc_wseo_tasks', JSON.stringify(u))
+  function startEdit(col) {
+    setEditValues(v => ({
+      ...v,
+      [col.handle]: {
+        title: v[col.handle]?.title ?? col.suggestedTitle,
+        desc:  v[col.handle]?.desc  ?? col.suggestedDesc,
+      }
+    }))
+    setEditing(e => ({...e, [col.handle]: true}))
   }
 
-  function copyText(text, id) {
-    navigator.clipboard.writeText(text)
-    setCopied(id); setTimeout(() => setCopied(null), 2000)
+  async function pushToShopify(col) {
+    const vals = editValues[col.handle] || { title: col.suggestedTitle, desc: col.suggestedDesc }
+    setPushing(p => ({...p, [col.handle]: true}))
+    setErrors(e => ({...e, [col.handle]: null}))
+    try {
+      const r = await fetch('/api/update-collection-seo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ handle: col.handle, metaTitle: vals.title, metaDesc: vals.desc })
+      })
+      const d = await r.json()
+      if (d.ok) {
+        setPushed(p => ({...p, [col.handle]: true}))
+        setEditing(e => ({...e, [col.handle]: false}))
+      } else {
+        setErrors(e => ({...e, [col.handle]: d.error}))
+      }
+    } catch(e) {
+      setErrors(prev => ({...prev, [col.handle]: e.message}))
+    }
+    setPushing(p => ({...p, [col.handle]: false}))
   }
 
-  function doSort(key) {
-    setSort(s => ({ key, dir: s.key === key && s.dir === 'desc' ? 'asc' : 'desc' }))
-  }
-
-  const donePct = Math.round(TASKS.filter(t => tasks[t.id]).length / TASKS.length * 100)
-
-  const sortedCollections = [...COLLECTIONS].sort((a, b) => {
-    const av = a[sort.key], bv = b[sort.key]
-    return sort.dir === 'desc' ? bv - av : av - bv
-  })
-
-  const TH = ({ children, k }) => (
-    <th onClick={k ? () => doSort(k) : undefined} style={{ padding: '7px 11px', fontSize: 10, fontWeight: 600, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left', background: T.bg, borderBottom: `0.5px solid ${T.border}`, whiteSpace: 'nowrap', cursor: k ? 'pointer' : 'default' }}>
-      {children}{k ? <span style={{ marginLeft: 3, opacity: 0.5 }}>{sort.key === k ? (sort.dir === 'desc' ? '↓' : '↑') : '↕'}</span> : null}
-    </th>
-  )
+  const TABS = ['Collections', 'Top Pages', 'Tasks']
 
   return (
     <>
       <Head><title>Website SEO — CC Intelligence</title></Head>
-      <Shell title="Website SEO" subtitle="Collection pages · meta titles · page performance · 2,760 collections">
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 8, marginBottom: 12 }}>
-          {[
-            { l: 'Collections needing meta fix', v: '8', s: 'Critical or high priority', sc: T.red },
-            { l: 'Collections with no description', v: '7', s: 'Thin content = low rankings', sc: T.amber },
-            { l: 'Pages already fixed', v: '2', s: 'Homepage title, about page', sc: T.green },
-            { l: 'Tasks done', v: `${TASKS.filter(t => tasks[t.id]).length}/${TASKS.length}`, s: `${donePct}%`, sc: donePct === 100 ? T.green : T.amber },
-          ].map((s, i) => (
-            <div key={i} style={{ background: T.surface, border: `0.5px solid ${T.border}`, borderRadius: 8, padding: '10px 12px' }}>
-              <div style={{ fontSize: 9, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>{s.l}</div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: T.text, marginBottom: 2 }}>{s.v}</div>
-              <div style={{ fontSize: 10, color: s.sc }}>{s.s}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Progress */}
-        <div style={{ background: T.surface, border: `0.5px solid ${T.border}`, borderRadius: 8, padding: '10px 14px', marginBottom: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, fontSize: 11 }}>
-            <span style={{ fontWeight: 600, color: T.text }}>Website SEO task progress</span>
-            <span style={{ color: T.textMuted }}>{donePct}%</span>
-          </div>
-          <div style={{ height: 5, background: T.borderLight, borderRadius: 99, border: `0.5px solid ${T.border}`, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${donePct}%`, background: donePct === 100 ? T.green : T.blue, borderRadius: 99, transition: 'width 0.3s' }} />
-          </div>
-        </div>
+      <Shell title="Website SEO" subtitle="Fix collection & page SEO · push directly to Shopify">
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: 0, borderBottom: `0.5px solid ${T.border}`, marginBottom: 14, overflowX: 'auto' }}>
-          {['Collections', 'Meta Templates', 'Pages', 'Tasks'].map(t => (
-            <button key={t} onClick={() => setTab(t)} style={{ padding: '7px 14px', fontSize: 11, fontWeight: tab === t ? 600 : 400, color: tab === t ? T.blue : T.textMuted, background: 'none', border: 'none', borderBottom: tab === t ? `2px solid ${T.blue}` : '2px solid transparent', whiteSpace: 'nowrap', cursor: 'pointer' }}>
-              {t}
-            </button>
+        <div style={{display:'flex',gap:4,marginBottom:16,borderBottom:`1px solid ${T.border}`,paddingBottom:0}}>
+          {TABS.map(t => (
+            <button key={t} onClick={()=>setTab(t)} style={{
+              padding:'7px 16px',fontSize:12,fontWeight:600,border:'none',background:'none',
+              borderBottom: tab===t ? `2px solid ${T.blue}` : '2px solid transparent',
+              color: tab===t ? T.blue : T.textMuted, cursor:'pointer',
+            }}>{t}</button>
           ))}
         </div>
 
+        {/* COLLECTIONS TAB */}
         {tab === 'Collections' && (
-          <div style={{ background: T.surface, border: `0.5px solid ${T.border}`, borderRadius: 8, overflow: 'auto' }}>
-            <div style={{ padding: '8px 12px', borderBottom: `0.5px solid ${T.border}`, background: T.bg, fontSize: 11, color: T.textMuted }}>
-              Click column headers to sort. Red = fix today. Collections with high impressions but low CTR need new meta titles.
+          <div>
+            <div style={{fontSize:11,color:T.textMuted,marginBottom:12}}>
+              Red = fix today. Click <strong>Edit SEO</strong> to review and edit the suggested title/description, then <strong>Push to Shopify</strong> to apply in one click.
             </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
-              <thead><tr>
-                <TH>Collection</TH>
-                <TH k="impr">Impressions ↕</TH>
-                <TH k="clicks">Clicks ↕</TH>
-                <TH k="pos">Position ↕</TH>
-                <TH k="ctr">CTR ↕</TH>
-                <TH>Has description</TH>
-                <TH>Meta title</TH>
-                <TH>Priority</TH>
-                <TH>How to fix</TH>
-              </tr></thead>
-              <tbody>
-                {sortedCollections.map((c, i) => (
-                  <tr key={i} style={{ background: c.priority === 'critical' ? T.redBg : 'transparent' }}>
-                    <td style={{ padding: '8px 11px', fontSize: 12, fontWeight: 600, color: T.text, borderBottom: `0.5px solid ${T.borderLight}`, whiteSpace: 'nowrap' }}>{c.name}</td>
-                    <td style={{ padding: '8px 11px', fontSize: 12, color: T.textMuted, borderBottom: `0.5px solid ${T.borderLight}` }}>{c.impr.toLocaleString()}</td>
-                    <td style={{ padding: '8px 11px', fontSize: 12, color: T.green, borderBottom: `0.5px solid ${T.borderLight}` }}>{c.clicks}</td>
-                    <td style={{ padding: '8px 11px', fontSize: 12, color: c.pos <= 5 ? T.green : c.pos <= 10 ? T.amber : T.red, fontWeight: 600, borderBottom: `0.5px solid ${T.borderLight}` }}>{c.pos}</td>
-                    <td style={{ padding: '8px 11px', fontSize: 12, color: c.ctr < 1 ? T.red : T.amber, fontWeight: 600, borderBottom: `0.5px solid ${T.borderLight}` }}>{c.ctr}%</td>
-                    <td style={{ padding: '8px 11px', fontSize: 12, borderBottom: `0.5px solid ${T.borderLight}` }}>
-                      <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: c.hasDesc ? T.greenBg : T.redBg, color: c.hasDesc ? T.green : T.red }}>{c.hasDesc ? '✓ Yes' : '✗ No'}</span>
-                    </td>
-                    <td style={{ padding: '8px 11px', fontSize: 12, borderBottom: `0.5px solid ${T.borderLight}` }}>
-                      <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: c.metaOk ? T.greenBg : T.redBg, color: c.metaOk ? T.green : T.red }}>{c.metaOk ? '✓ Good' : '✗ Fix needed'}</span>
-                    </td>
-                    <td style={{ padding: '8px 11px', fontSize: 12, borderBottom: `0.5px solid ${T.borderLight}` }}>
-                      <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: c.priority === 'critical' ? T.redBg : c.priority === 'high' ? T.amberBg : T.blueBg, color: c.priority === 'critical' ? T.red : c.priority === 'high' ? T.amber : T.blue }}>{c.priority}</span>
-                    </td>
-                    <td style={{ padding: '8px 11px', fontSize: 10, color: T.blue, borderBottom: `0.5px solid ${T.borderLight}`, whiteSpace: 'nowrap' }}>
-                      Shopify → Collections → {c.name} → Edit SEO
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:3,marginBottom:8,padding:'4px 8px',background:T.surface,borderRadius:6,border:`0.5px solid ${T.border}`,fontSize:10,fontWeight:700,color:T.textMuted,textTransform:'uppercase'}}>
+              <div>Collection</div><div>Search Data</div><div>Actions</div>
+            </div>
+            {COLLECTIONS.map(col => {
+              const isPushed = pushed[col.handle]
+              const isEditing = editing[col.handle]
+              const isPushing = pushing[col.handle]
+              const err = errors[col.handle]
+              const vals = editValues[col.handle] || { title: col.suggestedTitle, desc: col.suggestedDesc }
+              return (
+                <div key={col.handle} style={{
+                  background: isPushed ? '#dafbe1' : PRIORITY_BG[col.priority],
+                  border:`1px solid ${isPushed?'#1a7f37':PRIORITY_COLORS[col.priority]}30`,
+                  borderRadius:8, marginBottom:8, overflow:'hidden'
+                }}>
+                  {/* Header row */}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr auto',gap:8,padding:'10px 14px',alignItems:'center'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:10}}>
+                      <span style={{fontSize:11,fontWeight:700,padding:'2px 8px',borderRadius:4,background:PRIORITY_COLORS[col.priority],color:'#fff',textTransform:'uppercase',flexShrink:0}}>
+                        {col.priority}
+                      </span>
+                      <span style={{fontSize:13,fontWeight:700,color:T.text}}>{col.name}</span>
+                      <span style={{fontSize:10,color:T.textMuted}}>
+                        {col.impr.toLocaleString()} impr · {col.clicks} clicks · pos {col.pos} · CTR {col.ctr}%
+                      </span>
+                      {!col.hasDesc && <span style={{fontSize:10,color:'#cf222e',fontWeight:600}}>⚠ No description</span>}
+                    </div>
+                    <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                      {isPushed ? (
+                        <span style={{fontSize:11,color:'#1a7f37',fontWeight:700}}>✓ Updated in Shopify</span>
+                      ) : (
+                        <>
+                          {!isEditing && (
+                            <button onClick={()=>startEdit(col)}
+                              style={{padding:'5px 12px',fontSize:11,fontWeight:600,background:T.blue,color:'#fff',border:'none',borderRadius:6,cursor:'pointer'}}>
+                              ✏️ Edit SEO
+                            </button>
+                          )}
+                          {isEditing && (
+                            <button onClick={()=>pushToShopify(col)} disabled={isPushing}
+                              style={{padding:'5px 14px',fontSize:11,fontWeight:700,background:isPushing?T.border:'#1a7f37',color:'#fff',border:'none',borderRadius:6,cursor:'pointer'}}>
+                              {isPushing ? '⟳ Pushing...' : '🚀 Push to Shopify'}
+                            </button>
+                          )}
+                          <a href={`${SHOPIFY_ADMIN}/collections?search=${col.handle}`} target="_blank" rel="noreferrer"
+                            style={{padding:'5px 10px',fontSize:11,color:T.blue,background:T.bg,border:`0.5px solid ${T.border}`,borderRadius:6,textDecoration:'none'}}>
+                            View in Shopify →
+                          </a>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Edit panel */}
+                  {isEditing && (
+                    <div style={{padding:'0 14px 14px',borderTop:`0.5px solid ${T.border}`}}>
+                      {err && <div style={{fontSize:11,color:'#cf222e',margin:'8px 0',padding:'6px 10px',background:'#fff0f0',borderRadius:5}}>{err}</div>}
+                      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginTop:10}}>
+                        <div>
+                          <div style={{fontSize:10,fontWeight:700,color:T.textMuted,textTransform:'uppercase',marginBottom:4}}>
+                            SEO Title <span style={{color: vals.title.length > 70 ? '#cf222e' : '#1a7f37'}}>{vals.title.length}/70 chars</span>
+                          </div>
+                          <textarea value={vals.title} rows={2}
+                            onChange={e => setEditValues(v => ({...v, [col.handle]: {...vals, title: e.target.value}}))}
+                            style={{width:'100%',padding:'7px 9px',fontSize:12,border:`1px solid ${T.border}`,borderRadius:6,background:T.bg,color:T.text,resize:'vertical',lineHeight:1.4}}/>
+                        </div>
+                        <div>
+                          <div style={{fontSize:10,fontWeight:700,color:T.textMuted,textTransform:'uppercase',marginBottom:4}}>
+                            Meta Description <span style={{color: vals.desc.length > 160 ? '#cf222e' : '#1a7f37'}}>{vals.desc.length}/160 chars</span>
+                          </div>
+                          <textarea value={vals.desc} rows={2}
+                            onChange={e => setEditValues(v => ({...v, [col.handle]: {...vals, desc: e.target.value}}))}
+                            style={{width:'100%',padding:'7px 9px',fontSize:12,border:`1px solid ${T.border}`,borderRadius:6,background:T.bg,color:T.text,resize:'vertical',lineHeight:1.4}}/>
+                        </div>
+                      </div>
+                      <div style={{fontSize:11,color:T.textMuted,marginTop:8}}>
+                        📱 Google preview: <em style={{color:T.blue}}>{vals.title}</em> — {vals.desc.slice(0,80)}...
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
 
-        {tab === 'Meta Templates' && (
+        {/* TOP PAGES TAB */}
+        {tab === 'Top Pages' && (
           <div>
-            <div style={{ background: T.blueBg, border: `0.5px solid ${T.blueBorder}`, borderRadius: 7, padding: '9px 13px', marginBottom: 12, fontSize: 11, color: T.blue }}>
-              Copy these exact titles and descriptions into Shopify. They are already optimised with the right keywords and character counts.
+            <div style={{fontSize:11,color:T.textMuted,marginBottom:12}}>
+              Pages getting the most traffic from Google. Click <strong>Fix in Shopify →</strong> to go directly to the right place in Shopify admin to fix the issue.
             </div>
-            {META_TEMPLATES.map((m, i) => (
-              <div key={i} style={{ background: T.surface, border: `0.5px solid ${T.border}`, borderRadius: 8, padding: '14px 16px', marginBottom: 10 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>{m.collection}</div>
-                <div style={{ marginBottom: 10 }}>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: T.textMuted, textTransform: 'uppercase', marginBottom: 4 }}>Current title (bad)</div>
-                  <div style={{ fontSize: 12, color: T.red, background: T.redBg, padding: '6px 10px', borderRadius: 6 }}>{m.current}</div>
-                </div>
-                <div style={{ marginBottom: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                    <div style={{ fontSize: 10, fontWeight: 600, color: T.textMuted, textTransform: 'uppercase' }}>New title — copy this ({m.suggested.length} chars)</div>
-                    <button onClick={() => copyText(m.suggested, `title_${i}`)} style={{ fontSize: 10, color: '#fff', background: copied === `title_${i}` ? T.green : T.blue, border: 'none', borderRadius: 5, padding: '3px 10px', cursor: 'pointer' }}>
-                      {copied === `title_${i}` ? '✓ Copied!' : '📋 Copy'}
-                    </button>
-                  </div>
-                  <div style={{ fontSize: 12, color: T.green, background: T.greenBg, padding: '6px 10px', borderRadius: 6 }}>{m.suggested}</div>
-                </div>
+            {TOP_PAGES.map((page, i) => (
+              <div key={i} style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'12px 14px',marginBottom:6,display:'grid',gridTemplateColumns:'180px 1fr auto',gap:12,alignItems:'center'}}>
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                    <div style={{ fontSize: 10, fontWeight: 600, color: T.textMuted, textTransform: 'uppercase' }}>Meta description — copy this ({m.metaDesc.length} chars)</div>
-                    <button onClick={() => copyText(m.metaDesc, `desc_${i}`)} style={{ fontSize: 10, color: '#fff', background: copied === `desc_${i}` ? T.green : T.blue, border: 'none', borderRadius: 5, padding: '3px 10px', cursor: 'pointer' }}>
-                      {copied === `desc_${i}` ? '✓ Copied!' : '📋 Copy'}
-                    </button>
-                  </div>
-                  <div style={{ fontSize: 12, color: T.textMuted, background: T.bg, padding: '6px 10px', borderRadius: 6, lineHeight: 1.5 }}>{m.metaDesc}</div>
+                  <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:2}}>{page.name}</div>
+                  <div style={{fontSize:10,color:T.textMuted,fontFamily:'monospace',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{page.url.replace('https://www.cchairandbeauty.com','').slice(0,40)}</div>
+                  <div style={{fontSize:11,fontWeight:700,color:T.green,marginTop:2}}>{page.clicks.toLocaleString()} clicks</div>
                 </div>
-                <div style={{ fontSize: 10, color: T.blue, marginTop: 8 }}>→ Shopify → Online Store → Navigation → Collections → {m.collection} → Edit website SEO → paste both fields → Save</div>
+                <div style={{fontSize:11,color:'#9a6700',background:'#fff8e1',padding:'5px 9px',borderRadius:5,border:'1px solid #f0c040'}}>
+                  ⚠️ {page.issue}
+                </div>
+                <a href={page.fixUrl} target="_blank" rel="noreferrer"
+                  style={{padding:'6px 12px',fontSize:11,fontWeight:600,background:T.blue,color:'#fff',borderRadius:6,textDecoration:'none',whiteSpace:'nowrap'}}>
+                  Fix in Shopify →
+                </a>
               </div>
             ))}
           </div>
         )}
 
-        {tab === 'Pages' && (
-          <div>
-            {PAGES.map((p, i) => (
-              <div key={i} style={{ background: T.surface, border: `0.5px solid ${p.fix === 'No change needed' ? T.greenBorder : T.redBorder}`, borderRadius: 8, padding: '12px 14px', marginBottom: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: T.text }}>{p.page}</span>
-                  <span style={{ fontSize: 10, color: T.textMuted }}>{p.url}</span>
-                  <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: p.fix === 'No change needed' ? T.greenBg : T.redBg, color: p.fix === 'No change needed' ? T.green : T.red }}>
-                    {p.fix === 'No change needed' ? '✓ Good' : 'Fix needed'}
-                  </span>
-                </div>
-                <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 4 }}>Current: <span style={{ color: T.text }}>{p.title}</span></div>
-                {p.fix !== 'No change needed' && <div style={{ fontSize: 11, color: T.green }}>Fix to: <span style={{ fontWeight: 600 }}>{p.fix}</span></div>}
-                <div style={{ fontSize: 10, color: T.red, marginTop: 4 }}>{p.issue}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
+        {/* TASKS TAB */}
         {tab === 'Tasks' && (
-          <div style={{ maxWidth: 860 }}>
-            {TASKS.map((task, i) => (
-              <div key={task.id} onClick={() => tick(task.id)} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', background: tasks[task.id] ? T.greenBg : T.surface, border: `0.5px solid ${T.border}`, borderRadius: 8, marginBottom: 7, cursor: 'pointer' }}>
-                <div style={{ width: 15, height: 15, borderRadius: 4, border: `1.5px solid ${tasks[task.id] ? T.green : T.border}`, background: tasks[task.id] ? T.green : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
-                  {tasks[task.id] && <svg width="9" height="7" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, color: tasks[task.id] ? T.textMuted : T.text, textDecoration: tasks[task.id] ? 'line-through' : 'none', marginBottom: 3 }}>{task.text}</div>
-                  <div style={{ fontSize: 10, color: T.blue }}>→ {task.how}</div>
-                </div>
+          <div>
+            <div style={{fontSize:11,color:T.textMuted,marginBottom:12}}>Quick wins — fix these in order of priority.</div>
+            {[
+              { text:'Fix Relaxers meta title — 60k+ impressions, 0.5% CTR is critical', link:`${SHOPIFY_ADMIN}/collections`, priority:'critical' },
+              { text:'Fix Edge Control meta title — 4.2 avg position, should be 5%+ CTR', link:`${SHOPIFY_ADMIN}/collections`, priority:'critical' },
+              { text:'Add description to Relaxers collection — no description currently', link:`${SHOPIFY_ADMIN}/collections`, priority:'critical' },
+              { text:'Fix Braiding Hair meta title — 18.9k impressions, 0.3% CTR is very low', link:`${SHOPIFY_ADMIN}/collections`, priority:'high' },
+              { text:'Fix Lace Front Wigs meta title — 9.8k impressions, 0.2% CTR is the lowest', link:`${SHOPIFY_ADMIN}/collections`, priority:'high' },
+              { text:'Redirect HTTP homepage to HTTPS — 773 clicks going to wrong URL', link:`${SHOPIFY_ADMIN}/domains`, priority:'high' },
+              { text:'Fix homepage meta title — missing Leeds and "and" instead of &', link:`${SHOPIFY_ADMIN}/online_store/preferences`, priority:'medium' },
+              { text:'Add descriptions to Hair Extensions, Human Hair Wigs collections', link:`${SHOPIFY_ADMIN}/collections`, priority:'medium' },
+            ].map((task, i) => (
+              <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:7,marginBottom:5}}>
+                <span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:4,background:PRIORITY_COLORS[task.priority],color:'#fff',textTransform:'uppercase',flexShrink:0}}>{task.priority}</span>
+                <span style={{fontSize:12,color:T.text,flex:1}}>{task.text}</span>
+                <a href={task.link} target="_blank" rel="noreferrer"
+                  style={{fontSize:11,color:T.blue,textDecoration:'none',fontWeight:600,whiteSpace:'nowrap',flexShrink:0}}>Fix →</a>
               </div>
             ))}
           </div>
         )}
+
       </Shell>
     </>
   )
