@@ -224,18 +224,43 @@ export default function BlogPlanner() {
       setGenerated(prev => { const u={...prev,[slug]:blogContent}; try{localStorage.setItem('cc_blog_gen',JSON.stringify(u))}catch(e){}; return u })
       setPublishStatus(p => ({...p, [slug]: 'Generating image...'}))
 
-      // Step 2 — generate image
+      // Step 2 — use real Shopify product image if available, otherwise generate with DALL-E
       let imageDataUrl = null, imageAlt = null, imageFilename = null
-      const imgRes = await fetch('/api/generate-image', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ title: post.title, cat: post.cat, keywords: post.keywords })
-      })
-      const imgData = await imgRes.json()
-      if (imgData.ok) {
-        imageDataUrl = imgData.imageUrl
-        imageAlt = imgData.altText
-        imageFilename = imgData.filename
-        setImages(prev => { const u={...prev,[slug]:{url:imgData.imageUrl,alt:imgData.altText,filename:imgData.filename}}; try{localStorage.setItem('cc_blog_images',JSON.stringify(u))}catch(e){}; return u })
+      let usedShopifyImage = false
+
+      if (blogData.featuredImage?.src) {
+        // Use real Shopify product image — fetch and convert to base64
+        setPublishStatus(p => ({...p, [slug]: 'Fetching product image from Shopify...'}))
+        try {
+          const imgFetch = await fetch('/api/fetch-image-base64', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ url: blogData.featuredImage.src })
+          })
+          const imgBase = await imgFetch.json()
+          if (imgBase.ok) {
+            imageDataUrl = imgBase.dataUrl
+            imageAlt = blogData.featuredImage.alt
+            imageFilename = post.slug + '-cc-hair-beauty-leeds.jpg'
+            usedShopifyImage = true
+            setImages(prev => { const u={...prev,[slug]:{url:blogData.featuredImage.src,alt:imageAlt,filename:imageFilename,isShopify:true}}; try{localStorage.setItem('cc_blog_images',JSON.stringify(u))}catch(e){}; return u })
+          }
+        } catch(e) {}
+      }
+
+      if (!usedShopifyImage) {
+        // Fallback to DALL-E if no Shopify product image
+        setPublishStatus(p => ({...p, [slug]: 'Generating image with AI...'}))
+        const imgRes = await fetch('/api/generate-image', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ title: post.title, cat: post.cat, keywords: post.keywords })
+        })
+        const imgData = await imgRes.json()
+        if (imgData.ok) {
+          imageDataUrl = imgData.imageUrl
+          imageAlt = imgData.altText
+          imageFilename = imgData.filename
+          setImages(prev => { const u={...prev,[slug]:{url:imgData.imageUrl,alt:imgData.altText,filename:imgData.filename}}; try{localStorage.setItem('cc_blog_images',JSON.stringify(u))}catch(e){}; return u })
+        }
       }
       setPublishStatus(p => ({...p, [slug]: 'Publishing to Shopify...'}))
 
