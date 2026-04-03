@@ -132,6 +132,11 @@ export default function BlogPlanner() {
   const [copied, setCopied] = useState({})
   const [images, setImages] = useState({})
   const [imgGenerating, setImgGenerating] = useState({})
+  const [publishing, setPublishing] = useState({})
+  const [published, setPublished] = useState(() => {
+    try { const p = localStorage.getItem('cc_published'); return p ? JSON.parse(p) : {} } catch(e) { return {} }
+  })
+  const [publishStatus, setPublishStatus] = useState({})
   const [imgCopied, setImgCopied] = useState({})
   const [gbpGenerating, setGbpGenerating] = useState({})
   const [gbpContent, setGbpContent] = useState({})
@@ -196,6 +201,73 @@ export default function BlogPlanner() {
       }
     } catch(e) { alert('Error: ' + e.message) }
     setImgGenerating(g => { const u = {...g}; delete u[post.slug]; return u })
+  }
+
+  async function generateAndPublish(post) {
+    const slug = post.slug
+    setPublishing(p => ({...p, [slug]: 'generating'}))
+    setPublishStatus(p => ({...p, [slug]: 'Writing blog post...'}))
+
+    try {
+      // Step 1 — generate blog content
+      const blogRes = await fetch('/api/generate-blog', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ title:post.title, seoTitle:post.seoTitle, metaDesc:post.metaDesc, keywords:post.keywords, slug:post.slug, cat:post.cat, data:post.data })
+      })
+      const blogData = await blogRes.json()
+      if (!blogData.ok || !blogData.content) {
+        setPublishStatus(p => ({...p, [slug]: '✗ Blog generation failed: ' + (blogData.error || 'unknown')}))
+        setPublishing(p => ({...p, [slug]: 'failed'}))
+        return
+      }
+      const blogContent = blogData.content
+      setGenerated(prev => { const u={...prev,[slug]:blogContent}; try{localStorage.setItem('cc_blog_gen',JSON.stringify(u))}catch(e){}; return u })
+      setPublishStatus(p => ({...p, [slug]: 'Generating image...'}))
+
+      // Step 2 — generate image
+      let imageDataUrl = null, imageAlt = null, imageFilename = null
+      const imgRes = await fetch('/api/generate-image', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ title: post.title, cat: post.cat, keywords: post.keywords })
+      })
+      const imgData = await imgRes.json()
+      if (imgData.ok) {
+        imageDataUrl = imgData.imageUrl
+        imageAlt = imgData.altText
+        imageFilename = imgData.filename
+        setImages(prev => { const u={...prev,[slug]:{url:imgData.imageUrl,alt:imgData.altText,filename:imgData.filename}}; try{localStorage.setItem('cc_blog_images',JSON.stringify(u))}catch(e){}; return u })
+      }
+      setPublishStatus(p => ({...p, [slug]: 'Publishing to Shopify...'}))
+
+      // Step 3 — publish to Shopify
+      const pubRes = await fetch('/api/publish-to-shopify', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          title: post.title, seoTitle: post.seoTitle, metaDesc: post.metaDesc,
+          slug: post.slug, content: blogContent, cat: post.cat, keywords: post.keywords,
+          imageDataUrl, imageAlt, imageFilename,
+        })
+      })
+      const pubData = await pubRes.json()
+
+      if (!pubData.ok) {
+        setPublishStatus(p => ({...p, [slug]: '✗ Publish failed: ' + (pubData.error || 'unknown')}))
+        setPublishing(p => ({...p, [slug]: 'failed'}))
+        return
+      }
+
+      // Success
+      const successMsg = `✓ Live at ${pubData.articleUrl}`
+      setPublishStatus(p => ({...p, [slug]: successMsg}))
+      setPublishing(p => ({...p, [slug]: 'done'}))
+      const u = {...published, [slug]: { url: pubData.articleUrl, blogTitle: pubData.blogTitle, imageUploaded: pubData.imageUploaded }}
+      setPublished(u)
+      try { localStorage.setItem('cc_published', JSON.stringify(u)) } catch(e) {}
+
+    } catch(e) {
+      setPublishStatus(p => ({...p, [slug]: '✗ Error: ' + e.message}))
+      setPublishing(p => ({...p, [slug]: 'failed'}))
+    }
   }
 
   function copyBlog(slug) {
@@ -325,11 +397,16 @@ export default function BlogPlanner() {
                       <div style={{background:`${col}15`,color:col,padding:'2px 7px',borderRadius:4,fontSize:10,fontWeight:600,flexShrink:0}}>{CAT_META[post.cat].label}</div>
                       {/* Title */}
                       <div style={{fontWeight:600,color:isPub?C.text3:C.text,fontSize:13,flex:1,textDecoration:isPub?'line-through':'none',lineHeight:1.3,cursor:'pointer'}} onClick={()=>setExpanded(isExp?null:post.slug)}>{post.title}</div>
-                      {/* Generate button */}
-                      {!hasGen ? (
-                        <button onClick={()=>{setExpanded(post.slug);generateBlog(post)}} disabled={isGen}
-                          style={{padding:'5px 12px',borderRadius:6,border:'none',background:isGen?C.surface2:col,color:isGen?C.text3:'#000',fontWeight:700,fontSize:11,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap'}}>
-                          {isGen?'⟳ Writing...':'✨ Generate'}
+                      {/* Generate & Publish button */}
+                      {published[post.slug]?.url ? (
+                        <a href={published[post.slug].url} target="_blank" rel="noreferrer"
+                          style={{padding:'5px 12px',borderRadius:6,border:'none',background:'#1a7f37',color:'#fff',fontWeight:700,fontSize:11,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap',textDecoration:'none',display:'inline-block'}}>
+                          ✓ Live →
+                        </a>
+                      ) : (
+                        <button onClick={()=>{setExpanded(post.slug);generateAndPublish(post)}} disabled={publishing[post.slug]==='generating'}
+                          style={{padding:'5px 12px',borderRadius:6,border:'none',background:publishing[post.slug]==='generating'?C.surface2:publishing[post.slug]==='failed'?'#cf222e':col,color:publishing[post.slug]==='generating'?C.text3:'#fff',fontWeight:700,fontSize:11,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap'}}>
+                          {publishing[post.slug]==='generating'?'⟳ Publishing...':publishing[post.slug]==='failed'?'↺ Retry':'🚀 Publish'}
                         </button>
                       ) : (
                         <button onClick={()=>copyBlog(post.slug)}
