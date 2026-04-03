@@ -125,7 +125,6 @@ export default function BlogPlanner() {
   const [tab, setTab] = useState('blogs') // 'blogs' | 'gbp'
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
-  const [published, setPublished] = useState({})
   const [expanded, setExpanded] = useState(null)
   const [generating, setGenerating] = useState({})
   const [generated, setGenerated] = useState({})
