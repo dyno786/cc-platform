@@ -1,12 +1,14 @@
 import Head from 'next/head'
 import { useState, useEffect } from 'react'
-import Nav from '../components/Nav'
+import Shell from '../components/Shell'
+import { useAuth } from '../components/Auth'
 
+import { T as TC } from '../lib/theme'
 const C = {
-  bg:'#0f1117',surface:'#1a1d27',surface2:'#22263a',border:'#2e3347',
-  text:'#e8eaf0',text2:'#8b90a7',text3:'#555b75',
-  green:'#22c55e',amber:'#f59e0b',red:'#ef4444',
-  blue:'#3b82f6',accent:'#6366f1',accent2:'#818cf8',teal:'#14b8a6',
+  bg: TC.bg, surface: TC.surface, surface2: TC.bg, border: TC.border,
+  text: TC.text, text2: TC.textMuted, text3: TC.textHint,
+  green: TC.green, amber: TC.amber, red: TC.red,
+  blue: TC.blue, accent: TC.blue, accent2: TC.blue, teal: TC.green,
 }
 
 const CAT_META = {
@@ -242,7 +244,7 @@ export default function BlogPlanner() {
         <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
         <style>{`*{box-sizing:border-box;margin:0;padding:0}body{background:${C.bg};color:${C.text};font-family:'DM Sans',system-ui,sans-serif;font-size:14px}button,input{font-family:inherit}textarea{font-family:monospace}::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:${C.border};border-radius:3px}`}</style>
       </Head>
-      <Nav/>
+
       <div style={{maxWidth:1300,margin:'0 auto',padding:20}}>
 
         {/* HEADER */}
@@ -515,6 +517,7 @@ export default function BlogPlanner() {
           </div>
         )}
       </div>
+    </Shell>
     </>
   )
 }
