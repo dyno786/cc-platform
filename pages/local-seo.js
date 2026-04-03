@@ -67,6 +67,12 @@ export default function LocalSEO() {
       <Head><title>Local SEO — CC Intelligence</title></Head>
       <Shell title="Local SEO" subtitle="3 branches · GBP performance · reviews · local rankings">
 
+        <div style={{ background: T.blueBg, border: `0.5px solid ${T.blueBorder}`, borderRadius: 7, padding: '8px 12px', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, color: T.blue }}>
+          <span>📥 Connect your Google Business Profile to see live ratings and reviews</span>
+          <a href="/data-upload" style={{ fontSize: 11, color: '#fff', background: T.blue, borderRadius: 5, padding: '3px 12px', textDecoration: 'none', fontWeight: 600, flexShrink: 0 }}>
+            Upload GBP data →
+          </a>
+        </div>
         {criticalReviews > 0 && (
           <div style={{ background: T.redBg, border: `0.5px solid ${T.redBorder}`, borderRadius: 7, padding: '8px 12px', marginBottom: 12, fontSize: 11, color: T.red, fontWeight: 500 }}>
             🚨 {criticalReviews} low-rating review{criticalReviews > 1 ? 's' : ''} not yet replied to — reply within 24 hours
@@ -96,6 +102,16 @@ export default function LocalSEO() {
               </div>
               <div style={{ marginTop: 8, fontSize: 10, color: b.posts === 0 ? T.red : T.green, fontWeight: 500 }}>
                 {b.posts === 0 ? '⚠️ No GBP posts this week — post today' : `✓ ${b.posts} GBP post${b.posts > 1 ? 's' : ''} this week`}
+              </div>
+              <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                <a href={`https://business.google.com/`} target="_blank" rel="noreferrer"
+                  style={{ fontSize: 10, color: '#fff', background: T.blue, borderRadius: 5, padding: '3px 9px', textDecoration: 'none', fontWeight: 500 }}>
+                  Manage GBP →
+                </a>
+                <a href={`https://search.google.com/local/writereview?placeid=${b.id}`} target="_blank" rel="noreferrer"
+                  style={{ fontSize: 10, color: T.blue, background: T.blueBg, border: `0.5px solid ${T.blueBorder}`, borderRadius: 5, padding: '3px 9px', textDecoration: 'none', fontWeight: 500 }}>
+                  Get reviews →
+                </a>
               </div>
             </div>
           ))}
