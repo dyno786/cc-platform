@@ -7,6 +7,7 @@ const NAV = [
   { section:'Main', items:[
     { id:'/',               label:'Overview',       icon:'⬡'  },
     { id:'/tasks',          label:'Tasks',          icon:'✅' },
+    { id:'/data-upload',    label:'Data upload',    icon:'📥' },
     { id:'/monday-report',  label:'Weekly report',  icon:'📋' },
   ]},
   { section:'SEO', items:[
