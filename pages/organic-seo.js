@@ -360,19 +360,19 @@ export default function OrganicSEO() {
                       <td style={{ padding: '8px 11px', borderBottom: `0.5px solid ${T.borderLight}` }}>
                         <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
                           {isCollection && (
-                            <a href={`https://admin.shopify.com/store/cchairnbeauty/collections?search=${handle}`} target="_blank" rel="noreferrer"
+                            <a href={`https://admin.shopify.com/store/cchairandbeauty/collections?search=${handle}`} target="_blank" rel="noreferrer"
                               style={{ fontSize: 10, color: '#fff', background: T.blue, borderRadius: 4, padding: '2px 8px', textDecoration: 'none', whiteSpace:'nowrap' }}>
                               Edit SEO →
                             </a>
                           )}
                           {isProduct && (
-                            <a href={`https://admin.shopify.com/store/cchairnbeauty/products?search=${handle}`} target="_blank" rel="noreferrer"
+                            <a href={`https://admin.shopify.com/store/cchairandbeauty/products?search=${handle}`} target="_blank" rel="noreferrer"
                               style={{ fontSize: 10, color: '#fff', background: T.blue, borderRadius: 4, padding: '2px 8px', textDecoration: 'none', whiteSpace:'nowrap' }}>
                               Edit product →
                             </a>
                           )}
                           {isBlog && (
-                            <a href={`https://admin.shopify.com/store/cchairnbeauty/blogs`} target="_blank" rel="noreferrer"
+                            <a href={`https://admin.shopify.com/store/cchairandbeauty/blogs`} target="_blank" rel="noreferrer"
                               style={{ fontSize: 10, color: '#fff', background: '#7c3aed', borderRadius: 4, padding: '2px 8px', textDecoration: 'none', whiteSpace:'nowrap' }}>
                               Edit blog →
                             </a>

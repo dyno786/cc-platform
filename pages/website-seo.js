@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import Shell from '../components/Shell'
 import { T } from '../lib/theme'
 
-const SHOPIFY_ADMIN = 'https://admin.shopify.com/store/cchairnbeauty'
+const SHOPIFY_ADMIN = 'https://admin.shopify.com/store/cchairandbeauty'
 
 const COLLECTIONS = [
   { name:'Relaxers & Texturisers', handle:'relaxers',                  impr:60000, clicks:312, pos:6.8,  ctr:0.5, hasDesc:false, priority:'critical',
@@ -87,7 +87,7 @@ export default function WebsiteSEO() {
     const live = shopifyCollections[col.handle]
     if (live) return live.adminUrl
     // Fallback — direct collections list
-    return 'https://admin.shopify.com/store/cchairnbeauty/collections'
+    return 'https://admin.shopify.com/store/cchairandbeauty/collections'
   }
 
   function startEdit(col) {
