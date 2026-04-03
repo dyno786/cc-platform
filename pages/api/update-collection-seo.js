@@ -2,7 +2,7 @@ export const config = { maxDuration: 60 }
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
-  const { handle, metaTitle, metaDesc } = req.body
+  const { handle, collectionId, metaTitle, metaDesc } = req.body
   if (!handle || !metaTitle) return res.status(400).json({ ok: false, error: 'Missing handle or metaTitle' })
 
   const shop = process.env.SHOPIFY_STORE
@@ -11,22 +11,42 @@ export default async function handler(req, res) {
   const base = `https://${shop}/admin/api/2024-01`
 
   try {
-    // Find collection by handle
-    const r = await fetch(`${base}/collections.json?handle=${handle}&limit=1`, { headers })
-    const d = await r.json()
-    let collection = d.collections?.[0]
+    let collection = null
+    let collType = 'custom_collections'
 
-    // Try custom_collections if not found
-    if (!collection) {
-      const r2 = await fetch(`${base}/custom_collections.json?handle=${handle}&limit=1`, { headers })
-      const d2 = await r2.json()
-      collection = d2.custom_collections?.[0]
+    if (collectionId) {
+      // Try direct lookup by ID — much faster and reliable
+      const r1 = await fetch(`${base}/custom_collections/${collectionId}.json`, { headers })
+      if (r1.ok) {
+        const d1 = await r1.json()
+        collection = d1.custom_collection
+        collType = 'custom_collections'
+      }
+      if (!collection) {
+        const r2 = await fetch(`${base}/smart_collections/${collectionId}.json`, { headers })
+        if (r2.ok) {
+          const d2 = await r2.json()
+          collection = d2.smart_collection
+          collType = 'smart_collections'
+        }
+      }
     }
 
-    if (!collection) return res.status(200).json({ ok: false, error: `Collection not found: ${handle}` })
+    if (!collection) {
+      // Fallback: search by handle
+      const r3 = await fetch(`${base}/custom_collections.json?handle=${handle}&limit=1`, { headers })
+      const d3 = await r3.json()
+      collection = d3.custom_collections?.[0]
+      collType = 'custom_collections'
+    }
+    if (!collection) {
+      const r4 = await fetch(`${base}/smart_collections.json?handle=${handle}&limit=1`, { headers })
+      const d4 = await r4.json()
+      collection = d4.smart_collections?.[0]
+      collType = 'smart_collections'
+    }
 
-    // Determine if smart or custom collection
-    const collType = collection.rules ? 'smart_collections' : 'custom_collections'
+    if (!collection) return res.status(200).json({ ok: false, error: `Collection not found: ${handle} (ID: ${collectionId})` })
 
     // Update SEO fields
     const updateRes = await fetch(`${base}/${collType}/${collection.id}.json`, {
