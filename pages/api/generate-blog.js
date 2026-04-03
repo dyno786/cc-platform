@@ -6,59 +6,90 @@ Shopify store: cchairandbeauty.com with 23,000+ products.
 Discount codes: WIGDEAL15 (15% wigs), COLOUR10 (10% hair dye), EDGE15 (15% edge control), BRAID10 (10% braiding hair), OIL10 (10% hair oils), GROW10 (10% hair growth).
 Tone: friendly, expert, helpful. Never name competitors directly.`
 
+const CAT = {
+  local: 'LOCAL SEO post. Focus on Leeds context — mention branches (Chapeltown LS7, Roundhay LS8, City Centre), local customers, in-store experience. End with CTA to visit nearest branch or shop online.',
+  ads:   'PRODUCT REVIEW post. Keyword converts well in Ads. Write genuine helpful review: what it is, who for, how to use, results, pros/cons, price, where to buy. End with CTA to buy at cchairandbeauty.com with relevant discount code.',
+  org:   'ORGANIC SEO post. Comprehensive helpful guide answering the search query. Include product recommendations, expert tips, practical advice. End with CTA to shop at cchairandbeauty.com.',
+  community: 'COMMUNITY post. About local Leeds community news/events/stories — Chapeltown, Roundhay or city centre. Connect naturally to CC Hair and Beauty as community-rooted business since 1979. End with warm CTA to visit or shop.',
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
+
   const { title, seoTitle, metaDesc, keywords, slug, cat, data } = req.body
 
-  const catContext = {
-    local: 'This is a LOCAL SEO blog post for CC Hair and Beauty Leeds. Focus on local Leeds context — mention specific branches (Chapeltown LS7, Roundhay LS8, City Centre), local customers, in-store experience, click and collect, parking. End with a call to action to visit the nearest branch or shop online at cchairandbeauty.com.',
-    ads: 'This is a PRODUCT REVIEW blog post. This keyword converts extremely well in Google Ads. Write a genuine, helpful product review covering: what it is, who it is for, how to use it, results, pros and cons, price point, and where to buy. End with a call to action to buy at cchairandbeauty.com with the relevant discount code.',
-    org: 'This is an ORGANIC SEO blog post targeting national search volume. Write a comprehensive, helpful guide that genuinely answers the search query. Include product recommendations available at CC Hair and Beauty, tips from experts, and practical advice. End with a call to action to shop at cchairandbeauty.com.',
-    community: 'This is a COMMUNITY blog post for CC Hair and Beauty Leeds. Write about local Leeds community news, events or stories — Chapeltown, Roundhay or Leeds city centre. Connect it naturally to CC Hair and Beauty as a community-rooted local business established since 1979. Mention the relevant branch. End with a warm call to action to visit us in store or shop at cchairandbeauty.com.'
+  // Validate required fields
+  if (!title || !cat) {
+    return res.status(400).json({ ok: false, error: 'Missing title or cat', content: '' })
   }
+
+  const catInstructions = CAT[cat] || CAT.org
 
   const prompt = `${BIZ}
 
 Write a complete, publish-ready blog post for CC Hair and Beauty website.
 
 TITLE: ${title}
-SEO TITLE: ${seoTitle}  
-META DESCRIPTION: ${metaDesc}
-TARGET KEYWORDS: ${keywords.join(', ')}
-DATA/CONTEXT: ${data}
-CATEGORY INSTRUCTION: ${catContext[cat]}
+SEO TITLE: ${seoTitle || title}
+META DESCRIPTION: ${metaDesc || ''}
+TARGET KEYWORDS: ${Array.isArray(keywords) ? keywords.join(', ') : (keywords || title)}
+DATA/CONTEXT: ${data || 'No additional context'}
+CATEGORY: ${catInstructions}
 
-Write the full blog post in HTML format ready to paste into Shopify. Requirements:
+Requirements:
 - 700-900 words
-- Use <h1> for the title
-- Use <h2> for 3-4 subheadings 
-- Use <p> for paragraphs
-- Use <ul><li> for any lists
-- Include the primary keyword naturally in: title, first paragraph, at least 2 subheadings, throughout body, last paragraph
-- Include secondary keywords naturally throughout
-- Mention CC Hair and Beauty by name at least 3 times
+- HTML format ready to paste into Shopify
+- <h1> for title, <h2> for 3-4 subheadings, <p> for paragraphs, <ul><li> for lists
+- Include primary keyword in title, first paragraph, at least 2 subheadings, throughout body
+- Mention CC Hair and Beauty at least 3 times
 - Mention cchairandbeauty.com at least once
-- End with a strong call to action paragraph with the most relevant discount code
-- Write in a friendly, expert, helpful tone
-- Sound like a real person who knows hair and beauty, not AI
-- Do NOT include any markdown, backticks or code fences — pure HTML only
+- End with strong CTA paragraph with relevant discount code
+- Friendly, expert, helpful tone — sound like a real person who knows hair and beauty
+- NO markdown, NO backticks, NO code fences — pure HTML only
 - Start directly with <h1> tag`
 
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2000,
-      messages: [{ role: 'user', content: prompt }]
-    })
-  })
+  try {
+    console.log(`[generate-blog] Generating post: "${title}" cat:${cat}`)
 
-  const d = await r.json()
-  const content = d.content?.[0]?.text || ''
-  res.status(200).json({ ok: true, content })
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    })
+
+    if (!r.ok) {
+      const errText = await r.text()
+      console.error(`[generate-blog] Anthropic API error ${r.status}: ${errText}`)
+      return res.status(200).json({ ok: false, error: `Anthropic API error: ${r.status}`, content: '' })
+    }
+
+    const d = await r.json()
+
+    if (d.error) {
+      console.error(`[generate-blog] Anthropic error:`, JSON.stringify(d.error))
+      return res.status(200).json({ ok: false, error: d.error.message || 'Anthropic error', content: '' })
+    }
+
+    const content = d.content?.[0]?.text || ''
+
+    if (!content) {
+      console.error(`[generate-blog] Empty content. Full response:`, JSON.stringify(d))
+      return res.status(200).json({ ok: false, error: 'Empty response from AI', content: '' })
+    }
+
+    console.log(`[generate-blog] Success — ${content.length} chars generated`)
+    res.status(200).json({ ok: true, content })
+
+  } catch(e) {
+    console.error(`[generate-blog] Exception:`, e.message)
+    res.status(200).json({ ok: false, error: e.message, content: '' })
+  }
 }
