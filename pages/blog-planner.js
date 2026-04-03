@@ -469,25 +469,29 @@ export default function BlogPlanner() {
                             ✨ AI is writing your blog post... this takes about 15 seconds
                           </div>
                         )}
-                        {hasGen && !isGen && (
-                          <div>
-                            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-                              <div style={{fontSize:12,fontWeight:700,color:C.green}}>✅ Blog post ready — copy and paste into Shopify</div>
-                              <div style={{display:'flex',gap:6}}>
-                                <button onClick={()=>generateBlog(post)} style={{padding:'5px 10px',borderRadius:5,border:`1px solid ${C.border}`,background:C.surface2,color:C.text3,fontSize:11,cursor:'pointer'}}>↺ Regenerate</button>
-                                <button onClick={()=>copyBlog(post.slug)} style={{padding:'5px 14px',borderRadius:5,border:'none',background:copied[post.slug]?C.green:C.teal,color:'#000',fontWeight:700,fontSize:12,cursor:'pointer'}}>
-                                  {copied[post.slug]?'✓ Copied!':'📋 Copy Full Post'}
-                                </button>
-                              </div>
-                            </div>
-                            <textarea readOnly value={generated[post.slug]} rows={12}
-                              style={{width:'100%',background:C.surface,border:`1px solid ${C.border}`,borderRadius:7,color:C.text2,fontSize:11,padding:10,resize:'vertical',lineHeight:1.5}}/>
+                        {/* Publish status — shown during and after publish */}
+                        {publishStatus[post.slug] && (
+                          <div style={{padding:'12px 14px',borderRadius:8,marginBottom:12,background:
+                            publishStatus[post.slug].startsWith('✓')?'#dafbe1':
+                            publishStatus[post.slug].startsWith('✗')?'#fff0f0':'#ddf4ff',
+                            border:`1px solid ${publishStatus[post.slug].startsWith('✓')?'#1a7f37':publishStatus[post.slug].startsWith('✗')?'#cf222e':'#0969da'}`,
+                            fontSize:13,fontWeight:600,color:publishStatus[post.slug].startsWith('✓')?'#1a7f37':publishStatus[post.slug].startsWith('✗')?'#cf222e':'#0969da',
+                            display:'flex',alignItems:'center',gap:10}}>
+                            {publishing[post.slug]==='generating' && <span>⟳</span>}
+                            {publishStatus[post.slug]}
+                            {published[post.slug]?.url && (
+                              <a href={published[post.slug].url} target="_blank" rel="noreferrer"
+                                style={{marginLeft:'auto',background:'#1a7f37',color:'#fff',padding:'4px 14px',borderRadius:6,fontSize:12,textDecoration:'none',fontWeight:700}}>
+                                View live post →
+                              </a>
+                            )}
                           </div>
                         )}
-                        {!hasGen && !isGen && (
-                          <button onClick={()=>generateBlog(post)}
-                            style={{width:'100%',padding:'10px',borderRadius:8,border:`2px dashed ${col}`,background:`${col}08`,color:col,fontWeight:700,fontSize:13,cursor:'pointer'}}>
-                            ✨ Click to Generate Full Blog Post (700-900 words, formatted, ready to paste into Shopify)
+                        {/* Click to publish prompt — only show if not already publishing or published */}
+                        {!publishStatus[post.slug] && !published[post.slug]?.url && (
+                          <button onClick={()=>generateAndPublish(post)}
+                            style={{width:'100%',padding:'12px',borderRadius:8,border:`2px dashed ${col}`,background:`${col}08`,color:col,fontWeight:700,fontSize:13,cursor:'pointer'}}>
+                            🚀 Click to Generate & Publish to Shopify (writes blog, fetches image, publishes live)
                           </button>
                         )}
                         {/* IMAGE SECTION — shows after blog is generated */}
