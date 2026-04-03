@@ -37,6 +37,37 @@ const REVIEW_TEMPLATES = {
   1: `We're very sorry to hear about your experience and sincerely apologise that we let you down. This is not the standard we hold ourselves to. Please contact us directly at info@cchairandbeauty.com or call 0113 318 3830 so we can resolve this for you personally. — CC Hair and Beauty`,
 }
 
+
+function LiveRating({ branch, liveBranches, loadingGBP }) {
+  if (loadingGBP) return <span style={{ fontSize: 10, color: '#656d76' }}>Loading...</span>
+  const live = liveBranches?.find(lb => lb.name === branch.name)
+  const rating = live?.rating || branch.rating
+  const reviews = live?.reviewCount || branch.reviews
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <span style={{ fontSize: 14 }}>⭐</span>
+      <span style={{ fontSize: 13, fontWeight: 700, color: rating >= 4 ? '#1f883d' : rating >= 3.5 ? '#bf8700' : '#cf222e' }}>{rating}</span>
+      <span style={{ fontSize: 10, color: '#656d76' }}>({reviews})</span>
+      {live?.rating && <span style={{ fontSize: 9, color: '#1f883d', background: '#dafbe1', borderRadius: 3, padding: '1px 4px', fontWeight: 600 }}>LIVE</span>}
+    </div>
+  )
+}
+
+function BranchStatus({ branch, liveBranches }) {
+  const live = liveBranches?.find(lb => lb.name === branch.name)
+  if (!live) return null
+  return (
+    <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+      {live.isOpen !== undefined && (
+        <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 7px', borderRadius: 20, background: live.isOpen ? '#dafbe1' : '#fff0f0', color: live.isOpen ? '#1f883d' : '#cf222e' }}>
+          {live.isOpen ? '● Open now' : '● Closed now'}
+        </span>
+      )}
+      {live.phone && <span style={{ fontSize: 10, color: '#656d76' }}>{live.phone}</span>}
+    </div>
+  )
+}
+
 export default function LocalSEO() {
   const [tab, setTab] = useState('Branches')
   const [liveBranches, setLiveBranches] = useState(null)
@@ -95,39 +126,10 @@ export default function LocalSEO() {
             <div key={i} style={{ background: T.surface, border: `0.5px solid ${b.color === T.green ? T.greenBorder : b.color === T.amber ? T.amberBorder : T.redBorder}`, borderRadius: 8, padding: '14px 16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{b.name}</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  {loadingGBP ? (
-                    <span style={{ fontSize: 10, color: T.textMuted }}>Loading...</span>
-                  ) : (() => {
-                    const live = liveBranches?.find(lb => lb.name === b.name)
-                    const rating = live?.rating || b.rating
-                    const reviews = live?.reviewCount || b.reviews
-                    const isLive = !!live?.rating
-                    return (
-                      <>
-                        <span style={{ fontSize: 14 }}>⭐</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: rating >= 4 ? T.green : rating >= 3.5 ? T.amber : T.red }}>{rating}</span>
-                        <span style={{ fontSize: 10, color: T.textMuted }}>({reviews})</span>
-                        {isLive && <span style={{ fontSize: 9, color: T.green, background: T.greenBg, borderRadius: 3, padding: '1px 4px' }}>LIVE</span>}
-                      </>
-                    )
-                  })()}
-                </div>
+                <LiveRating branch={b} liveBranches={liveBranches} loadingGBP={loadingGBP} />
               </div>
               <div style={{ fontSize: 10, color: T.textMuted, marginBottom: 6 }}>{b.addr}</div>
-              {(() => {
-                const live = liveBranches?.find(lb => lb.name === b.name)
-                return live ? (
-                  <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
-                    {live.isOpen !== undefined && (
-                      <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 7px', borderRadius: 20, background: live.isOpen ? T.greenBg : T.redBg, color: live.isOpen ? T.green : T.red }}>
-                        {live.isOpen ? '● Open now' : '● Closed now'}
-                      </span>
-                    )}
-                    {live.phone && <span style={{ fontSize: 10, color: T.textMuted }}>{live.phone}</span>}
-                  </div>
-                ) : null
-              })()}
+              <BranchStatus branch={b} liveBranches={liveBranches} />
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 6 }}>
                 {[{ l: 'Views', v: b.views.toLocaleString() }, { l: 'Calls', v: b.calls }, { l: 'Directions', v: b.directions }, { l: 'Website clicks', v: b.website }].map((s, x) => (
                   <div key={x} style={{ background: T.bg, borderRadius: 6, padding: '5px 8px' }}>
@@ -206,7 +208,7 @@ export default function LocalSEO() {
         {tab === 'Reviews' && (
           <div>
             {loadingGBP && <div style={{padding:20,textAlign:'center',color:T.textMuted,fontSize:12}}>Loading live reviews from Google...</div>}
-            {liveBranches && liveBranches.flatMap(b => (b.recentReviews||[]).map(r=>({...r,branch:b.name,reviewLink:b.reviewLink,mapsLink:b.mapsLink}))).sort((a,b)=>a.rating-b.rating).map((r, i) => (
+            {liveBranches && liveBranches.flatMap(b => (b.recentReviews||[]).map(r=>({...r,branch:b.name,reviewLink:b.reviewLink,mapsLink:b.mapsLink}))).sort((x,y)=>x.rating-y.rating).map((r, i) => (
               <div key={i} style={{ background: T.surface, border: `0.5px solid ${r.rating <= 2 ? T.redBorder : T.border}`, borderRadius: 8, padding: '12px 14px', marginBottom: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
                   <div style={{ width: 32, height: 32, borderRadius: '50%', background: T.bg, border: `0.5px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: T.text, flexShrink: 0 }}>{(r.author||'?').charAt(0)}</div>
