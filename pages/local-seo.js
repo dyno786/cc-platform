@@ -9,7 +9,8 @@ const BRANCHES = [
   { id:'city',       name:'City Centre',addr:'New York Street, Leeds City Centre LS2',  rating:3.5, reviews:40,  views:640,  calls:44,  directions:71,  website:89,  ph:'',              posts:0, color:T.red    },
 ]
 
-const REVIEWS = [
+// Reviews now pulled live from Google Places API — see liveBranches state
+const STATIC_REVIEWS = [
   { branch:'Chapeltown', author:'Sarah M', rating:5, text:'Amazing selection of braiding hair. Staff were so helpful and knowledgeable. Will definitely be back!', date:'2 days ago', replied:false },
   { branch:'Roundhay',   author:'Aisha K', rating:4, text:'Good range of products. Prices are reasonable. Only downside was it was quite busy when I visited.', date:'4 days ago', replied:true  },
   { branch:'Chapeltown', author:'James T', rating:2, text:'Waited 20 minutes to be served. Staff seemed uninterested. Products are good but service needs work.', date:'5 days ago', replied:false },
@@ -113,7 +114,20 @@ export default function LocalSEO() {
                   })()}
                 </div>
               </div>
-              <div style={{ fontSize: 10, color: T.textMuted, marginBottom: 10 }}>{b.addr}</div>
+              <div style={{ fontSize: 10, color: T.textMuted, marginBottom: 6 }}>{b.addr}</div>
+              {(() => {
+                const live = liveBranches?.find(lb => lb.name === b.name)
+                return live ? (
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+                    {live.isOpen !== undefined && (
+                      <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 7px', borderRadius: 20, background: live.isOpen ? T.greenBg : T.redBg, color: live.isOpen ? T.green : T.red }}>
+                        {live.isOpen ? '● Open now' : '● Closed now'}
+                      </span>
+                    )}
+                    {live.phone && <span style={{ fontSize: 10, color: T.textMuted }}>{live.phone}</span>}
+                  </div>
+                ) : null
+              })()}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 6 }}>
                 {[{ l: 'Views', v: b.views.toLocaleString() }, { l: 'Calls', v: b.calls }, { l: 'Directions', v: b.directions }, { l: 'Website clicks', v: b.website }].map((s, x) => (
                   <div key={x} style={{ background: T.bg, borderRadius: 6, padding: '5px 8px' }}>
@@ -191,29 +205,33 @@ export default function LocalSEO() {
         {/* REVIEWS */}
         {tab === 'Reviews' && (
           <div>
-            {REVIEWS.map((r, i) => (
+            {loadingGBP && <div style={{padding:20,textAlign:'center',color:T.textMuted,fontSize:12}}>Loading live reviews from Google...</div>}
+            {liveBranches && liveBranches.flatMap(b => (b.recentReviews||[]).map(r=>({...r,branch:b.name,reviewLink:b.reviewLink,mapsLink:b.mapsLink}))).sort((a,b)=>a.rating-b.rating).map((r, i) => (
               <div key={i} style={{ background: T.surface, border: `0.5px solid ${r.rating <= 2 ? T.redBorder : T.border}`, borderRadius: 8, padding: '12px 14px', marginBottom: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: T.bg, border: `0.5px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: T.text, flexShrink: 0 }}>{r.author.charAt(0)}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
+                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: T.bg, border: `0.5px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: T.text, flexShrink: 0 }}>{(r.author||'?').charAt(0)}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: T.text }}>{r.author}</div>
-                    <div style={{ fontSize: 10, color: T.textMuted }}>{r.branch} · {r.date}</div>
+                    <div style={{ fontSize: 10, color: T.textMuted }}>{r.branch} · {r.time}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 2 }}>
                     {[1, 2, 3, 4, 5].map(n => <span key={n} style={{ fontSize: 14, color: n <= r.rating ? '#f59e0b' : T.borderLight }}>★</span>)}
                   </div>
-                  {!r.replied ? (
-                    <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: T.redBg, color: T.red }}>Not replied</span>
-                  ) : (
-                    <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: T.greenBg, color: T.green }}>Replied ✓</span>
+                  <span style={{ fontSize: 9, color: T.green, background: T.greenBg, borderRadius: 3, padding: '1px 5px', fontWeight: 600 }}>LIVE</span>
+                  {r.rating <= 3 && (
+                    <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: T.redBg, color: T.red }}>Reply needed</span>
                   )}
                 </div>
-                <div style={{ fontSize: 12, color: T.textMuted, lineHeight: 1.5, marginBottom: !r.replied ? 8 : 0 }}>{r.text}</div>
-                {!r.replied && (
+                <div style={{ fontSize: 12, color: T.textMuted, lineHeight: 1.5, marginBottom: 8 }}>{r.text}</div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   <button onClick={() => setReplyRating(r.rating === replyRating ? null : r.rating)} style={{ fontSize: 11, color: T.blue, background: T.blueBg, border: `0.5px solid ${T.blueBorder}`, borderRadius: 6, padding: '4px 12px', cursor: 'pointer' }}>
                     {replyRating === r.rating ? 'Hide template' : 'Get reply template'}
                   </button>
-                )}
+                  <a href={r.reviewLink} target="_blank" rel="noreferrer"
+                    style={{ fontSize: 11, color: '#fff', background: T.green, borderRadius: 6, padding: '4px 12px', textDecoration: 'none', fontWeight: 500 }}>
+                    Reply on Google Maps →
+                  </a>
+                </div>
               </div>
             ))}
           </div>
