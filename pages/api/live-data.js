@@ -134,28 +134,44 @@ export default async function handler(req, res) {
 
     } else if (source === 'gbp') {
       const key = process.env.GOOGLE_PLACES_KEY
-      // Search for each branch
-      const branches = [
-        { name: 'Chapeltown', query: 'CC Hair and Beauty Chapeltown Leeds' },
-        { name: 'Roundhay', query: 'CC Hair and Beauty Roundhay Leeds' },
-        { name: 'City Centre', query: 'CC Hair and Beauty New York Street Leeds' },
-      ]
+      // Place IDs confirmed via API — do not change these
+      const PLACE_IDS = {
+        Chapeltown: 'ChIJ_5jc6wlceUgRo_t7u41q3Dw',
+        Roundhay:   'ChIJSwvcAYlbeUgRT7wTEeJy25A',
+        'City Centre': 'ChIJqTbKkhlceUgRcbg1e3Z7Ezo',
+      }
+      const FIELDS = 'name,rating,user_ratings_total,formatted_address,opening_hours,reviews,url,website,formatted_phone_number'
 
-      const results = await Promise.all(branches.map(async (b) => {
-        const searchRes = await fetch(
-          `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(b.query)}&inputtype=textquery&fields=place_id,name,rating,user_ratings_total,formatted_address&key=${key}`
-        )
-        const data = await searchRes.json()
-        const place = data.candidates?.[0]
-        return {
-          name: b.name,
-          placeId: place?.place_id,
-          rating: place?.rating,
-          reviewCount: place?.user_ratings_total,
-          address: place?.formatted_address,
-          reviewLink: place?.place_id ? `https://search.google.com/local/writereview?placeid=${place.place_id}` : null,
-        }
-      }))
+      const results = await Promise.all(
+        Object.entries(PLACE_IDS).map(async ([name, placeId]) => {
+          const r = await fetch(
+            `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=${FIELDS}&key=${key}&language=en`
+          )
+          const d = await r.json()
+          const p = d.result || {}
+          return {
+            name,
+            placeId,
+            rating: p.rating,
+            reviewCount: p.user_ratings_total,
+            address: p.formatted_address,
+            phone: p.formatted_phone_number,
+            website: p.website,
+            mapsUrl: p.url,
+            isOpen: p.opening_hours?.open_now,
+            hours: p.opening_hours?.weekday_text || [],
+            reviewLink: `https://search.google.com/local/writereview?placeid=${placeId}`,
+            mapsLink: `https://www.google.com/maps/place/?q=place_id:${placeId}`,
+            recentReviews: (p.reviews || []).slice(0, 5).map(r => ({
+              author: r.author_name,
+              rating: r.rating,
+              text: r.text,
+              time: r.relative_time_description,
+              replied: false,
+            })),
+          }
+        })
+      )
 
       res.status(200).json({ ok: true, branches: results })
 
