@@ -4,6 +4,9 @@ import { PINS, ROLES } from '../lib/theme'
 const AuthContext = createContext(null)
 export function useAuth() { return useContext(AuthContext) }
 
+// Pages that don't need PIN — add path here to exclude
+const PUBLIC_PATHS = ['/debug']
+
 export function AuthProvider({ children }) {
   const [role, setRole] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -37,6 +40,10 @@ export function AuthProvider({ children }) {
   }
 
   if (loading) return null
+  // Allow debug page without PIN
+  if (typeof window !== 'undefined' && PUBLIC_PATHS.includes(window.location.pathname)) {
+    return <AuthContext.Provider value={{ role: 'manager', logout, isManager: true }}>{children}</AuthContext.Provider>
+  }
   if (!role) return <LoginScreen login={login} />
   return (
     <AuthContext.Provider value={{ role, logout, isManager: role === ROLES.manager, isStaff: role === ROLES.staff }}>
