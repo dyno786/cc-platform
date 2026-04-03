@@ -41,11 +41,11 @@ export default function Nav() {
       display:'flex',flexDirection:'column',flexShrink:0,
       position:'sticky',top:0,height:'100vh',overflowY:'auto',
     }}>
-      {/* Logo */}
-      <div style={{padding:'13px 16px',borderBottom:`0.5px solid ${T.border}`,display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
+      {/* Logo — click to go home */}
+      <Link href="/" style={{padding:'13px 16px',borderBottom:`0.5px solid ${T.border}`,display:'flex',alignItems:'center',gap:8,flexShrink:0,textDecoration:'none',cursor:'pointer'}}>
         <div style={{width:27,height:27,borderRadius:7,background:T.green,display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'#fff',letterSpacing:'-0.3px'}}>CC</div>
         <span style={{fontSize:13,fontWeight:600,color:T.text}}>CC Intelligence</span>
-      </div>
+      </Link>
 
       {/* Role */}
       <div style={{margin:'10px 12px 2px',padding:'5px 10px',borderRadius:6,fontSize:11,fontWeight:500,display:'flex',alignItems:'center',gap:6,
