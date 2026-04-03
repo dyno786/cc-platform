@@ -1,20 +1,34 @@
 export const config = { maxDuration: 60 }
 
 export default async function handler(req, res) {
-  const store   = process.env.SHOPIFY_STORE
-  const token   = process.env.SHOPIFY_TOKEN
-  const headers = { 'X-Shopify-Access-Token': token }
-  const { type = 'products', limit = 30 } = req.query
+  if (req.method !== 'GET') return res.status(405).end()
+
+  const { q } = req.query
+  if (!q) return res.status(400).json({ ok: false, error: 'Missing search query' })
+
+  const shop = process.env.SHOPIFY_STORE
+  const token = process.env.SHOPIFY_TOKEN
+  const headers = { 'X-Shopify-Access-Token': token, 'Content-Type': 'application/json' }
 
   try {
-    const url = type === 'collections'
-      ? `https://${store}/admin/api/2024-01/custom_collections.json?limit=${limit}&fields=id,title,handle,published_at,updated_at`
-      : `https://${store}/admin/api/2024-01/products.json?limit=${limit}&fields=id,title,handle,product_type,tags,images,published_at,status&order=created_at+desc`
+    // Search products by title
+    const r = await fetch(
+      `https://${shop}/admin/api/2024-01/products.json?title=${encodeURIComponent(q)}&limit=6&fields=id,title,handle,images,variants`,
+      { headers }
+    )
+    const data = await r.json()
+    const products = (data.products || []).map(p => ({
+      id: p.id,
+      title: p.title,
+      handle: p.handle,
+      url: `https://cchairandbeauty.com/products/${p.handle}`,
+      image: p.images?.[0]?.src || null,
+      imageAlt: p.images?.[0]?.alt || p.title,
+      price: p.variants?.[0]?.price || null,
+    }))
 
-    const r = await fetch(url, { headers })
-    const d = await r.json()
-    res.status(200).json({ ok: true, data: d.products || d.custom_collections || [] })
+    res.status(200).json({ ok: true, products })
   } catch(e) {
-    res.status(500).json({ ok: false, error: e.message })
+    res.status(200).json({ ok: false, error: e.message, products: [] })
   }
 }
