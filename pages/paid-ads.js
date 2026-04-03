@@ -74,7 +74,7 @@ export default function PaidAds() {
   const [copied, setCopied] = useState(null)
 
   async function runAnalysis() {
-    setLoading(true); setError(null); setAnalysis(null)
+    setLoading(true); setError(null); setAnalysis(null); setActiveTab('overview')
     setLoadingStep('Reading Google Sheets...')
     try {
       // Step 1 — read all sheets
@@ -192,16 +192,23 @@ export default function PaidAds() {
             {/* ── OVERVIEW ── */}
             {activeTab==='overview' && (
               <div>
-                <div style={{ background:`${C.amber}08`, border:`1px solid ${C.amber}20`, borderRadius:11, padding:14, marginBottom:16, fontSize:13, color:C.amber, lineHeight:1.7 }}>
-                  💡 {a.summary}
-                </div>
+                {a.summary && a.summary.trim() !== '' && (
+                  <div style={{ background:`${C.amber}08`, border:`1px solid ${C.amber}20`, borderRadius:11, padding:14, marginBottom:16, fontSize:13, color:C.amber, lineHeight:1.7 }}>
+                    💡 {a.summary}
+                  </div>
+                )}
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:10, marginBottom:16 }}>
-                  <Stat label="Total Spend" value={a.totalSpend} color={C.red}/>
-                  <Stat label="Total Revenue" value={a.totalRevenue} color={C.green}/>
-                  <Stat label="Overall ROAS" value={a.overallROAS} color={C.blue}/>
-                  <Stat label="Overall CPA" value={a.overallCPA} color={C.amber}/>
-                  <Stat label="Conversions" value={a.totalConversions} color={C.teal}/>
+                  <Stat label="Total Spend" value={a.totalSpend||'—'} color={C.red}/>
+                  <Stat label="Total Revenue" value={a.totalRevenue||'—'} color={C.green}/>
+                  <Stat label="Overall ROAS" value={a.overallROAS||'—'} color={C.blue}/>
+                  <Stat label="Overall CPA" value={a.overallCPA||'—'} color={C.amber}/>
+                  <Stat label="Conversions" value={a.totalConversions||'—'} color={C.teal}/>
                 </div>
+                {(!a.summary || a.summary.trim() === '') && (
+                  <div style={{background:`${C.amber}10`,border:`1px solid ${C.amber}30`,borderRadius:10,padding:12,marginBottom:14,fontSize:13,color:C.amber}}>
+                    ⚠️ Summary not generated — the AI analysis may have timed out on the first run. Click <strong>🔄 Run Full Analysis</strong> again to get fresh results.
+                  </div>
+                )}
                 {a.topUrgentActions?.length > 0 && (
                   <Section title="Top urgent actions — do these today" icon="🚨" color={C.red}>
                     {a.topUrgentActions.map((ac,i) => (
