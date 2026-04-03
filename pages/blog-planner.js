@@ -159,12 +159,14 @@ export default function BlogPlanner() {
         body: JSON.stringify({ title:post.title, seoTitle:post.seoTitle, metaDesc:post.metaDesc, keywords:post.keywords, slug:post.slug, cat:post.cat, data:post.data })
       })
       const d = await r.json()
-      const blogContent = d.content || ''
-      if (!blogContent || blogContent.trim() === '') {
-        alert('Generation failed — please try again')
+      if (!d.ok || !d.content || d.content.trim() === '') {
+        const errMsg = d.error || 'Empty response — please try again'
+        console.error('[blog-planner] Generation failed:', errMsg)
+        alert('Generation failed: ' + errMsg)
         setGenerating(g => { const u = {...g}; delete u[post.slug]; return u })
         return
       }
+      const blogContent = d.content
       setGenerated(prev => {
         const u = { ...prev, [post.slug]: blogContent }
         try { localStorage.setItem('cc_blog_gen', JSON.stringify(u)) } catch(e) {}
