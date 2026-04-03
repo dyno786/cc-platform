@@ -9,7 +9,7 @@ const BLOG_HANDLES = {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { title, seoTitle, metaDesc, slug, content, imageDataUrl, imageAlt, imageFilename, cat, keywords } = req.body
+  const { title, seoTitle, metaDesc, slug, content, imageUrl, imageAlt, imageFilename, cat, keywords } = req.body
 
   const shop = process.env.SHOPIFY_STORE
   const token = process.env.SHOPIFY_TOKEN
@@ -31,27 +31,9 @@ export default async function handler(req, res) {
 
     console.log(`[publish] Using blog: ${blog.title} (${blog.handle}) id:${blog.id}`)
 
-    // Step 2 — upload image to Shopify Files if we have one
-    let featuredImageUrl = null
-    if (imageDataUrl && imageDataUrl.startsWith('data:')) {
-      const base64Data = imageDataUrl.split(',')[1]
-      const mimeType = imageDataUrl.split(';')[0].split(':')[1] || 'image/png'
-
-      const uploadRes = await fetch(`${base}/files.json`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          file: {
-            attachment: base64Data,
-            content_type: mimeType,
-            filename: imageFilename || slug + '.png',
-          }
-        })
-      })
-      const uploadData = await uploadRes.json()
-      featuredImageUrl = uploadData.file?.url || null
-      console.log(`[publish] Image upload: ${featuredImageUrl ? 'OK' : 'failed'}`)
-    }
+    // Step 2 — use image URL directly (Shopify CDN or any public URL)
+    let featuredImageUrl = imageUrl || null
+    console.log(`[publish] Image URL: ${featuredImageUrl ? 'provided' : 'none'}`)
 
     // Step 3 — build article body with image embedded after h1
     let body = content || ''
