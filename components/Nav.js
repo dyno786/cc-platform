@@ -25,6 +25,10 @@ const NAV = [
     { id:'/content-studio', label:'Content studio', icon:'✍️' },
     { id:'/performance',    label:'Performance',    icon:'📈', managerOnly:true },
   ]},
+,
+  { section:'System', items:[
+    { id:'/debug', label:'Debug & API Status', icon:'🔧' },
+  ]},
 ]
 
 export default function Nav() {
