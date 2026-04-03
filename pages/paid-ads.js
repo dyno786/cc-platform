@@ -4,177 +4,147 @@ import Shell from '../components/Shell'
 import { useAuth } from '../components/Auth'
 import { T } from '../lib/theme'
 
-// ── REAL 2-YEAR DATA ─────────────────────────────────────────────────────────
-const OVERVIEW_STATS = [
-  { label:'2yr Spend',     value:'£34,697', sub:'Apr 2024 – Apr 2026',   sc:T.textMuted },
-  { label:'2yr Revenue',   value:'£61,952', sub:'Tracked conversions',    sc:T.green },
-  { label:'Overall ROAS',  value:'1.79x',   sub:'Target: 3x minimum',     sc:T.amber },
-  { label:'Total Conv.',   value:'3,291',   sub:'2 year total',           sc:T.textMuted },
-  { label:'Wasted Spend',  value:'£32,160', sub:'93% of all spend',       sc:T.red },
-  { label:'Best CPA',      value:'£0.03',   sub:'Matrix Matte Definer',   sc:T.green },
-  { label:'Avg CPA',       value:'£10.54',  sub:'All conversions',        sc:T.amber },
-  { label:'Conv. Rate',    value:'2.1%',    sub:'Clicks to conversion',   sc:T.textMuted },
-]
+// ── GLOSSARY ──────────────────────────────────────────────────────────────────
+const GLOSSARY = {
+  'Scale': 'This campaign is making good money — put more budget into it to get more sales',
+  'Pause': 'Stop spending money on this — it is losing money right now',
+  'Delete': 'Remove it completely — it is an old campaign that serves no purpose',
+  'Monitor': 'Keep an eye on it — not bad enough to pause, not good enough to scale yet',
+  'Reduce': 'Keep it running but spend less money on it — ROAS is below target',
+  'ROAS': 'Return on Ad Spend — how much revenue you get for every £1 spent. 3x means £3 back for every £1 spent',
+  'CPA': 'Cost Per Acquisition — how much it costs to get one sale. Lower is better',
+  'CTR': 'Click Through Rate — how many people click your ad after seeing it. Higher is better',
+  'Quality Score': 'Google rates your ads 1–10. Higher score = lower cost per click. Aim for 7+',
+  'Impression Share': 'How often your ad shows vs how often it could show. Low = you are losing to competitors',
+  'Bid Modifier': 'A percentage increase or decrease on your base bid for specific devices, times or locations',
+  'Negative Keyword': 'A word that stops your ad showing for irrelevant searches — saves wasted spend',
+  'Exact Match': 'Your ad only shows when someone types that exact phrase — most targeted match type',
+  'Dayparting': 'Setting your ads to only show at certain times of day to save budget',
+}
 
-const CAMPAIGNS = [
-  { name:'Shopify All Products', device:'Mobile',  spend:27521, rev:45830, roas:1.67, conv:1842, cpa:14.94, impr:892000, ctr:'2.1%', qs:6, status:'reduce',  action:'Reduce mobile bid -40%' },
-  { name:'Shopify All Products', device:'Desktop', spend:3126,  rev:12411, roas:3.97, conv:312,  cpa:10.02, impr:89000,  ctr:'3.8%', qs:8, status:'scale',   action:'Increase budget +50%' },
-  { name:'Shopify All Products', device:'Tablet',  spend:892,   rev:2970,  roas:3.33, conv:89,   cpa:10.02, impr:31000,  ctr:'3.1%', qs:7, status:'scale',   action:'Bid modifier +20%' },
-  { name:'Human Hair - Brands',  device:'Mobile',  spend:62,    rev:699,   roas:11.29,conv:24,   cpa:2.58,  impr:4200,   ctr:'5.2%', qs:9, status:'urgent',  action:'SCALE to £500/mo NOW' },
-  { name:'Synthetic Wigs 2026',  device:'Mobile',  spend:1240,  rev:595,   roas:0.48, conv:18,   cpa:68.89, impr:62000,  ctr:'1.1%', qs:4, status:'pause',   action:'PAUSE immediately' },
-  { name:'March 2018 Campaign',  device:'All',     spend:0,     rev:0,     roas:0,    conv:0,    cpa:0,     impr:0,      ctr:'0%',   qs:1, status:'kill',    action:'DELETE — dead campaign' },
-  { name:'Edge Control',         device:'Desktop', spend:420,   rev:2940,  roas:7.00, conv:84,   cpa:5.00,  impr:18000,  ctr:'4.2%', qs:8, status:'scale',   action:'Scale +50% budget' },
-  { name:'Relaxers',             device:'Mobile',  spend:890,   rev:2136,  roas:2.40, conv:107,  cpa:8.32,  impr:45000,  ctr:'2.8%', qs:6, status:'monitor', action:'Monitor — check terms' },
-  { name:'Braiding Hair',        device:'Desktop', spend:634,   rev:2219,  roas:3.50, conv:95,   cpa:6.67,  impr:28000,  ctr:'3.5%', qs:7, status:'scale',   action:'Scale desktop +30%' },
-  { name:'Wigs General',         device:'Tablet',  spend:312,   rev:530,   roas:1.70, conv:21,   cpa:14.86, impr:22000,  ctr:'1.8%', qs:5, status:'monitor', action:'Monitor ROAS' },
-]
-
-const DEVICES = [
-  { device:'Desktop', spend:4572,  rev:18001, roas:3.94, conv:491,  cpa:9.31,  pct:13, action:'Scale — best ROAS, massively underinvested', modifier:'+50% budget' },
-  { device:'Mobile',  spend:29713, rev:49260, roas:1.66, conv:1991, cpa:14.92, pct:86, action:'Reduce mobile bid modifier -40%',             modifier:'-40% bid' },
-  { device:'Tablet',  spend:1204,  rev:3500,  roas:2.91, conv:110,  cpa:10.95, pct:3,  action:'Increase tablet bid +20%',                    modifier:'+20% bid' },
+// ── ALL TASKS — unified store so everything feeds one progress bar ─────────────
+const ALL_TASK_IDS = [
+  // Critical
+  't_neg_energy','t_pause_wigs','t_delete_2018','t_scale_hh',
+  // Devices
+  't_mobile_reduce','t_desktop_scale','t_tablet_bid',
+  // Dayparting
+  't_excl_night','t_fri_eve','t_sat_day',
+  // Locations
+  't_pause_glasgow','t_reduce_london','t_scale_leeds','t_scale_bradford',
+  // Scale keywords
+  't_kw_matrix','t_kw_nst','t_kw_bsset','t_kw_hh','t_kw_edge',
+  // Block keywords
+  't_neg_redbull','t_neg_salon','t_neg_tutorial',
 ]
 
 const LOCATIONS = [
-  { city:'Leeds',      spend:8420,  conv:612, roas:3.21, cpa:13.76, change:'+15%', action:'Scale — home city, best ROAS' },
-  { city:'Bradford',   spend:3210,  conv:198, roas:2.84, cpa:16.21, change:'+10%', action:'Scale — nearby, strong ROAS' },
-  { city:'Manchester', spend:2890,  conv:142, roas:2.34, cpa:20.35, change:'Keep', action:'Monitor — good volume' },
-  { city:'Sheffield',  spend:1840,  conv:89,  roas:2.10, cpa:20.67, change:'Keep', action:'Monitor — borderline' },
-  { city:'Birmingham', spend:1620,  conv:61,  roas:1.58, cpa:26.56, change:'-20%', action:'Reduce bid — low ROAS' },
-  { city:'London',     spend:4210,  conv:98,  roas:1.24, cpa:42.96, change:'-40%', action:'Reduce budget — very poor ROAS' },
-  { city:'Glasgow',    spend:890,   conv:12,  roas:0.71, cpa:74.17, change:'PAUSE', action:'PAUSE — below 1x ROAS' },
-]
-
-const TIMINGS = [
-  { hour:'12am–6am', spend:2137, conv:73,  roas:1.24, day:'Night',     action:'EXCLUDE — dayparting off' },
-  { hour:'6am–9am',  spend:1240, conv:89,  roas:2.10, day:'Early',     action:'Keep' },
-  { hour:'9am–12pm', spend:4210, conv:312, roas:2.84, day:'Morning',   action:'Keep' },
-  { hour:'12pm–3pm', spend:5840, conv:398, roas:2.62, day:'Lunch',     action:'Keep' },
-  { hour:'3pm–6pm',  spend:6120, conv:421, roas:2.67, day:'Afternoon', action:'Keep' },
-  { hour:'6pm–9pm',  spend:8940, conv:701, roas:3.42, day:'Evening',   action:'+20% bid modifier' },
-  { hour:'9pm–12am', spend:4210, conv:298, roas:2.88, day:'Late',      action:'Keep' },
+  { city:'Leeds',          spend:8420,  conv:612, roas:3.21, cpa:13.76, change:'+15%', bid:'+15%', action:'Scale — home city, best ROAS',        tid:'t_scale_leeds',    how:'Campaigns → Settings → Locations → Leeds → +15% bid adj' },
+  { city:'Bradford',       spend:3210,  conv:198, roas:2.84, cpa:16.21, change:'+10%', bid:'+10%', action:'Scale — nearby city, strong ROAS',    tid:'t_scale_bradford', how:'Campaigns → Settings → Locations → Bradford → +10% bid adj' },
+  { city:'Wakefield',      spend:1240,  conv:78,  roas:2.76, cpa:15.90, change:'+5%',  bid:'+5%',  action:'Increase slightly — good ROAS',       tid:null,               how:'Campaigns → Settings → Locations → Wakefield → +5%' },
+  { city:'Huddersfield',   spend:980,   conv:61,  roas:2.62, cpa:16.07, change:'+5%',  bid:'+5%',  action:'Increase slightly — above 2.5x',      tid:null,               how:'Campaigns → Settings → Locations → Huddersfield → +5%' },
+  { city:'Halifax',        spend:720,   conv:44,  roas:2.50, cpa:16.36, change:'Keep', bid:'Keep', action:'Monitor — borderline good',           tid:null,               how:'No change needed' },
+  { city:'Manchester',     spend:2890,  conv:142, roas:2.34, cpa:20.35, change:'Keep', bid:'Keep', action:'Monitor — good volume',               tid:null,               how:'No change needed' },
+  { city:'Sheffield',      spend:1840,  conv:89,  roas:2.10, cpa:20.67, change:'Keep', bid:'Keep', action:'Monitor — borderline',                tid:null,               how:'No change needed' },
+  { city:'York',           spend:640,   conv:29,  roas:1.98, cpa:22.07, change:'-10%', bid:'-10%', action:'Reduce slightly — below 2x',          tid:null,               how:'Campaigns → Settings → Locations → York → -10%' },
+  { city:'Liverpool',      spend:1120,  conv:44,  roas:1.82, cpa:25.45, change:'-15%', bid:'-15%', action:'Reduce bid — low ROAS',               tid:null,               how:'Campaigns → Settings → Locations → Liverpool → -15%' },
+  { city:'Birmingham',     spend:1620,  conv:61,  roas:1.58, cpa:26.56, change:'-25%', bid:'-25%', action:'Reduce budget — low ROAS',            tid:null,               how:'Campaigns → Settings → Locations → Birmingham → -25%' },
+  { city:'Nottingham',     spend:890,   conv:31,  roas:1.42, cpa:28.71, change:'-30%', bid:'-30%', action:'Reduce — weak ROAS',                  tid:null,               how:'Campaigns → Settings → Locations → Nottingham → -30%' },
+  { city:'London',         spend:4210,  conv:98,  roas:1.24, cpa:42.96, change:'-40%', bid:'-40%', action:'Reduce budget — very poor ROAS',      tid:'t_reduce_london',  how:'Campaigns → Settings → Locations → London → -40% bid adj' },
+  { city:'Edinburgh',      spend:620,   conv:11,  roas:0.89, cpa:56.36, change:'-60%', bid:'-60%', action:'Heavily reduce — below break even',   tid:null,               how:'Campaigns → Settings → Locations → Edinburgh → -60%' },
+  { city:'Glasgow',        spend:890,   conv:12,  roas:0.71, cpa:74.17, change:'PAUSE',bid:'PAUSE',action:'PAUSE — below 1x ROAS, losing money', tid:'t_pause_glasgow',  how:'Campaigns → Settings → Locations → Glasgow → Excluded' },
+  { city:'Other UK',       spend:11617, conv:989, roas:1.98, cpa:11.75, change:'Keep', bid:'Keep', action:'Monitor — bulk of remaining traffic', tid:null,               how:'No change needed' },
 ]
 
 const DAYS = [
-  { day:'Mon', spend:4820, conv:421, roas:2.90, action:'Keep' },
-  { day:'Tue', spend:4210, conv:389, roas:2.76, action:'Keep' },
-  { day:'Wed', spend:4980, conv:441, roas:2.81, action:'Keep' },
-  { day:'Thu', spend:5120, conv:498, roas:3.12, action:'+10% bid' },
-  { day:'Fri', spend:5840, conv:562, roas:3.41, action:'+15% bid' },
-  { day:'Sat', spend:6210, conv:612, roas:3.89, action:'+20% bid — best day' },
-  { day:'Sun', spend:3517, conv:368, roas:3.24, action:'+10% bid' },
+  { day:'Mon', spend:4820, conv:421, roas:2.90, bid:'+0%',  action:'Keep current budget', how:'No change needed', weekly_tip:'Monday is steady — good for new campaigns to gather data' },
+  { day:'Tue', spend:4210, conv:389, roas:2.76, bid:'+0%',  action:'Keep current budget', how:'No change needed', weekly_tip:'Tuesday dips slightly — monitor but do not change' },
+  { day:'Wed', spend:4980, conv:441, roas:2.81, bid:'+0%',  action:'Keep current budget', how:'No change needed', weekly_tip:'Wednesday is consistent — solid mid-week performance' },
+  { day:'Thu', spend:5120, conv:498, roas:3.12, bid:'+10%', action:'Increase bid +10%',   how:'Ad Schedule → Thursday → +10% bid modifier', weekly_tip:'Thursday picks up — people planning weekend purchases' },
+  { day:'Fri', spend:5840, conv:562, roas:3.41, bid:'+15%', action:'Increase bid +15%',   how:'Ad Schedule → Friday → +15% bid modifier', weekly_tip:'Friday is strong — weekend shoppers. Increase budget' },
+  { day:'Sat', spend:6210, conv:612, roas:3.89, bid:'+20%', action:'Increase bid +20%',   how:'Ad Schedule → Saturday → +20% bid modifier', weekly_tip:'Saturday is your BEST day — 3.89x ROAS. Always max budget' },
+  { day:'Sun', spend:3517, conv:368, roas:3.24, bid:'+10%', action:'Increase bid +10%',   how:'Ad Schedule → Sunday → +10% bid modifier', weekly_tip:'Sunday is strong — good for next-day delivery intent' },
 ]
 
-const WEEKLY = [
-  { week:'W1 Jan', spend:680, conv:58,  roas:2.1 },
-  { week:'W2 Jan', spend:720, conv:62,  roas:2.3 },
-  { week:'W3 Jan', spend:850, conv:78,  roas:2.8 },
-  { week:'W4 Jan', spend:690, conv:61,  roas:2.4 },
-  { week:'W1 Feb', spend:740, conv:71,  roas:2.6 },
-  { week:'W2 Feb', spend:880, conv:89,  roas:3.1 },
-  { week:'W3 Feb', spend:920, conv:94,  roas:3.2 },
-  { week:'W4 Feb', spend:760, conv:74,  roas:2.7 },
-  { week:'W1 Mar', spend:810, conv:82,  roas:2.9 },
-  { week:'W2 Mar', spend:940, conv:98,  roas:3.4 },
-  { week:'W3 Mar', spend:680, conv:55,  roas:2.1 },
-  { week:'W4 Mar', spend:720, conv:68,  roas:2.6 },
+const TIMINGS = [
+  { hour:'12am–6am', spend:2137, conv:73,  roas:1.24, action:'EXCLUDE — losing £2,137',     modifier:'Excluded', how:'Ad Schedule → exclude 12am–6am all days', tid:'t_excl_night' },
+  { hour:'6am–9am',  spend:1240, conv:89,  roas:2.10, action:'Keep',                        modifier:'Keep',     how:'No change needed', tid:null },
+  { hour:'9am–12pm', spend:4210, conv:312, roas:2.84, action:'Keep',                        modifier:'Keep',     how:'No change needed', tid:null },
+  { hour:'12pm–3pm', spend:5840, conv:398, roas:2.62, action:'Keep',                        modifier:'Keep',     how:'No change needed', tid:null },
+  { hour:'3pm–6pm',  spend:6120, conv:421, roas:2.67, action:'Keep',                        modifier:'Keep',     how:'No change needed', tid:null },
+  { hour:'6pm–9pm',  spend:8940, conv:701, roas:3.42, action:'+20% bid — best window',      modifier:'+20%',     how:'Ad Schedule → 6pm–9pm → +20% bid modifier', tid:'t_fri_eve' },
+  { hour:'9pm–12am', spend:4210, conv:298, roas:2.88, action:'Keep',                        modifier:'Keep',     how:'No change needed', tid:null },
 ]
 
-const MONTHLY = [
-  { month:'Apr 24', spend:2100, rev:3780,  roas:1.80, conv:201 },
-  { month:'May 24', spend:2340, rev:4446,  roas:1.90, conv:224 },
-  { month:'Jun 24', spend:2890, rev:5202,  roas:1.80, conv:276 },
-  { month:'Jul 24', spend:3120, rev:6240,  roas:2.00, conv:298 },
-  { month:'Aug 24', spend:2980, rev:5960,  roas:2.00, conv:285 },
-  { month:'Sep 24', spend:2640, rev:4752,  roas:1.80, conv:252 },
-  { month:'Oct 24', spend:3210, rev:6420,  roas:2.00, conv:307 },
-  { month:'Nov 24', spend:3840, rev:8448,  roas:2.20, conv:367 },
-  { month:'Dec 24', spend:4120, rev:9888,  roas:2.40, conv:394 },
-  { month:'Jan 25', spend:2640, rev:3960,  roas:1.50, conv:252 },
-  { month:'Feb 25', spend:2890, rev:5202,  roas:1.80, conv:276 },
-  { month:'Mar 25', spend:3210, rev:6420,  roas:2.00, conv:307 },
+const MONTHLY_BUDGET = [
+  { month:'January',   budget:'£2,100', action:'Reduce 20%',  reason:'Worst month historically — lowest ROAS', color:T.red },
+  { month:'February',  budget:'£2,600', action:'Keep',         reason:'Steady recovery after Jan', color:T.amber },
+  { month:'March',     budget:'£3,000', action:'Increase 15%', reason:'Spring surge — hair prep', color:T.green },
+  { month:'April',     budget:'£3,100', action:'Increase 10%', reason:'Current month — steady growth', color:T.green },
+  { month:'May',       budget:'£3,400', action:'Increase 15%', reason:'Pre-summer hair prep surge', color:T.green },
+  { month:'June',      budget:'£3,800', action:'Increase 20%', reason:'Summer — peak wigs and extensions', color:T.green },
+  { month:'July',      budget:'£4,200', action:'Increase 25%', reason:'Peak summer — best for wigs', color:T.green },
+  { month:'August',    budget:'£4,200', action:'Keep peak',     reason:'Summer peak continues', color:T.green },
+  { month:'September', budget:'£3,000', action:'Reduce 20%',  reason:'Post-summer dip — reduce all', color:T.amber },
+  { month:'October',   budget:'£3,400', action:'Increase 15%', reason:'Back to school — braiding surge', color:T.green },
+  { month:'November',  budget:'£3,800', action:'Increase 20%', reason:'Pre-Christmas — scale all', color:T.green },
+  { month:'December',  budget:'£4,500', action:'Max budget',   reason:'Christmas — best month of year', color:T.green },
 ]
 
 const POSITIVE_KW = [
-  { kw:'human hair extensions',    curr:0.45, recommended:1.80, roas:11.3, reason:'11.29x ROAS — massively underinvested, only £62 spend in 2 years',       priority:'critical' },
-  { kw:'matrix matte definer',     curr:0.20, recommended:0.80, roas:1000, reason:'1000x ROAS — £0.03 CPA, lowest in account, scale aggressively',           priority:'critical' },
-  { kw:'naturally straight textures', curr:0.15, recommended:0.60, roas:735, reason:'735x ROAS — 7 conv at £0.04 CPA, add exact match',                    priority:'critical' },
-  { kw:'bsset curl cream',         curr:0.80, recommended:1.40, roas:11,   reason:'Highest volume converter (24 conv) — room to increase bid',               priority:'high' },
-  { kw:'edge control',             curr:0.85, recommended:1.30, roas:7.0,  reason:'7x ROAS — increase bid to capture more impression share',                 priority:'high' },
-  { kw:'braiding hair leeds',      curr:0.65, recommended:0.95, roas:3.5,  reason:'Local high-intent term — 3.5x ROAS, increase to dominate local search',   priority:'high' },
-  { kw:'ors relaxer',              curr:0.45, recommended:0.70, roas:2.84, reason:'Brand keyword — good ROAS, protect brand impression share',               priority:'medium' },
-  { kw:'papaya brightening serum', curr:0.30, recommended:0.55, roas:251,  reason:'251x ROAS — very low spend, easy win to scale',                           priority:'high' },
-  { kw:'iris wigs',                curr:0.40, recommended:0.75, roas:165,  reason:'165x ROAS — wig category growing, increase bid',                          priority:'high' },
-  { kw:'caro light soap',          curr:0.35, recommended:0.60, roas:40,   reason:'40x ROAS — skincare converting well, scale',                              priority:'medium' },
+  { kw:'human hair extensions',    curr:0.45, rec:1.80, roas:11.3, priority:'critical', reason:'11.29x ROAS — only £62 spent in 2 years. Put £500/month here.',        tid:'t_kw_hh',     how:'Keywords → [human hair extensions] → Edit bid → £1.80' },
+  { kw:'matrix matte definer',     curr:0.20, rec:0.80, roas:1000, priority:'critical', reason:'1000x ROAS — £0.03 CPA. Best keyword in the entire account.',           tid:'t_kw_matrix', how:'Keywords → + Add → [matrix matte definer] exact match → £0.80 bid' },
+  { kw:'naturally straight textures', curr:0.15, rec:0.60, roas:735, priority:'critical', reason:'735x ROAS — 7 conversions at £0.04 CPA. Add as exact match.',        tid:'t_kw_nst',    how:'Keywords → + Add → [naturally straight beautiful textures] → £0.60' },
+  { kw:'bsset curl cream',         curr:0.80, rec:1.40, roas:11,   priority:'high',     reason:'Highest volume converter — 24 conversions. Increase to capture more.', tid:'t_kw_bsset',  how:'Keywords → bsset curl cream → Edit bid → £1.40' },
+  { kw:'edge control',             curr:0.85, rec:1.30, roas:7.0,  priority:'high',     reason:'7x ROAS — strong keyword. Increase to dominate impression share.',      tid:'t_kw_edge',   how:'Keywords → edge control → Edit bid → £1.30' },
+  { kw:'braiding hair leeds',      curr:0.65, rec:0.95, roas:3.5,  priority:'high',     reason:'Local high-intent term. 3.5x ROAS. Dominate local search.',             tid:null,          how:'Keywords → braiding hair leeds → Edit bid → £0.95' },
+  { kw:'ors relaxer',              curr:0.45, rec:0.70, roas:2.84, priority:'medium',   reason:'Brand keyword. Good ROAS. Protect brand impression share.',             tid:null,          how:'Keywords → ors relaxer → Edit bid → £0.70' },
+  { kw:'papaya brightening serum', curr:0.30, rec:0.55, roas:251,  priority:'high',     reason:'251x ROAS — very low spend. Easy win to scale.',                        tid:null,          how:'Keywords → papaya brightening serum → Edit bid → £0.55' },
+  { kw:'iris wigs',                curr:0.40, rec:0.75, roas:165,  priority:'high',     reason:'165x ROAS — wigs converting well. Increase bid.',                       tid:null,          how:'Keywords → iris wigs → Edit bid → £0.75' },
+  { kw:'caro light soap',          curr:0.35, rec:0.60, roas:40,   priority:'medium',   reason:'40x ROAS — skincare converting. Scale.',                               tid:null,          how:'Keywords → caro light soap → Edit bid → £0.60' },
 ]
 
 const NEGATIVE_KW = [
-  { kw:'monster energy drink',  spent:'£612',  reason:'Zero conversions — food item',     selected:true  },
-  { kw:'red bull',              spent:'£389',  reason:'Zero conversions — food item',     selected:true  },
-  { kw:'sour patch kids',       spent:'£283',  reason:'0.26x ROAS — food item',           selected:true  },
-  { kw:'hair salon near me',    spent:'£920',  reason:'Service intent — not a retailer',  selected:true  },
-  { kw:'hair extensions salon', spent:'£640',  reason:'Service intent',                   selected:true  },
-  { kw:'how to braid hair',     spent:'£276',  reason:'Tutorial/info intent',             selected:true  },
-  { kw:'braiding hair tutorial',spent:'£198',  reason:'Tutorial intent',                  selected:true  },
-  { kw:'afro hair styles 4c',   spent:'£298',  reason:'Inspiration intent',               selected:true  },
-  { kw:'synthetic hair styles', spent:'£334',  reason:'Style inspo — not buying',         selected:false },
-  { kw:'cheap wigs',            spent:'£412',  reason:'1.42x ROAS — borderline',          selected:false },
-  { kw:'hair growth tips',      spent:'£156',  reason:'Info intent',                      selected:true  },
-  { kw:'black hair care routine',spent:'£189', reason:'Info intent — no purchase intent', selected:true  },
+  { kw:'monster energy drink',     spent:'£612',  reason:'Zero conv — food item',        tid:'t_neg_energy', selected:true  },
+  { kw:'red bull',                 spent:'£389',  reason:'Zero conv — food item',        tid:'t_neg_redbull',selected:true  },
+  { kw:'sour patch kids',          spent:'£283',  reason:'0.26x ROAS — food item',       tid:null,           selected:true  },
+  { kw:'hair salon near me',       spent:'£920',  reason:'Service intent — not retail',  tid:'t_neg_salon',  selected:true  },
+  { kw:'hair extensions salon',    spent:'£640',  reason:'Service intent',               tid:null,           selected:true  },
+  { kw:'how to braid hair',        spent:'£276',  reason:'Tutorial intent',              tid:'t_neg_tutorial', selected:true },
+  { kw:'braiding hair tutorial',   spent:'£198',  reason:'Tutorial intent',              tid:null,           selected:true  },
+  { kw:'afro hair styles 4c',      spent:'£298',  reason:'Inspiration intent',           tid:null,           selected:true  },
+  { kw:'synthetic hair styles',    spent:'£334',  reason:'Style inspo — not buying',     tid:null,           selected:false },
+  { kw:'cheap wigs',               spent:'£412',  reason:'1.42x ROAS — borderline',      tid:null,           selected:false },
+  { kw:'hair growth tips',         spent:'£156',  reason:'Info intent',                  tid:null,           selected:true  },
+  { kw:'black hair care routine',  spent:'£189',  reason:'Info intent',                  tid:null,           selected:true  },
 ]
 
-const COMPETITORS = [
-  { name:'Hair City Leeds',       overlap:68, topKw:'braiding hair leeds, wigs leeds, afro hair shop', est:'Medium spend', threat:'High', strategy:'They rank for "wigs leeds" — increase bid on this term' },
-  { name:'Kashmir Hair',          overlap:54, topKw:'relaxer uk, hair products leeds, dark and lovely', est:'Low-medium', threat:'Medium', strategy:'Overlap on relaxer terms — protect with brand keywords' },
-  { name:'Beauty Depot Online',   overlap:41, topKw:'hair extensions uk, human hair wigs, clip in extensions', est:'High spend', threat:'High', strategy:'Big budget national competitor — focus on local terms they cant win' },
-  { name:'Afro Hair UK (online)', overlap:38, topKw:'afro hair products, natural hair products uk', est:'Medium spend', threat:'Medium', strategy:'National focus — compete locally where they are weak' },
+const CAMPAIGNS = [
+  { name:'Shopify All Products', device:'Mobile',  spend:27521, rev:45830, roas:1.67, conv:1842, cpa:14.94, impr:892000, ctr:2.1, qs:6, status:'reduce',  action:'Reduce mobile bid -40%',        tid:'t_mobile_reduce', how:'Campaigns → Shopify All Products → Devices → Mobile → -40% bid modifier' },
+  { name:'Shopify All Products', device:'Desktop', spend:3126,  rev:12411, roas:3.97, conv:312,  cpa:10.02, impr:89000,  ctr:3.8, qs:8, status:'scale',   action:'Increase desktop budget +50%',  tid:'t_desktop_scale', how:'Campaigns → Shopify All Products → Devices → Desktop → +50% bid modifier' },
+  { name:'Shopify All Products', device:'Tablet',  spend:892,   rev:2970,  roas:3.33, conv:89,   cpa:10.02, impr:31000,  ctr:3.1, qs:7, status:'scale',   action:'Tablet bid modifier +20%',      tid:'t_tablet_bid',    how:'Campaigns → Shopify All Products → Devices → Tablets → +20% bid modifier' },
+  { name:'Human Hair - Brands',  device:'Mobile',  spend:62,    rev:699,   roas:11.29,conv:24,   cpa:2.58,  impr:4200,   ctr:5.2, qs:9, status:'urgent',  action:'SCALE to £500/month NOW',       tid:'t_scale_hh',      how:'Campaigns → Human Hair - Brands → Budget → £16.67/day (= £500/month)' },
+  { name:'Synthetic Wigs 2026',  device:'Mobile',  spend:1240,  rev:595,   roas:0.48, conv:18,   cpa:68.89, impr:62000,  ctr:1.1, qs:4, status:'pause',   action:'PAUSE — losing £1,240',         tid:'t_pause_wigs',    how:'Campaigns → Synthetic Wigs 2026 → Status dropdown → Paused' },
+  { name:'March 2018 Campaign',  device:'All',     spend:0,     rev:0,     roas:0,    conv:0,    cpa:0,     impr:0,      ctr:0,   qs:1, status:'kill',    action:'DELETE — dead test campaign',   tid:'t_delete_2018',   how:'Campaigns → March 2018 → 3-dot menu → Remove campaign' },
+  { name:'Edge Control',         device:'Desktop', spend:420,   rev:2940,  roas:7.00, conv:84,   cpa:5.00,  impr:18000,  ctr:4.2, qs:8, status:'scale',   action:'Scale — 7x ROAS increase +50%', tid:null,              how:'Campaigns → Edge Control → Budget → increase by 50%' },
+  { name:'Relaxers',             device:'Mobile',  spend:890,   rev:2136,  roas:2.40, conv:107,  cpa:8.32,  impr:45000,  ctr:2.8, qs:6, status:'monitor', action:'Monitor — check search terms',  tid:null,              how:'Reports → Search terms → look for irrelevant searches' },
+  { name:'Braiding Hair',        device:'Desktop', spend:634,   rev:2219,  roas:3.50, conv:95,   cpa:6.67,  impr:28000,  ctr:3.5, qs:7, status:'scale',   action:'Scale desktop +30%',            tid:null,              how:'Campaigns → Braiding Hair → Budget → increase 30%' },
+  { name:'Wigs General',         device:'Tablet',  spend:312,   rev:530,   roas:1.70, conv:21,   cpa:14.86, impr:22000,  ctr:1.8, qs:5, status:'monitor', action:'Monitor ROAS this week',        tid:null,              how:'Check again next Monday before changing' },
 ]
 
-const TASKS = [
-  { group:'🚨 Critical — do today', color:T.red, items:[
-    {id:'t1', text:'Add negative keywords: Red Bull, Monster, Sour Patch Kids (£1,284 wasted)', how:'Google Ads → Tools → Keyword Planner → Negative keywords → Add to all campaigns'},
-    {id:'t2', text:'PAUSE Synthetic Wigs 2026 campaign — 0.48x ROAS losing £1,240', how:'Google Ads → Campaigns → Synthetic Wigs 2026 → Status → Paused'},
-    {id:'t3', text:'DELETE March 2018 campaign — dead test campaign', how:'Google Ads → Campaigns → March 2018 → 3-dot menu → Remove'},
-    {id:'t4', text:'Scale Human Hair Brands to £500/month immediately — 11.29x ROAS, only £62 spent in 2 years', how:'Google Ads → Campaigns → Human Hair Brands → Budget → Set to £16.67/day'},
-  ]},
-  { group:'📱 Device bid adjustments', color:T.blue, items:[
-    {id:'t5', text:'Reduce mobile bid modifier -40% on Shopify All Products — 1.67x ROAS', how:'Google Ads → Campaigns → Shopify All Products → Devices → Mobile → -40%'},
-    {id:'t6', text:'Increase desktop budget +50% on Shopify All Products — 3.97x ROAS', how:'Google Ads → Campaigns → Shopify All Products → Devices → Desktop → +50%'},
-    {id:'t7', text:'Add tablet bid modifier +20% across all campaigns', how:'Google Ads → Each Campaign → Devices → Tablets → +20%'},
-  ]},
-  { group:'📅 Dayparting adjustments', color:T.purple, items:[
-    {id:'t8', text:'EXCLUDE 12am–6am completely — 1.24x ROAS wasting £2,137', how:'Google Ads → Campaigns → Ad Schedule → Add schedule → Exclude 12am–6am all days'},
-    {id:'t9', text:'Add +20% bid modifier Friday 6pm–9pm — 3.41x ROAS on Fridays', how:'Google Ads → Campaigns → Ad Schedule → Friday 6pm-9pm → +20%'},
-    {id:'t10', text:'Add +20% bid modifier Saturday all day — 3.89x ROAS, best day of week', how:'Google Ads → Campaigns → Ad Schedule → Saturday → +20%'},
-  ]},
-  { group:'📍 Location bid adjustments', color:T.amber, items:[
-    {id:'t11', text:'PAUSE Glasgow targeting — 0.71x ROAS, zero profitability', how:'Google Ads → Campaigns → Settings → Locations → Glasgow → Exclude'},
-    {id:'t12', text:'Reduce London bid -40% — 1.24x ROAS, £4,210 spend', how:'Google Ads → Campaigns → Settings → Locations → London → -40%'},
-    {id:'t13', text:'Increase Leeds bid +15% — home city, 3.21x ROAS', how:'Google Ads → Campaigns → Settings → Locations → Leeds → +15%'},
-  ]},
-  { group:'🚀 Keyword bid increases', color:T.green, items:[
-    {id:'t14', text:'Add exact match "matrix matte definer" — £0.03 CPA, 1000x ROAS', how:'Google Ads → Keywords → + Add keyword → [matrix matte definer] → £0.80 bid'},
-    {id:'t15', text:'Add exact match "naturally straight beautiful textures" — £0.04 CPA', how:'Google Ads → Keywords → + Add keyword → [naturally straight beautiful textures] → £0.60 bid'},
-    {id:'t16', text:'Increase "bsset curl cream" bid to £1.40 — 24 conversions, room to scale', how:'Google Ads → Keywords → bsset curl cream → Edit bid → £1.40'},
-  ]},
-]
+const TABS = ['Overview','Campaigns','Devices & Times','Locations','Weekly Budget','Monthly Budget','Scale Keywords','Block Keywords','Competitors','How-To Guide','Tasks']
 
-const TABS = ['Overview','Campaigns','Devices & Times','Locations','Weekly Analysis','Monthly Analysis','Keywords: Scale','Keywords: Block','Competitors','How-To Guide','Tasks']
-
-// ── COMPONENTS ────────────────────────────────────────────────────────────────
-function Stat({ label, value, sub, sc, border }) {
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function TH({ children, onSort, sorted }) {
   return (
-    <div style={{background:T.surface,border:`0.5px solid ${border||T.border}`,borderRadius:8,padding:'11px 13px'}}>
-      <div style={{fontSize:10,color:T.textMuted,textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:3}}>{label}</div>
-      <div style={{fontSize:19,fontWeight:700,color:T.text,marginBottom:2}}>{value}</div>
-      <div style={{fontSize:10,color:sc||T.textMuted}}>{sub}</div>
-    </div>
+    <th onClick={onSort} style={{padding:'7px 11px',fontSize:10,fontWeight:600,color:T.textMuted,textTransform:'uppercase',letterSpacing:'0.05em',textAlign:'left',background:T.bg,borderBottom:`0.5px solid ${T.border}`,whiteSpace:'nowrap',cursor:onSort?'pointer':'default',userSelect:'none'}}>
+      {children}{onSort?<span style={{marginLeft:3,opacity:0.5}}>{sorted==='asc'?'↑':sorted==='desc'?'↓':'↕'}</span>:null}
+    </th>
   )
 }
-
-function TH({ children, w }) { return <th style={{padding:'7px 11px',fontSize:10,fontWeight:600,color:T.textMuted,textTransform:'uppercase',letterSpacing:'0.05em',textAlign:'left',background:T.bg,borderBottom:`0.5px solid ${T.border}`,whiteSpace:'nowrap',width:w}}>{children}</th> }
-function TD({ children, c, bold, wrap }) { return <td style={{padding:'8px 11px',fontSize:12,color:c||T.text,fontWeight:bold?600:400,borderBottom:`0.5px solid ${T.borderLight}`,verticalAlign:'middle',whiteSpace:wrap?'normal':'nowrap'}}>{children}</td> }
-
+function TD({ children, c, bold, wrap, small }) {
+  return <td style={{padding:'8px 11px',fontSize:small?10:12,color:c||T.text,fontWeight:bold?600:400,borderBottom:`0.5px solid ${T.borderLight}`,verticalAlign:'middle',whiteSpace:wrap?'normal':'nowrap'}}>{children}</td>
+}
 function RBar({ v, max=12 }) {
   const pct = Math.min((v/max)*100,100)
   const col = v>=4?T.green:v>=2?T.amber:T.red
@@ -183,55 +153,92 @@ function RBar({ v, max=12 }) {
       <div style={{flex:1,height:4,background:T.borderLight,borderRadius:99,overflow:'hidden',border:`0.5px solid ${T.border}`,minWidth:50}}>
         <div style={{width:`${pct}%`,height:'100%',background:col,borderRadius:99}}/>
       </div>
-      <span style={{fontSize:11,fontWeight:700,color:col,minWidth:34}}>{v}x</span>
+      <span style={{fontSize:11,fontWeight:700,color:col,minWidth:36}}>{v}x</span>
     </div>
   )
 }
-
 function Badge({ text, c, bg }) {
   return <span style={{fontSize:10,fontWeight:600,padding:'2px 7px',borderRadius:20,background:bg,color:c,flexShrink:0,whiteSpace:'nowrap'}}>{text}</span>
 }
-
 function StatusBadge({ s }) {
-  const m = { scale:{bg:T.greenBg,c:T.green,t:'Scale'}, urgent:{bg:'#fef2f2',c:'#b91c1c',t:'Urgent!'}, pause:{bg:T.redBg,c:T.red,t:'Pause'}, kill:{bg:'#1f2328',c:'#fff',t:'Delete'}, monitor:{bg:T.amberBg,c:T.amber,t:'Monitor'}, reduce:{bg:T.amberBg,c:T.amber,t:'Reduce'} }
+  const m = {
+    scale:  {bg:T.greenBg, c:T.green,  t:'Scale — put more budget here',         tip:'This is making money. Put more budget in to get more sales.'},
+    urgent: {bg:'#fef2f2', c:'#b91c1c', t:'Urgent — scale immediately',           tip:'This is making a lot of money but has almost no budget. Fix this today.'},
+    pause:  {bg:T.redBg,   c:T.red,    t:'Pause — stop spending',                 tip:'This is losing money. Stop it immediately to save budget.'},
+    kill:   {bg:'#1f2328', c:'#fff',   t:'Delete — remove completely',            tip:'This campaign is dead and serves no purpose. Remove it.'},
+    monitor:{bg:T.amberBg, c:T.amber,  t:'Monitor — watch but do not change yet', tip:'Not bad enough to pause, not good enough to scale. Check again next Monday.'},
+    reduce: {bg:T.amberBg, c:T.amber,  t:'Reduce — spend less here',              tip:'Below target ROAS. Cut the budget but do not stop it completely.'},
+  }
   const x = m[s]||m.monitor
-  return <Badge text={x.t} c={x.c} bg={x.bg}/>
+  return (
+    <span title={x.tip} style={{fontSize:10,fontWeight:600,padding:'2px 7px',borderRadius:20,background:x.bg,color:x.c,cursor:'help',borderBottom:`1px dashed ${x.c}40`}}>{x.t}</span>
+  )
+}
+function TickBox({ done, onToggle, tid, small }) {
+  if (!tid) return null
+  return (
+    <div onClick={e=>{e.stopPropagation();onToggle(tid)}} style={{width:small?14:16,height:small?14:16,borderRadius:4,border:`1.5px solid ${done?T.green:T.border}`,background:done?T.green:'transparent',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',transition:'all 0.1s'}}>
+      {done&&<svg width="9" height="7" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+    </div>
+  )
+}
+function HowTo({ text }) {
+  return <div style={{fontSize:10,color:T.blue,marginTop:3,lineHeight:1.4}}>→ {text}</div>
 }
 
-function SpendBar({ v, max }) {
-  const pct = (v/max)*100
-  return <div style={{width:`${pct}%`,height:16,background:T.blue,borderRadius:3,minWidth:2}}/>
+function sortData(data, key, dir) {
+  return [...data].sort((a,b) => {
+    const av = typeof a[key]==='string'?a[key].toLowerCase():a[key]
+    const bv = typeof b[key]==='string'?b[key].toLowerCase():b[key]
+    if (av===bv) return 0
+    const res = av>bv?1:-1
+    return dir==='asc'?res:-res
+  })
 }
 
 // ── PAGE ──────────────────────────────────────────────────────────────────────
 export default function PaidAds() {
   const { isManager } = useAuth()
   const [tab, setTab] = useState('Overview')
-  const [tasksDone, setTasksDone] = useState({})
-  const [negSelected, setNegSelected] = useState(() => Object.fromEntries(NEGATIVE_KW.map(k=>[k.kw,k.selected])))
+  const [tasks, setTasks] = useState({})
+  const [negSel, setNegSel] = useState(()=>Object.fromEntries(NEGATIVE_KW.map(k=>[k.kw,k.selected])))
   const [copied, setCopied] = useState(false)
   const [uploadData, setUploadData] = useState(null)
+  const [sort, setSort] = useState({key:null,dir:'desc'})
+  const [glossaryWord, setGlossaryWord] = useState(null)
 
-  useEffect(() => {
+  useEffect(()=>{
     try {
-      const t = localStorage.getItem('cc_ads_tasks2'); if(t) setTasksDone(JSON.parse(t))
-      const u = localStorage.getItem('cc_data_upload'); if(u) setUploadData(JSON.parse(u))
+      const t=localStorage.getItem('cc_ads_v3'); if(t) setTasks(JSON.parse(t))
+      const u=localStorage.getItem('cc_data_upload'); if(u) setUploadData(JSON.parse(u))
     } catch(e){}
-  }, [])
+  },[])
 
-  function toggleTask(id) {
-    const u = {...tasksDone,[id]:!tasksDone[id]}
-    setTasksDone(u); localStorage.setItem('cc_ads_tasks2',JSON.stringify(u))
+  function tick(id) {
+    if (!id) return
+    const u={...tasks,[id]:!tasks[id]}
+    setTasks(u); localStorage.setItem('cc_ads_v3',JSON.stringify(u))
   }
 
-  function copyNegatives() {
-    const selected = NEGATIVE_KW.filter(k=>negSelected[k.kw]).map(k=>k.kw).join('\n')
-    navigator.clipboard.writeText(selected)
+  function copyNegs() {
+    const txt = NEGATIVE_KW.filter(k=>negSel[k.kw]).map(k=>k.kw).join('\n')
+    navigator.clipboard.writeText(txt)
+    // Auto-tick neg keyword tasks
+    const u={...tasks}
+    NEGATIVE_KW.filter(k=>negSel[k.kw]&&k.tid).forEach(k=>{u[k.tid]=true})
+    setTasks(u); localStorage.setItem('cc_ads_v3',JSON.stringify(u))
     setCopied(true); setTimeout(()=>setCopied(false),2000)
   }
 
-  const allTasks = TASKS.flatMap(g=>g.items)
-  const donePct = Math.round(allTasks.filter(t=>tasksDone[t.id]).length/allTasks.length*100)
+  function doSort(key) {
+    setSort(s=>({key,dir:s.key===key&&s.dir==='desc'?'asc':'desc'}))
+  }
+
+  const donePct = Math.round(ALL_TASK_IDS.filter(id=>tasks[id]).length/ALL_TASK_IDS.length*100)
+  const doneCount = ALL_TASK_IDS.filter(id=>tasks[id]).length
+
+  const sortedCampaigns = sort.key?sortData(CAMPAIGNS,sort.key,sort.dir):CAMPAIGNS
+  const sortedLocations = sort.key?sortData(LOCATIONS,sort.key,sort.dir):LOCATIONS
 
   if (!isManager) return (
     <>
@@ -251,22 +258,69 @@ export default function PaidAds() {
       <Head><title>Paid Ads — CC Intelligence</title></Head>
       <Shell title="Paid Ads — Deep Analysis" subtitle="Apr 2024 – Apr 2026 · 2 full years of real Google Ads data">
 
-        {uploadData && (
-          <div style={{background:T.blueBg,border:`0.5px solid ${T.blueBorder}`,borderRadius:7,padding:'8px 12px',marginBottom:12,fontSize:11,color:T.blue,display:'flex',alignItems:'center',gap:6}}>
-            📥 Last upload: {new Date(uploadData.timestamp).toLocaleDateString('en-GB')} — {uploadData.adsFile}
+        {/* Glossary tooltip */}
+        {glossaryWord && (
+          <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.3)',zIndex:999,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>setGlossaryWord(null)}>
+            <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:10,padding:20,maxWidth:400,margin:20}} onClick={e=>e.stopPropagation()}>
+              <div style={{fontSize:14,fontWeight:600,color:T.text,marginBottom:8}}>{glossaryWord}</div>
+              <div style={{fontSize:13,color:T.textMuted,lineHeight:1.6}}>{GLOSSARY[glossaryWord]}</div>
+              <button onClick={()=>setGlossaryWord(null)} style={{marginTop:12,fontSize:11,color:T.textMuted,background:T.bg,border:`0.5px solid ${T.border}`,borderRadius:6,padding:'5px 14px',cursor:'pointer'}}>Close</button>
+            </div>
           </div>
         )}
 
-        {/* Stats row */}
+        {uploadData && (
+          <div style={{background:T.blueBg,border:`0.5px solid ${T.blueBorder}`,borderRadius:7,padding:'7px 12px',marginBottom:10,fontSize:11,color:T.blue,display:'flex',alignItems:'center',gap:6}}>
+            📥 Data uploaded: {new Date(uploadData.timestamp).toLocaleDateString('en-GB')} — {uploadData.adsFile}
+          </div>
+        )}
+
+        {/* Stats */}
         <div style={{display:'grid',gridTemplateColumns:'repeat(8,minmax(0,1fr))',gap:7,marginBottom:12}}>
-          {OVERVIEW_STATS.map((s,i)=><Stat key={i} {...s} border={s.label==='Wasted Spend'?T.redBorder:s.label==='2yr Revenue'||s.label==='Best CPA'?T.greenBorder:T.border}/>)}
+          {[
+            {l:'2yr Spend',    v:'£34,697', s:'Apr 2024–Apr 2026',    sc:T.textMuted},
+            {l:'2yr Revenue',  v:'£61,952', s:'Tracked conversions',  sc:T.green},
+            {l:'ROAS',         v:'1.79x',   s:'Target: 3x minimum',   sc:T.amber},
+            {l:'Conversions',  v:'3,291',   s:'2 year total',         sc:T.textMuted},
+            {l:'Wasted',       v:'£32,160', s:'93% of total spend',   sc:T.red},
+            {l:'Best CPA',     v:'£0.03',   s:'Matrix Matte Definer', sc:T.green},
+            {l:'Avg CPA',      v:'£10.54',  s:'All conversions',      sc:T.amber},
+            {l:'Tasks done',   v:`${doneCount}/${ALL_TASK_IDS.length}`, s:`${donePct}% complete`, sc:donePct===100?T.green:T.amber},
+          ].map((s,i)=>(
+            <div key={i} style={{background:T.surface,border:`0.5px solid ${i===4?T.redBorder:i===1||i===5?T.greenBorder:T.border}`,borderRadius:8,padding:'10px 12px'}}>
+              <div style={{fontSize:9,color:T.textMuted,textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:3}}>{s.l}</div>
+              <div style={{fontSize:18,fontWeight:700,color:T.text,marginBottom:2}}>{s.v}</div>
+              <div style={{fontSize:10,color:s.sc}}>{s.s}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Global progress bar */}
+        <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'10px 14px',marginBottom:12}}>
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:5,fontSize:11}}>
+            <span style={{fontWeight:600,color:T.text}}>Overall action progress — tick each action across all tabs as you complete it</span>
+            <span style={{color:T.textMuted}}>{doneCount}/{ALL_TASK_IDS.length} actions done · {donePct}%</span>
+          </div>
+          <div style={{height:6,background:T.borderLight,borderRadius:99,border:`0.5px solid ${T.border}`,overflow:'hidden'}}>
+            <div style={{height:'100%',width:`${donePct}%`,background:donePct===100?T.green:T.blue,borderRadius:99,transition:'width 0.3s'}}/>
+          </div>
+        </div>
+
+        {/* Glossary bar */}
+        <div style={{background:T.bg,border:`0.5px solid ${T.border}`,borderRadius:7,padding:'7px 12px',marginBottom:12,display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+          <span style={{fontSize:10,color:T.textMuted,fontWeight:600}}>GLOSSARY:</span>
+          {Object.keys(GLOSSARY).map(w=>(
+            <button key={w} onClick={()=>setGlossaryWord(w)} style={{fontSize:10,color:T.blue,background:'none',border:`0.5px solid ${T.blueBorder}`,borderRadius:4,padding:'1px 6px',cursor:'pointer'}}>
+              {w}
+            </button>
+          ))}
         </div>
 
         {/* Sub tabs */}
-        <div style={{display:'flex',gap:0,borderBottom:`0.5px solid ${T.border}`,marginBottom:14,overflowX:'auto',flexShrink:0}}>
+        <div style={{display:'flex',gap:0,borderBottom:`0.5px solid ${T.border}`,marginBottom:14,overflowX:'auto'}}>
           {TABS.map(t=>(
-            <button key={t} onClick={()=>setTab(t)} style={{padding:'7px 13px',fontSize:11,fontWeight:tab===t?600:400,color:tab===t?T.blue:T.textMuted,background:'none',border:'none',borderBottom:tab===t?`2px solid ${T.blue}`:'2px solid transparent',whiteSpace:'nowrap',cursor:'pointer',transition:'color 0.1s'}}>
-              {t}{t==='Tasks'?` (${Math.round(donePct)}%)`:''}
+            <button key={t} onClick={()=>setTab(t)} style={{padding:'7px 12px',fontSize:11,fontWeight:tab===t?600:400,color:tab===t?T.blue:T.textMuted,background:'none',border:'none',borderBottom:tab===t?`2px solid ${T.blue}`:'2px solid transparent',whiteSpace:'nowrap',cursor:'pointer'}}>
+              {t}{t==='Tasks'?` (${donePct}%)`:''}
             </button>
           ))}
         </div>
@@ -276,9 +330,9 @@ export default function PaidAds() {
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,overflow:'hidden'}}>
-                <div style={{padding:'9px 13px',borderBottom:`0.5px solid ${T.border}`,background:T.bg,fontSize:12,fontWeight:600,color:T.text}}>Campaign ROAS overview</div>
+                <div style={{padding:'9px 13px',borderBottom:`0.5px solid ${T.border}`,background:T.bg,fontSize:12,fontWeight:600,color:T.text}}>Campaign ROAS — hover status badges for plain English explanation</div>
                 <div style={{padding:'12px 14px'}}>
-                  {[{l:'Human Hair Brands',r:11.29,s:'urgent'},{l:'Edge Control Desktop',r:7.00,s:'scale'},{l:'Braiding Hair',r:3.50,s:'scale'},{l:'Shopify Desktop',r:3.97,s:'scale'},{l:'Relaxers Mobile',r:2.40,s:'monitor'},{l:'Shopify Mobile',r:1.67,s:'reduce'},{l:'Synthetic Wigs',r:0.48,s:'pause'}].map((i,x)=>(
+                  {[{l:'Human Hair Brands',r:11.29,s:'urgent'},{l:'Edge Control Desktop',r:7.00,s:'scale'},{l:'Braiding Hair Desktop',r:3.50,s:'scale'},{l:'Shopify Desktop',r:3.97,s:'scale'},{l:'Relaxers Mobile',r:2.40,s:'monitor'},{l:'Shopify Mobile',r:1.67,s:'reduce'},{l:'Synthetic Wigs',r:0.48,s:'pause'}].map((i,x)=>(
                     <div key={x} style={{marginBottom:9}}>
                       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:3}}>
                         <span style={{fontSize:11,color:T.text}}>{i.l}</span>
@@ -292,24 +346,39 @@ export default function PaidAds() {
             </div>
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               <div style={{background:T.redBg,border:`0.5px solid ${T.redBorder}`,borderRadius:8,padding:'12px 14px'}}>
-                <div style={{fontSize:11,fontWeight:600,color:T.red,marginBottom:7}}>🚨 Fix today — wasting £32,160/2yr</div>
-                {[{l:'Energy drinks (Monster, Red Bull, Sour Patch)',v:'£1,284 at 0.26x'},{l:'Service intent (hair salon searches)',v:'£2,560 at 0.82x'},{l:'Synthetic Wigs 2026 campaign',v:'£1,240 at 0.48x'},{l:'Night spend 12am–6am',v:'£2,137 at 1.24x'},{l:'Glasgow targeting',v:'£890 at 0.71x'}].map((i,x)=>(
-                  <div key={x} style={{display:'flex',justifyContent:'space-between',padding:'4px 0',borderBottom:x<4?`0.5px solid ${T.redBorder}`:'none',fontSize:11,color:T.red}}>
-                    <span>{i.l}</span><span style={{fontWeight:600}}>{i.v}</span>
+                <div style={{fontSize:11,fontWeight:600,color:T.red,marginBottom:7}}>🚨 Biggest waste — fix today</div>
+                {[
+                  {l:'Energy drinks (Monster, Red Bull, Sour Patch)',v:'£1,284 at 0.26x',tid:'t_neg_energy'},
+                  {l:'Service intent (hair salon searches)',v:'£2,560 at 0.82x',tid:'t_neg_salon'},
+                  {l:'Synthetic Wigs 2026 campaign',v:'£1,240 at 0.48x',tid:'t_pause_wigs'},
+                  {l:'Night spend 12am–6am',v:'£2,137 at 1.24x',tid:'t_excl_night'},
+                  {l:'Glasgow targeting',v:'£890 at 0.71x',tid:'t_pause_glasgow'},
+                ].map((i,x)=>(
+                  <div key={x} style={{display:'flex',alignItems:'center',gap:8,padding:'5px 0',borderBottom:x<4?`0.5px solid ${T.redBorder}`:'none'}}>
+                    <TickBox done={!!tasks[i.tid]} onToggle={tick} tid={i.tid} small/>
+                    <span style={{flex:1,fontSize:11,color:tasks[i.tid]?T.textMuted:T.red,textDecoration:tasks[i.tid]?'line-through':'none'}}>{i.l}</span>
+                    <span style={{fontSize:11,fontWeight:600,color:tasks[i.tid]?T.textMuted:T.red}}>{i.v}</span>
                   </div>
                 ))}
               </div>
               <div style={{background:T.greenBg,border:`0.5px solid ${T.greenBorder}`,borderRadius:8,padding:'12px 14px'}}>
                 <div style={{fontSize:11,fontWeight:600,color:T.green,marginBottom:7}}>🚀 Scale these — money left on table</div>
-                {[{l:'Human Hair Brands — only £62 spend!',v:'11.29x ROAS'},{l:'Matrix Matte Definer',v:'1000x ROAS'},{l:'Naturally Straight Textures',v:'735x ROAS'},{l:'Papaya Brightening Serum',v:'251x ROAS'},{l:'Desktop vs Mobile split',v:'3.94x vs 1.66x'}].map((i,x)=>(
-                  <div key={x} style={{display:'flex',justifyContent:'space-between',padding:'4px 0',borderBottom:x<4?`0.5px solid ${T.greenBorder}`:'none',fontSize:11,color:T.green}}>
-                    <span>{i.l}</span><span style={{fontWeight:600}}>{i.v}</span>
+                {[
+                  {l:'Human Hair Brands — only £62 spend in 2 years!',v:'11.29x ROAS',tid:'t_scale_hh'},
+                  {l:'Matrix Matte Definer — £0.03 CPA',v:'1000x ROAS',tid:'t_kw_matrix'},
+                  {l:'Naturally Straight Textures',v:'735x ROAS',tid:'t_kw_nst'},
+                  {l:'Desktop vs Mobile — fix device split',v:'3.94x vs 1.66x',tid:'t_mobile_reduce'},
+                ].map((i,x)=>(
+                  <div key={x} style={{display:'flex',alignItems:'center',gap:8,padding:'5px 0',borderBottom:x<3?`0.5px solid ${T.greenBorder}`:'none'}}>
+                    <TickBox done={!!tasks[i.tid]} onToggle={tick} tid={i.tid} small/>
+                    <span style={{flex:1,fontSize:11,color:tasks[i.tid]?T.textMuted:T.green,textDecoration:tasks[i.tid]?'line-through':'none'}}>{i.l}</span>
+                    <span style={{fontSize:11,fontWeight:600,color:tasks[i.tid]?T.textMuted:T.green}}>{i.v}</span>
                   </div>
                 ))}
               </div>
               <div style={{background:T.amberBg,border:`0.5px solid ${T.amberBorder}`,borderRadius:8,padding:'12px 14px'}}>
-                <div style={{fontSize:11,fontWeight:600,color:T.amber,marginBottom:6}}>⚠️ Critical device imbalance</div>
-                <div style={{fontSize:11,color:T.amber,lineHeight:1.6}}>86% of budget on mobile at 1.66x ROAS. Desktop gets only 13% at 3.94x ROAS. Fixing this one issue could save £8,000–£12,000/year.</div>
+                <div style={{fontSize:11,fontWeight:600,color:T.amber,marginBottom:6}}>⚠️ Device imbalance — most important fix</div>
+                <div style={{fontSize:11,color:T.amber,lineHeight:1.6}}>86% of budget on mobile at 1.66x ROAS. Desktop gets 13% at 3.94x ROAS. In plain English: you are spending most of your money on the device that makes the least money. Fixing this alone could save £8,000–£12,000 per year.</div>
               </div>
             </div>
           </div>
@@ -318,11 +387,28 @@ export default function PaidAds() {
         {/* ── CAMPAIGNS ── */}
         {tab==='Campaigns' && (
           <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,overflow:'auto'}}>
-            <table style={{width:'100%',borderCollapse:'collapse',minWidth:1000}}>
-              <thead><tr><TH>Campaign</TH><TH>Device</TH><TH>Spend</TH><TH>Revenue</TH><TH>ROAS</TH><TH>Conv.</TH><TH>CPA</TH><TH>Impr.</TH><TH>CTR</TH><TH>QS</TH><TH>Status</TH><TH w={180}>Action</TH></tr></thead>
+            <div style={{padding:'9px 13px',borderBottom:`0.5px solid ${T.border}`,background:T.bg,fontSize:11,color:T.textMuted}}>
+              Click column headers to sort. Hover status badges for plain English. Tick boxes feed into the progress bar above.
+            </div>
+            <table style={{width:'100%',borderCollapse:'collapse',minWidth:1100}}>
+              <thead><tr>
+                <TH>Done</TH>
+                <TH onSort={()=>doSort('name')} sorted={sort.key==='name'?sort.dir:null}>Campaign</TH>
+                <TH onSort={()=>doSort('device')} sorted={sort.key==='device'?sort.dir:null}>Device</TH>
+                <TH onSort={()=>doSort('spend')} sorted={sort.key==='spend'?sort.dir:null}>Spend ↕</TH>
+                <TH onSort={()=>doSort('rev')} sorted={sort.key==='rev'?sort.dir:null}>Revenue ↕</TH>
+                <TH onSort={()=>doSort('roas')} sorted={sort.key==='roas'?sort.dir:null}>ROAS ↕</TH>
+                <TH onSort={()=>doSort('conv')} sorted={sort.key==='conv'?sort.dir:null}>Conv. ↕</TH>
+                <TH onSort={()=>doSort('cpa')} sorted={sort.key==='cpa'?sort.dir:null}>CPA ↕</TH>
+                <TH onSort={()=>doSort('ctr')} sorted={sort.key==='ctr'?sort.dir:null}>CTR ↕</TH>
+                <TH onSort={()=>doSort('qs')} sorted={sort.key==='qs'?sort.dir:null}>QS ↕</TH>
+                <TH>Status</TH>
+                <TH>Action & How to do it</TH>
+              </tr></thead>
               <tbody>
-                {CAMPAIGNS.map((c,i)=>(
+                {sortedCampaigns.map((c,i)=>(
                   <tr key={i} style={{background:c.status==='kill'?'#fff8f8':c.status==='urgent'?'#f0fff4':'transparent'}}>
+                    <TD><TickBox done={!!tasks[c.tid]} onToggle={tick} tid={c.tid}/></TD>
                     <TD bold>{c.name}</TD>
                     <TD c={T.textMuted}>{c.device}</TD>
                     <TD c={T.textMuted}>£{c.spend.toLocaleString()}</TD>
@@ -330,11 +416,13 @@ export default function PaidAds() {
                     <TD><RBar v={c.roas}/></TD>
                     <TD>{c.conv.toLocaleString()}</TD>
                     <TD c={c.cpa<5?T.green:c.cpa<15?T.amber:T.red}>£{c.cpa.toFixed(2)}</TD>
-                    <TD c={T.textMuted}>{c.impr.toLocaleString()}</TD>
-                    <TD>{c.ctr}</TD>
+                    <TD>{c.ctr}%</TD>
                     <TD c={c.qs>=8?T.green:c.qs>=6?T.amber:T.red}>{c.qs}/10</TD>
                     <TD><StatusBadge s={c.status}/></TD>
-                    <TD c={T.textMuted} wrap>{c.action}</TD>
+                    <td style={{padding:'8px 11px',fontSize:11,borderBottom:`0.5px solid ${T.borderLight}`,verticalAlign:'top',maxWidth:220}}>
+                      <div style={{color:T.text,fontWeight:500,marginBottom:2}}>{c.action}</div>
+                      <HowTo text={c.how}/>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -348,53 +436,61 @@ export default function PaidAds() {
             {/* Devices */}
             <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:8}}>Device performance</div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10,marginBottom:16}}>
-              {DEVICES.map((d,i)=>(
+              {[
+                {device:'Desktop',spend:4572,rev:18001,roas:3.94,conv:491,cpa:9.31,pct:13,tid:'t_desktop_scale',action:'Put more budget here — making the most money per click',modifier:'+50% bid modifier',how:'Campaigns → Shopify All Products → Devices → Desktop → set to +50%'},
+                {device:'Mobile', spend:29713,rev:49260,roas:1.66,conv:1991,cpa:14.92,pct:86,tid:'t_mobile_reduce',action:'Reduce budget — spending too much, making too little',modifier:'-40% bid modifier',how:'Campaigns → Shopify All Products → Devices → Mobile → set to -40%'},
+                {device:'Tablet', spend:1204,rev:3500,roas:2.91,conv:110,cpa:10.95,pct:3,tid:'t_tablet_bid',action:'Small increase — solid ROAS',modifier:'+20% bid modifier',how:'Campaigns → Shopify All Products → Devices → Tablets → set to +20%'},
+              ].map((d,i)=>(
                 <div key={i} style={{background:T.surface,border:`0.5px solid ${d.roas>=3?T.greenBorder:d.roas>=2?T.amberBorder:T.redBorder}`,borderRadius:8,padding:'14px 16px'}}>
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
-                    <span style={{fontSize:13,fontWeight:600,color:T.text}}>{d.device}</span>
-                    <span style={{fontSize:11,color:T.textMuted}}>{d.pct}% of budget</span>
+                    <span style={{fontSize:13,fontWeight:700,color:T.text}}>{d.device}</span>
+                    <div style={{display:'flex',alignItems:'center',gap:6}}>
+                      <span style={{fontSize:11,color:T.textMuted}}>{d.pct}% of budget</span>
+                      <TickBox done={!!tasks[d.tid]} onToggle={tick} tid={d.tid}/>
+                    </div>
                   </div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
-                    {[{l:'Spend',v:`£${d.spend.toLocaleString()}`},{l:'Revenue',v:`£${d.rev.toLocaleString()}`},{l:'Conv.',v:d.conv},{l:'CPA',v:`£${d.cpa.toFixed(2)}`}].map((s,x)=>(
+                    {[{l:'Spend',v:`£${d.spend.toLocaleString()}`},{l:'Revenue',v:`£${d.rev.toLocaleString()}`},{l:'Conversions',v:d.conv},{l:'Cost/sale',v:`£${d.cpa.toFixed(2)}`}].map((s,x)=>(
                       <div key={x}><div style={{fontSize:9,color:T.textMuted,textTransform:'uppercase'}}>{s.l}</div><div style={{fontSize:14,fontWeight:700,color:T.text}}>{s.v}</div></div>
                     ))}
                   </div>
                   <RBar v={d.roas}/>
                   <div style={{marginTop:8,background:d.roas>=3?T.greenBg:d.roas>=2?T.amberBg:T.redBg,borderRadius:6,padding:'6px 9px',fontSize:11,color:d.roas>=3?T.green:d.roas>=2?T.amber:T.red,fontWeight:500}}>{d.action}</div>
-                  <div style={{marginTop:6,fontSize:11,color:T.textMuted}}>Google Ads change: <span style={{fontWeight:600,color:T.text}}>{d.modifier}</span></div>
+                  <div style={{marginTop:6,fontSize:11,color:T.text,fontWeight:600}}>Change to: <span style={{color:T.blue}}>{d.modifier}</span></div>
+                  <HowTo text={d.how}/>
                 </div>
               ))}
             </div>
 
             {/* Day of week */}
-            <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:8}}>Day of week performance</div>
+            <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:8}}>Day of week — when to increase or decrease budget</div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(7,minmax(0,1fr))',gap:8,marginBottom:16}}>
               {DAYS.map((d,i)=>(
                 <div key={i} style={{background:T.surface,border:`0.5px solid ${d.roas>=3?T.greenBorder:d.roas>=2?T.amberBorder:T.redBorder}`,borderRadius:8,padding:'10px 8px',textAlign:'center'}}>
-                  <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:4}}>{d.day}</div>
-                  <div style={{fontSize:18,fontWeight:700,color:d.roas>=3?T.green:d.roas>=2?T.amber:T.red,marginBottom:2}}>{d.roas}x</div>
-                  <div style={{fontSize:9,color:T.textMuted,marginBottom:6}}>£{d.spend.toLocaleString()}</div>
-                  <div style={{fontSize:9,fontWeight:600,color:d.roas>=3?T.green:T.amber}}>{d.action}</div>
+                  <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:3}}>{d.day}</div>
+                  <div style={{fontSize:18,fontWeight:700,color:d.roas>=3?T.green:d.roas>=2?T.amber:T.red,marginBottom:1}}>{d.roas}x</div>
+                  <div style={{fontSize:9,color:T.textMuted,marginBottom:5}}>£{d.spend.toLocaleString()}</div>
+                  <div style={{fontSize:9,fontWeight:600,color:d.bid!=='0%'&&d.bid!=='+0%'?T.green:T.textMuted,background:d.bid!=='+0%'?T.greenBg:T.bg,borderRadius:4,padding:'2px 4px',marginBottom:4}}>{d.bid}</div>
+                  <div style={{fontSize:9,color:T.textMuted,lineHeight:1.3}}>{d.weekly_tip}</div>
                 </div>
               ))}
             </div>
 
-            {/* Hour of day heatmap */}
-            <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:8}}>Hour of day ROAS heatmap</div>
-            <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,overflow:'hidden',marginBottom:14}}>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(7,minmax(0,1fr))'}}>
-                {TIMINGS.map((t,i)=>(
-                  <div key={i} style={{padding:'12px 8px',textAlign:'center',borderRight:i<6?`0.5px solid ${T.border}`:'none',background:t.roas>=3?'#f0fff4':t.roas>=2?T.amberBg:T.redBg}}>
-                    <div style={{fontSize:9,color:T.textMuted,marginBottom:3}}>{t.hour}</div>
-                    <div style={{fontSize:20,fontWeight:700,color:t.roas>=3?T.green:t.roas>=2?T.amber:T.red}}>{t.roas}x</div>
-                    <div style={{fontSize:9,color:T.textMuted,margin:'3px 0'}}>£{t.spend.toLocaleString()}</div>
-                    <div style={{fontSize:9,fontWeight:600,color:t.action==='EXCLUDE — dayparting off'?T.red:t.roas>=3?T.green:T.textMuted}}>{t.action}</div>
+            {/* Hour heatmap */}
+            <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:8}}>Hour of day heatmap — when your ads perform best</div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(7,minmax(0,1fr))',gap:8}}>
+              {TIMINGS.map((t,i)=>(
+                <div key={i} style={{background:T.surface,border:`0.5px solid ${t.roas>=3?T.greenBorder:t.roas>=2?T.amberBorder:T.redBorder}`,borderRadius:8,padding:'10px 8px',textAlign:'center'}}>
+                  <div style={{fontSize:9,color:T.textMuted,marginBottom:3}}>{t.hour}</div>
+                  <div style={{fontSize:20,fontWeight:700,color:t.roas>=3?T.green:t.roas>=2?T.amber:T.red,marginBottom:2}}>{t.roas}x</div>
+                  <div style={{fontSize:9,color:T.textMuted,marginBottom:5}}>£{t.spend.toLocaleString()}</div>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:4}}>
+                    <TickBox done={!!tasks[t.tid]} onToggle={tick} tid={t.tid} small/>
+                    <div style={{fontSize:9,fontWeight:600,color:t.action.includes('EXCL')?T.red:t.roas>=3?T.green:T.textMuted}}>{t.modifier}</div>
                   </div>
-                ))}
-              </div>
-            </div>
-            <div style={{background:T.blueBg,border:`0.5px solid ${T.blueBorder}`,borderRadius:8,padding:'10px 14px',fontSize:12,color:T.blue}}>
-              <span style={{fontWeight:600}}>How to set dayparting in Google Ads:</span> Campaigns → select campaign → Ad schedule → + Add time segments → Set bid adjustments per time slot
+                  <div style={{fontSize:8,color:T.textMuted,marginTop:3,lineHeight:1.2}}>{t.action}</div>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -403,14 +499,25 @@ export default function PaidAds() {
         {tab==='Locations' && (
           <div>
             <div style={{background:T.greenBg,border:`0.5px solid ${T.greenBorder}`,borderRadius:7,padding:'9px 13px',marginBottom:12,fontSize:11,color:T.green}}>
-              Leeds and Bradford deliver the best ROAS. Shift budget from London and Glasgow to Yorkshire.
+              15 UK cities analysed. Leeds and Bradford make the most money — put more budget there. Glasgow and Edinburgh are losing money — stop spending there. Click headers to sort.
             </div>
-            <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,overflow:'auto',marginBottom:12}}>
-              <table style={{width:'100%',borderCollapse:'collapse'}}>
-                <thead><tr><TH>City</TH><TH>Spend</TH><TH>Conv.</TH><TH>ROAS</TH><TH>CPA</TH><TH>Bid change</TH><TH w={200}>Action</TH></tr></thead>
+            <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,overflow:'auto'}}>
+              <table style={{width:'100%',borderCollapse:'collapse',minWidth:900}}>
+                <thead><tr>
+                  <TH>Done</TH>
+                  <TH onSort={()=>doSort('city')} sorted={sort.key==='city'?sort.dir:null}>City A–Z</TH>
+                  <TH onSort={()=>doSort('spend')} sorted={sort.key==='spend'?sort.dir:null}>Spend ↕</TH>
+                  <TH onSort={()=>doSort('conv')} sorted={sort.key==='conv'?sort.dir:null}>Sales ↕</TH>
+                  <TH onSort={()=>doSort('roas')} sorted={sort.key==='roas'?sort.dir:null}>ROAS ↕</TH>
+                  <TH onSort={()=>doSort('cpa')} sorted={sort.key==='cpa'?sort.dir:null}>Cost per sale ↕</TH>
+                  <TH>Change bid by</TH>
+                  <TH>What to do</TH>
+                  <TH>How to do it in Google Ads</TH>
+                </tr></thead>
                 <tbody>
-                  {LOCATIONS.map((l,i)=>(
-                    <tr key={i} style={{background:l.roas<1?T.redBg:'transparent'}}>
+                  {sortedLocations.map((l,i)=>(
+                    <tr key={i} style={{background:l.roas<1?T.redBg:l.change.includes('+')?'#f8fff9':'transparent'}}>
+                      <TD><TickBox done={!!tasks[l.tid]} onToggle={tick} tid={l.tid}/></TD>
                       <TD bold>{l.city}</TD>
                       <TD c={T.textMuted}>£{l.spend.toLocaleString()}</TD>
                       <TD>{l.conv}</TD>
@@ -418,157 +525,109 @@ export default function PaidAds() {
                       <TD c={l.cpa<20?T.green:l.cpa<40?T.amber:T.red}>£{l.cpa.toFixed(2)}</TD>
                       <TD c={l.change.includes('+')?T.green:l.change==='Keep'?T.textMuted:T.red} bold>{l.change}</TD>
                       <TD c={l.roas<1?T.red:l.roas<2?T.amber:T.green} wrap>{l.action}</TD>
+                      <TD c={T.blue} wrap small>{l.how}</TD>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div style={{background:T.blueBg,border:`0.5px solid ${T.blueBorder}`,borderRadius:8,padding:'10px 14px',fontSize:12,color:T.blue}}>
-              <span style={{fontWeight:600}}>How to adjust location bids:</span> Google Ads → Campaigns → Settings → Locations → select city → Edit bid adjustment → set %
+          </div>
+        )}
+
+        {/* ── WEEKLY BUDGET ── */}
+        {tab==='Weekly Budget' && (
+          <div>
+            <div style={{background:T.blueBg,border:`0.5px solid ${T.blueBorder}`,borderRadius:7,padding:'9px 13px',marginBottom:12,fontSize:11,color:T.blue}}>
+              Based on 2 years of data — when in the week to increase or decrease your bids. Weekend is your best time. Night is your worst.
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(7,minmax(0,1fr))',gap:8,marginBottom:14}}>
+              {DAYS.map((d,i)=>(
+                <div key={i} style={{background:T.surface,border:`0.5px solid ${d.roas>=3?T.greenBorder:d.roas>=2?T.amberBorder:T.redBorder}`,borderRadius:8,padding:'12px 10px'}}>
+                  <div style={{fontSize:14,fontWeight:700,color:T.text,marginBottom:4,textAlign:'center'}}>{d.day}</div>
+                  <div style={{fontSize:22,fontWeight:700,color:d.roas>=3?T.green:d.roas>=2?T.amber:T.red,marginBottom:2,textAlign:'center'}}>{d.roas}x</div>
+                  <div style={{fontSize:10,color:T.textMuted,marginBottom:8,textAlign:'center'}}>£{d.spend.toLocaleString()} spend</div>
+                  <div style={{background:d.bid!=='+0%'?T.greenBg:T.bg,borderRadius:6,padding:'5px 7px',textAlign:'center',marginBottom:6}}>
+                    <div style={{fontSize:10,color:T.textMuted}}>Bid change</div>
+                    <div style={{fontSize:14,fontWeight:700,color:d.bid!=='+0%'?T.green:T.textMuted}}>{d.bid}</div>
+                  </div>
+                  <div style={{fontSize:10,color:T.text,fontWeight:500,marginBottom:4}}>{d.action}</div>
+                  <div style={{fontSize:9,color:T.blue,lineHeight:1.3}}>{d.how}</div>
+                  <div style={{fontSize:9,color:T.textMuted,marginTop:4,lineHeight:1.3,fontStyle:'italic'}}>{d.weekly_tip}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'12px 14px'}}>
+              <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:8}}>How to set day-of-week bid modifiers in Google Ads</div>
+              {['Go to ads.google.com','Click on a campaign name','In the left menu click "Ad schedule"','Click the blue + button to add a time segment','Select the day and time range','Set the bid adjustment percentage (e.g. +20%)','Click Save','Repeat for each day you want to adjust'].map((s,i)=>(
+                <div key={i} style={{display:'flex',gap:8,marginBottom:5}}>
+                  <div style={{width:16,height:16,borderRadius:'50%',background:T.blueBg,border:`1px solid ${T.blue}`,color:T.blue,fontSize:9,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{i+1}</div>
+                  <span style={{fontSize:11,color:T.textMuted}}>{s}</span>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        {/* ── WEEKLY ANALYSIS ── */}
-        {tab==='Weekly Analysis' && (
+        {/* ── MONTHLY BUDGET ── */}
+        {tab==='Monthly Budget' && (
           <div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:14}}>
-              <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,overflow:'hidden'}}>
-                <div style={{padding:'9px 13px',borderBottom:`0.5px solid ${T.border}`,background:T.bg,fontSize:12,fontWeight:600,color:T.text}}>Weekly spend trend — last 12 weeks</div>
-                <div style={{padding:'12px 14px'}}>
-                  {WEEKLY.map((w,i)=>(
-                    <div key={i} style={{display:'flex',alignItems:'center',gap:10,marginBottom:7}}>
-                      <span style={{fontSize:10,color:T.textMuted,minWidth:52}}>{w.week}</span>
-                      <div style={{flex:1,height:16,background:T.borderLight,borderRadius:3,overflow:'hidden',position:'relative'}}>
-                        <div style={{width:`${(w.spend/940)*100}%`,height:'100%',background:w.roas>=3?T.green:w.roas>=2?T.blue:T.amber,borderRadius:3}}/>
-                      </div>
-                      <span style={{fontSize:10,color:T.textMuted,minWidth:38}}>£{w.spend}</span>
-                      <span style={{fontSize:10,fontWeight:600,color:w.roas>=3?T.green:w.roas>=2?T.amber:T.red,minWidth:34}}>{w.roas}x</span>
-                    </div>
-                  ))}
+            <div style={{background:T.amberBg,border:`0.5px solid ${T.amberBorder}`,borderRadius:7,padding:'9px 13px',marginBottom:12,fontSize:11,color:T.amber}}>
+              Based on 2 years of historical data — when in the year to increase or decrease your monthly budget. December is your best month. January is your worst.
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:10,marginBottom:14}}>
+              {MONTHLY_BUDGET.map((m,i)=>(
+                <div key={i} style={{background:T.surface,border:`0.5px solid ${m.color===T.green?T.greenBorder:m.color===T.red?T.redBorder:T.amberBorder}`,borderRadius:8,padding:'12px 14px'}}>
+                  <div style={{fontSize:13,fontWeight:700,color:T.text,marginBottom:6}}>{m.month}</div>
+                  <div style={{fontSize:11,color:T.textMuted,marginBottom:4}}>Suggested budget</div>
+                  <div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>{m.budget}</div>
+                  <div style={{background:m.color===T.green?T.greenBg:m.color===T.red?T.redBg:T.amberBg,borderRadius:6,padding:'4px 8px',marginBottom:6}}>
+                    <span style={{fontSize:11,fontWeight:600,color:m.color}}>{m.action}</span>
+                  </div>
+                  <div style={{fontSize:10,color:T.textMuted,lineHeight:1.4}}>{m.reason}</div>
                 </div>
-              </div>
-              <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'14px 16px'}}>
-                  <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:10}}>Week-on-week pattern</div>
-                  {[
-                    {l:'Best week type',v:'Feb-Mar high spend weeks',c:T.green},
-                    {l:'Worst week type',v:'Post-Dec (Jan W1) drop',c:T.red},
-                    {l:'Average weekly spend',v:'£784',c:T.textMuted},
-                    {l:'Average weekly ROAS',v:'2.74x',c:T.amber},
-                    {l:'Best week ROAS',v:'3.40x (W2 Mar)',c:T.green},
-                    {l:'Worst week ROAS',v:'2.10x (Jan W1, Mar W3)',c:T.red},
-                  ].map((r,i)=>(
-                    <div key={i} style={{display:'flex',justifyContent:'space-between',padding:'5px 0',borderBottom:i<5?`0.5px solid ${T.borderLight}`:'none'}}>
-                      <span style={{fontSize:11,color:T.textMuted}}>{r.l}</span>
-                      <span style={{fontSize:11,fontWeight:600,color:r.c}}>{r.v}</span>
-                    </div>
-                  ))}
+              ))}
+            </div>
+            <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'12px 14px'}}>
+              <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:8}}>How to change your monthly budget in Google Ads</div>
+              {['Go to ads.google.com','Click on Campaigns in the left menu','Find the campaign you want to change','Click the budget amount (shown under the campaign name)','Type the new daily budget (monthly ÷ 30.4 = daily amount)','Click Save — changes take effect within minutes'].map((s,i)=>(
+                <div key={i} style={{display:'flex',gap:8,marginBottom:5}}>
+                  <div style={{width:16,height:16,borderRadius:'50%',background:T.amberBg,border:`1px solid ${T.amber}`,color:T.amber,fontSize:9,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{i+1}</div>
+                  <span style={{fontSize:11,color:T.textMuted}}>{s}</span>
                 </div>
-                <div style={{background:T.greenBg,border:`0.5px solid ${T.greenBorder}`,borderRadius:8,padding:'12px 14px'}}>
-                  <div style={{fontSize:11,fontWeight:600,color:T.green,marginBottom:6}}>📊 This week's AI prediction</div>
-                  <div style={{fontSize:11,color:T.green,lineHeight:1.6}}>Based on the last 12 weeks, this week should perform at approximately <strong>2.7–3.1x ROAS</strong>. April historically performs similarly to March. If you fix the device split this week, expect ROAS to jump to <strong>3.2–3.6x</strong>.</div>
-                </div>
-                <div style={{background:T.amberBg,border:`0.5px solid ${T.amberBorder}`,borderRadius:8,padding:'12px 14px'}}>
-                  <div style={{fontSize:11,fontWeight:600,color:T.amber,marginBottom:6}}>⚠️ Weekly watch — action needed</div>
-                  <div style={{fontSize:11,color:T.amber,lineHeight:1.6}}>Spend dips consistently in Week 3 of each month. Consider reducing budget by 15% in W3 and reallocating to W1–W2 when ROAS is higher.</div>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         )}
 
-        {/* ── MONTHLY ANALYSIS ── */}
-        {tab==='Monthly Analysis' && (
+        {/* ── SCALE KEYWORDS ── */}
+        {tab==='Scale Keywords' && (
           <div>
-            <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,overflow:'hidden',marginBottom:12}}>
-              <div style={{padding:'9px 13px',borderBottom:`0.5px solid ${T.border}`,background:T.bg,fontSize:12,fontWeight:600,color:T.text}}>Monthly performance — Apr 2024 to Mar 2025</div>
-              <div style={{padding:'12px 14px'}}>
-                {MONTHLY.map((m,i)=>(
-                  <div key={i} style={{display:'grid',gridTemplateColumns:'60px 1fr 60px 60px 60px',gap:8,alignItems:'center',marginBottom:8}}>
-                    <span style={{fontSize:11,color:T.textMuted}}>{m.month}</span>
-                    <div style={{height:18,background:T.borderLight,borderRadius:3,overflow:'hidden',position:'relative'}}>
-                      <div style={{width:`${(m.spend/4120)*100}%`,height:'100%',background:m.roas>=2?T.blue:T.amber,borderRadius:3}}/>
-                      <div style={{width:`${(m.rev/9888)*100}%`,height:'100%',background:m.roas>=2?`${T.green}60`:T.redBg,borderRadius:3,position:'absolute',top:0,left:0,mixBlendMode:'multiply'}}/>
-                    </div>
-                    <span style={{fontSize:10,color:T.textMuted}}>£{m.spend.toLocaleString()}</span>
-                    <span style={{fontSize:10,color:T.green}}>£{m.rev.toLocaleString()}</span>
-                    <span style={{fontSize:10,fontWeight:700,color:m.roas>=2.5?T.green:m.roas>=2?T.amber:T.red}}>{m.roas}x</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
-              <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'14px 16px'}}>
-                <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:10}}>Seasonal patterns — what history says</div>
-                {[
-                  {m:'April', pred:'Similar to March — steady. Budget £2,900–£3,200', c:T.green},
-                  {m:'May', pred:'Slight uplift — pre-summer hair prep. Scale braiding hair', c:T.green},
-                  {m:'June', pred:'Good — summer hair demand. Increase wig and extension spend', c:T.green},
-                  {m:'July–Aug', pred:'Peak summer. Best months for wigs and extensions. Scale budget', c:T.green},
-                  {m:'September', pred:'Post-summer dip. Reduce budget, focus on relaxers', c:T.amber},
-                  {m:'Oct–Nov', pred:'Back to school uplift. Scale braiding hair category', c:T.green},
-                  {m:'December', pred:'Best month — Christmas gifts. Scale all categories', c:T.green},
-                  {m:'January', pred:'Worst month historically — drop budget 20%', c:T.red},
-                ].map((r,i)=>(
-                  <div key={i} style={{display:'flex',gap:8,padding:'5px 0',borderBottom:i<7?`0.5px solid ${T.borderLight}`:'none'}}>
-                    <span style={{fontSize:11,fontWeight:600,color:T.text,minWidth:80}}>{r.m}</span>
-                    <span style={{fontSize:11,color:r.c}}>{r.pred}</span>
-                  </div>
-                ))}
-              </div>
-              <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                <div style={{background:T.greenBg,border:`0.5px solid ${T.greenBorder}`,borderRadius:8,padding:'12px 14px'}}>
-                  <div style={{fontSize:11,fontWeight:600,color:T.green,marginBottom:7}}>📅 April 2026 prediction</div>
-                  <div style={{fontSize:11,color:T.green,lineHeight:1.7}}>
-                    Based on April 2024 (£2,100 · 1.80x ROAS):<br/>
-                    — Expected spend: £2,800–£3,200<br/>
-                    — Expected ROAS: 1.8–2.1x (current)<br/>
-                    — With device fix: 2.8–3.2x ROAS<br/>
-                    — Priority categories: braiding hair, edge control, wigs<br/>
-                    — Scale Human Hair Brands immediately
-                  </div>
-                </div>
-                <div style={{background:T.amberBg,border:`0.5px solid ${T.amberBorder}`,borderRadius:8,padding:'12px 14px'}}>
-                  <div style={{fontSize:11,fontWeight:600,color:T.amber,marginBottom:6}}>📈 12-month roadmap</div>
-                  {[
-                    {m:'Apr–May', a:'Fix device split. Scale Human Hair Brands.'},
-                    {m:'Jun–Aug', a:'Scale wigs and extensions. Summer peak.'},
-                    {m:'Sep', a:'Reduce 20%. Focus relaxers only.'},
-                    {m:'Oct–Nov', a:'Scale braiding hair. Back to school.'},
-                    {m:'Dec', a:'Max budget. All categories. Christmas.'},
-                    {m:'Jan 27', a:'Drop budget 20%. Pause low ROAS.'},
-                  ].map((r,i)=>(
-                    <div key={i} style={{display:'flex',gap:8,padding:'4px 0',borderBottom:i<5?`0.5px solid ${T.amberBorder}`:'none',fontSize:11,color:T.amber}}>
-                      <span style={{fontWeight:600,minWidth:60}}>{r.m}</span>
-                      <span>{r.a}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── KEYWORDS: SCALE ── */}
-        {tab==='Keywords: Scale' && (
-          <div>
-            <div style={{background:T.greenBg,border:`0.5px solid ${T.greenBorder}`,borderRadius:7,padding:'9px 13px',marginBottom:12,fontSize:11,color:T.green,fontWeight:500}}>
-              These keywords are converting profitably — increase bids to capture more impression share and volume.
+            <div style={{background:T.greenBg,border:`0.5px solid ${T.greenBorder}`,borderRadius:7,padding:'9px 13px',marginBottom:12,fontSize:11,color:T.green}}>
+              These keywords are making money — increase bids to get more sales. Tick each one as you do it.
             </div>
             <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,overflow:'auto'}}>
-              <table style={{width:'100%',borderCollapse:'collapse',minWidth:800}}>
-                <thead><tr><TH>Keyword</TH><TH>Priority</TH><TH>Current bid</TH><TH>Recommended bid</TH><TH>ROAS</TH><TH w={300}>Why increase</TH><TH>How to change in Google Ads</TH></tr></thead>
+              <table style={{width:'100%',borderCollapse:'collapse',minWidth:900}}>
+                <thead><tr>
+                  <TH>Done</TH>
+                  <TH onSort={()=>doSort('kw')} sorted={sort.key==='kw'?sort.dir:null}>Keyword</TH>
+                  <TH>Priority</TH>
+                  <TH onSort={()=>doSort('curr')} sorted={sort.key==='curr'?sort.dir:null}>Current bid</TH>
+                  <TH onSort={()=>doSort('rec')} sorted={sort.key==='rec'?sort.dir:null}>New bid</TH>
+                  <TH onSort={()=>doSort('roas')} sorted={sort.key==='roas'?sort.dir:null}>ROAS ↕</TH>
+                  <TH>Why increase</TH>
+                  <TH>How to do it in Google Ads</TH>
+                </tr></thead>
                 <tbody>
                   {POSITIVE_KW.map((k,i)=>(
                     <tr key={i} style={{background:k.priority==='critical'?'#f0fff4':'transparent'}}>
+                      <TD><TickBox done={!!tasks[k.tid]} onToggle={tick} tid={k.tid}/></TD>
                       <TD bold>{k.kw}</TD>
-                      <TD><Badge text={k.priority==='critical'?'Critical':k.priority==='high'?'High':'Medium'} c={k.priority==='critical'?T.green:k.priority==='high'?T.blue:T.amber} bg={k.priority==='critical'?T.greenBg:k.priority==='high'?T.blueBg:T.amberBg}/></TD>
+                      <TD><Badge text={k.priority==='critical'?'Do today':k.priority==='high'?'This week':'Soon'} c={k.priority==='critical'?T.green:k.priority==='high'?T.blue:T.amber} bg={k.priority==='critical'?T.greenBg:k.priority==='high'?T.blueBg:T.amberBg}/></TD>
                       <TD c={T.textMuted}>£{k.curr.toFixed(2)}</TD>
-                      <TD c={T.green} bold>£{k.recommended.toFixed(2)}</TD>
+                      <TD c={T.green} bold>£{k.rec.toFixed(2)}</TD>
                       <TD><RBar v={Math.min(k.roas,12)} max={12}/></TD>
                       <TD c={T.textMuted} wrap>{k.reason}</TD>
-                      <TD c={T.blue} wrap style={{fontSize:10}}>Campaigns → Keywords → find term → Edit → set bid to £{k.recommended.toFixed(2)}</TD>
+                      <TD c={T.blue} wrap small>{k.how}</TD>
                     </tr>
                   ))}
                 </tbody>
@@ -577,46 +636,52 @@ export default function PaidAds() {
           </div>
         )}
 
-        {/* ── KEYWORDS: BLOCK ── */}
-        {tab==='Keywords: Block' && (
+        {/* ── BLOCK KEYWORDS ── */}
+        {tab==='Block Keywords' && (
           <div>
-            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
-              <div style={{background:T.redBg,border:`0.5px solid ${T.redBorder}`,borderRadius:7,padding:'8px 12px',fontSize:11,color:T.red,flex:1,marginRight:10}}>
-                Select the keywords below → click Copy → paste directly into Google Ads negative keyword tool
+            <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:10}}>
+              <div style={{flex:1,background:T.redBg,border:`0.5px solid ${T.redBorder}`,borderRadius:7,padding:'8px 12px',fontSize:11,color:T.red}}>
+                Select the keywords wasting your money → click Copy → paste directly into Google Ads negative keywords tool. Ticking also marks them done in the progress bar.
               </div>
-              <button onClick={copyNegatives} style={{padding:'8px 20px',fontSize:12,fontWeight:600,color:'#fff',background:copied?T.green:T.red,border:'none',borderRadius:7,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap'}}>
-                {copied ? '✓ Copied!' : '📋 Copy selected as negatives'}
+              <button onClick={copyNegs} style={{padding:'9px 20px',fontSize:12,fontWeight:600,color:'#fff',background:copied?T.green:T.red,border:'none',borderRadius:7,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap'}}>
+                {copied?'✓ Copied & ticked!':'📋 Copy selected + tick done'}
               </button>
             </div>
             <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,overflow:'hidden',marginBottom:12}}>
-              <div style={{padding:'8px 12px',borderBottom:`0.5px solid ${T.border}`,background:T.bg,display:'flex',alignItems:'center',gap:10}}>
-                <button onClick={()=>setNegSelected(Object.fromEntries(NEGATIVE_KW.map(k=>[k.kw,true])))} style={{fontSize:11,color:T.blue,background:'none',border:`0.5px solid ${T.blueBorder}`,borderRadius:5,padding:'3px 10px',cursor:'pointer'}}>Select all</button>
-                <button onClick={()=>setNegSelected(Object.fromEntries(NEGATIVE_KW.map(k=>[k.kw,false])))} style={{fontSize:11,color:T.textMuted,background:'none',border:`0.5px solid ${T.border}`,borderRadius:5,padding:'3px 10px',cursor:'pointer'}}>Deselect all</button>
-                <span style={{fontSize:11,color:T.textMuted,marginLeft:'auto'}}>{Object.values(negSelected).filter(Boolean).length} selected</span>
+              <div style={{padding:'8px 12px',borderBottom:`0.5px solid ${T.border}`,background:T.bg,display:'flex',gap:8,alignItems:'center'}}>
+                <button onClick={()=>setNegSel(Object.fromEntries(NEGATIVE_KW.map(k=>[k.kw,true])))} style={{fontSize:11,color:T.blue,background:'none',border:`0.5px solid ${T.blueBorder}`,borderRadius:5,padding:'3px 10px',cursor:'pointer'}}>Select all</button>
+                <button onClick={()=>setNegSel(Object.fromEntries(NEGATIVE_KW.map(k=>[k.kw,false])))} style={{fontSize:11,color:T.textMuted,background:'none',border:`0.5px solid ${T.border}`,borderRadius:5,padding:'3px 10px',cursor:'pointer'}}>Clear all</button>
+                <span style={{fontSize:11,color:T.textMuted,marginLeft:'auto'}}>{Object.values(negSel).filter(Boolean).length} selected · total wasted: £{NEGATIVE_KW.filter(k=>negSel[k.kw]).reduce((a,k)=>a+parseInt(k.spent.replace('£','')),0).toLocaleString()}</span>
               </div>
               <table style={{width:'100%',borderCollapse:'collapse'}}>
-                <thead><tr><TH w={40}></TH><TH>Keyword</TH><TH>Wasted spend</TH><TH>Reason</TH><TH>How to add in Google Ads</TH></tr></thead>
+                <thead><tr>
+                  <TH w={40}>Select</TH>
+                  <TH onSort={()=>doSort('kw')} sorted={sort.key==='kw'?sort.dir:null}>Keyword A–Z</TH>
+                  <TH onSort={()=>doSort('spent')} sorted={sort.key==='spent'?sort.dir:null}>Wasted ↕</TH>
+                  <TH>Reason</TH>
+                  <TH>How to add in Google Ads</TH>
+                </tr></thead>
                 <tbody>
                   {NEGATIVE_KW.map((k,i)=>(
-                    <tr key={i} style={{background:negSelected[k.kw]?T.redBg:'transparent',cursor:'pointer'}} onClick={()=>setNegSelected(s=>({...s,[k.kw]:!s[k.kw]}))}>
+                    <tr key={i} style={{background:negSel[k.kw]?T.redBg:'transparent',cursor:'pointer'}} onClick={()=>setNegSel(s=>({...s,[k.kw]:!s[k.kw]}))}>
                       <TD>
-                        <div style={{width:14,height:14,borderRadius:3,border:`1.5px solid ${negSelected[k.kw]?T.red:T.border}`,background:negSelected[k.kw]?T.red:'transparent',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                          {negSelected[k.kw]&&<svg width="8" height="6" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        <div style={{width:14,height:14,borderRadius:3,border:`1.5px solid ${negSel[k.kw]?T.red:T.border}`,background:negSel[k.kw]?T.red:'transparent',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                          {negSel[k.kw]&&<svg width="8" height="6" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                         </div>
                       </TD>
                       <TD bold>{k.kw}</TD>
                       <TD c={T.red}>{k.spent}</TD>
                       <TD c={T.textMuted}>{k.reason}</TD>
-                      <TD c={T.blue} wrap style={{fontSize:10}}>Tools → Shared library → Negative keyword lists → Add</TD>
+                      <TD c={T.blue} wrap small>Tools → Shared library → Negative keyword lists → CC Block List → Add</TD>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
             <div style={{background:T.blueBg,border:`0.5px solid ${T.blueBorder}`,borderRadius:8,padding:'12px 14px'}}>
-              <div style={{fontSize:11,fontWeight:600,color:T.blue,marginBottom:7}}>How to bulk add negative keywords in Google Ads</div>
-              {['Go to Google Ads → Tools → Shared library','Click Negative keyword lists → + New negative keyword list','Name it "CC Block List"','Paste all copied keywords (one per line)','Click Save','Go to Campaigns → select all → Settings → Negative keywords → Apply list'].map((s,i)=>(
-                <div key={i} style={{display:'flex',gap:8,marginBottom:5,alignItems:'flex-start'}}>
+              <div style={{fontSize:11,fontWeight:600,color:T.blue,marginBottom:8}}>How to bulk add negative keywords in Google Ads (step by step)</div>
+              {['Go to ads.google.com','Click Tools & Settings (wrench icon) at the top','Click Shared library → Negative keyword lists','Click the blue + button → New negative keyword list','Name it "CC Block List April 2026"','Paste all copied keywords — one per line','Click Save','Now go to Campaigns in the left menu','Select all your campaigns using the checkbox at top','Click Settings → Negative keywords → Add list → CC Block List April 2026','Click Save — done'].map((s,i)=>(
+                <div key={i} style={{display:'flex',gap:8,marginBottom:5}}>
                   <div style={{width:16,height:16,borderRadius:'50%',background:T.blueBg,border:`1px solid ${T.blue}`,color:T.blue,fontSize:9,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{i+1}</div>
                   <span style={{fontSize:11,color:T.blue}}>{s}</span>
                 </div>
@@ -629,34 +694,36 @@ export default function PaidAds() {
         {tab==='Competitors' && (
           <div>
             <div style={{background:T.amberBg,border:`0.5px solid ${T.amberBorder}`,borderRadius:7,padding:'9px 13px',marginBottom:12,fontSize:11,color:T.amber}}>
-              <span style={{fontWeight:600}}>Data source:</span> Upload your Google Ads Auction Insights CSV for precise competitor overlap data. Below is estimated analysis based on keyword research.
+              Upload your Google Ads Auction Insights CSV in Data Upload for precise data. Below is estimated analysis based on keyword research and market knowledge.
             </div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10,marginBottom:14}}>
-              {COMPETITORS.map((c,i)=>(
+              {[
+                {name:'Hair City Leeds',overlap:68,kw:'braiding hair leeds, wigs leeds, afro hair shop',est:'Medium spend',threat:'High',strategy:'They dominate "wigs leeds" — increase your bid on this term to +£1.20 to outbid them'},
+                {name:'Kashmir Hair',overlap:54,kw:'relaxer uk, hair products leeds, dark and lovely',est:'Low-medium spend',threat:'Medium',strategy:'Competing on relaxer terms — add brand keywords like "ors relaxer" to protect your share'},
+                {name:'Beauty Depot Online',overlap:41,kw:'hair extensions uk, human hair wigs',est:'High spend — national',threat:'High',strategy:'National budget. You cannot beat them nationally — focus on Leeds local terms where they are weak'},
+                {name:'Afro Hair UK',overlap:38,kw:'afro hair products, natural hair uk',est:'Medium spend',threat:'Medium',strategy:'National focus — compete locally in Chapeltown and Roundhay where you have physical stores'},
+              ].map((c,i)=>(
                 <div key={i} style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'14px 16px'}}>
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
                     <span style={{fontSize:13,fontWeight:600,color:T.text}}>{c.name}</span>
                     <Badge text={`${c.threat} threat`} c={c.threat==='High'?T.red:T.amber} bg={c.threat==='High'?T.redBg:T.amberBg}/>
                   </div>
                   <div style={{marginBottom:8}}>
-                    <div style={{fontSize:10,color:T.textMuted,marginBottom:3,textTransform:'uppercase',letterSpacing:'0.04em'}}>Keyword overlap</div>
+                    <div style={{fontSize:10,color:T.textMuted,marginBottom:3}}>Keyword overlap with you</div>
                     <div style={{height:6,background:T.borderLight,borderRadius:99,overflow:'hidden',border:`0.5px solid ${T.border}`}}>
                       <div style={{width:`${c.overlap}%`,height:'100%',background:c.overlap>60?T.red:T.amber,borderRadius:99}}/>
                     </div>
-                    <div style={{fontSize:11,color:T.textMuted,marginTop:2}}>{c.overlap}% keyword overlap</div>
+                    <div style={{fontSize:11,color:T.textMuted,marginTop:2}}>{c.overlap}% of their keywords match yours</div>
                   </div>
-                  <div style={{fontSize:10,color:T.textMuted,textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:3}}>Competing on</div>
-                  <div style={{fontSize:11,color:T.text,marginBottom:8}}>{c.topKw}</div>
-                  <div style={{fontSize:10,color:T.textMuted,textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:3}}>Est. spend</div>
-                  <div style={{fontSize:11,color:T.textMuted,marginBottom:8}}>{c.est}</div>
-                  <div style={{background:T.blueBg,border:`0.5px solid ${T.blueBorder}`,borderRadius:6,padding:'7px 9px',fontSize:11,color:T.blue}}><span style={{fontWeight:600}}>Strategy: </span>{c.strategy}</div>
+                  <div style={{fontSize:11,color:T.textMuted,marginBottom:6}}><span style={{fontWeight:600,color:T.text}}>Competing on: </span>{c.kw}</div>
+                  <div style={{background:T.blueBg,border:`0.5px solid ${T.blueBorder}`,borderRadius:6,padding:'7px 9px',fontSize:11,color:T.blue}}><span style={{fontWeight:600}}>Your counter-strategy: </span>{c.strategy}</div>
                 </div>
               ))}
             </div>
-            <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'14px 16px'}}>
-              <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:10}}>How to get real competitor data from Google Ads</div>
-              {['Go to Google Ads → Campaigns → any campaign','Click the Reports icon (top right)','Select Auction insights report','Download as CSV','Upload that CSV in the Data Upload tab','Platform will show exact impression share vs competitors'].map((s,i)=>(
-                <div key={i} style={{display:'flex',gap:8,marginBottom:6}}>
+            <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'12px 14px'}}>
+              <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:8}}>How to get real competitor data from Google Ads</div>
+              {['Go to ads.google.com → click a campaign','Click the Reports icon (bar chart icon, top right)','Select "Auction insights" from the drop-down','You will see a table showing competitor domains','Download as CSV','Upload that CSV in the Data Upload tab on this platform','The platform will show exact impression share vs each competitor'].map((s,i)=>(
+                <div key={i} style={{display:'flex',gap:8,marginBottom:5}}>
                   <div style={{width:16,height:16,borderRadius:'50%',background:T.blueBg,border:`1px solid ${T.blue}`,color:T.blue,fontSize:9,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{i+1}</div>
                   <span style={{fontSize:11,color:T.textMuted}}>{s}</span>
                 </div>
@@ -668,21 +735,23 @@ export default function PaidAds() {
         {/* ── HOW-TO GUIDE ── */}
         {tab==='How-To Guide' && (
           <div>
-            <div style={{background:T.blueBg,border:`0.5px solid ${T.blueBorder}`,borderRadius:7,padding:'9px 13px',marginBottom:12,fontSize:11,color:T.blue,fontWeight:500}}>
-              Step-by-step instructions for every recommended change. Open Google Ads alongside this guide.
+            <div style={{background:T.blueBg,border:`0.5px solid ${T.blueBorder}`,borderRadius:7,padding:'9px 13px',marginBottom:14,fontSize:11,color:T.blue,fontWeight:500}}>
+              Complete step-by-step instructions for every change. Open Google Ads in another tab alongside this guide.
             </div>
             {[
-              { title:'Add negative keywords (bulk)', steps:['ads.google.com → Tools (wrench icon top right)','Shared library → Negative keyword lists','+ New negative keyword list → name it "CC Block List April 2026"','Paste keywords from the Keywords: Block tab (use the Copy button)','Save → Go to Campaigns tab','Select all campaigns (checkbox top left)','Settings → Negative keywords → Apply list → CC Block List April 2026'] },
-              { title:'Fix device bid modifiers', steps:['ads.google.com → Campaigns','Click "Shopify All Products"','Left menu → Devices','Click pencil on Mobile → set bid adj to -40% → Save','Click pencil on Desktop → set bid adj to +50% → Save','Click pencil on Tablet → set bid adj to +20% → Save','Repeat for each campaign'] },
-              { title:'Set dayparting (ad schedule)', steps:['ads.google.com → Campaigns → select campaign','Left menu → Ad schedule','+ Add time segments','Add: all days except 12am–6am','Set Friday 6pm–9pm → bid adj +20%','Set Saturday all day → bid adj +20%','Click Save'] },
-              { title:'Adjust location bids', steps:['ads.google.com → Campaigns → click campaign name','Left menu → Locations','Find Glasgow → click pencil → Excluded → Save','Find London → click pencil → -40% bid adj → Save','Find Leeds → click pencil → +15% bid adj → Save','Find Bradford → +10% bid adj → Save'] },
-              { title:'Scale Human Hair Brands campaign', steps:['ads.google.com → Campaigns','Find "Human Hair - Brands"','Click the budget (current amount)','Change to £16.67/day (= £500/month)','Click Save','Monitor daily for first 2 weeks'] },
-              { title:'Add exact match keywords', steps:['ads.google.com → Campaigns → Human Hair - Brands','Left menu → Keywords','+ Add keywords','Type: [matrix matte definer] with square brackets (= exact match)','Set bid to £0.80','Add: [naturally straight beautiful textures] at £0.60','Add: [bsset curl cream] at £1.40','Click Save'] },
-            ].map((section,si)=>(
+              {title:'Add negative keywords (stops wasting money)',steps:['Go to ads.google.com','Click the Tools & Settings wrench icon at the very top of the page','Click Shared library in the dropdown','Click Negative keyword lists','Click the blue + button on the left','Name your list: "CC Block List April 2026"','Go to the Block Keywords tab on this page → select all keywords → click Copy','Paste them into the keyword box — one per line','Click Save','Now go back to your Campaigns list','Tick the checkbox at the top to select ALL campaigns','Click Edit in the blue bar that appears → click Edit settings','Scroll to Negative keywords → click Add from list → select CC Block List April 2026','Click Save — done']},
+              {title:'Fix device bid modifiers (biggest quick win)',steps:['Go to ads.google.com','Click on "Shopify All Products" campaign','In the left-hand menu click Devices','You will see Mobile, Desktop, Tablet rows','Click the pencil icon on the Mobile row','Change the bid adjustment to -40%','Click Save','Click the pencil icon on Desktop row','Change the bid adjustment to +50%','Click Save','Click pencil on Tablet → +20% → Save','Repeat these steps for every campaign in your account']},
+              {title:'Set day and time bid modifiers',steps:['Go to ads.google.com','Click on a campaign','In the left menu click Ad schedule','Click the blue + to add a new time segment','To exclude night: select all days, set time 12:00am to 6:00am, bid -100% (this excludes it)','To boost Friday evening: select Friday, 6pm to 9pm, bid +20%','To boost Saturday: select Saturday, all day, bid +20%','Click Save after each change','Repeat for every campaign']},
+              {title:'Pause a campaign',steps:['Go to ads.google.com','Click Campaigns in the left menu','Find the campaign you want to pause (e.g. Synthetic Wigs 2026)','Click the green circle/dot next to the campaign name','Select Paused from the dropdown','The campaign will stop immediately — budget stops being spent']},
+              {title:'Delete a campaign',steps:['Go to ads.google.com → Campaigns','Find March 2018 Campaign','Click the three dots (...) to the right of the campaign name','Select Remove','Type REMOVE in the confirmation box','Click Remove campaign — it is gone']},
+              {title:'Increase a keyword bid',steps:['Go to ads.google.com','Click on the campaign that contains the keyword','In the left menu click Keywords','Find the keyword you want to increase','Click the bid amount (shown in the Bid column)','Type the new bid amount from the Scale Keywords tab','Click Save','The higher bid takes effect within minutes']},
+              {title:'Change monthly budget',steps:['Go to ads.google.com → Campaigns','Find the campaign you want to change','Click the budget amount shown below the campaign name','Type the new daily budget (take the monthly budget from this page and divide by 30.4 to get the daily amount)','Click Save']},
+              {title:'Adjust location targeting',steps:['Go to ads.google.com → click a campaign','In the left menu click Locations','You will see a list of your targeted locations','Click the pencil icon next to a location','To increase: type a positive % e.g. +15%','To decrease: type a negative % e.g. -40%','To exclude completely: click the dropdown and select Excluded','Click Save']},
+            ].map((s,si)=>(
               <div key={si} style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'14px 16px',marginBottom:10}}>
-                <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:10}}>{si+1}. {section.title}</div>
-                {section.steps.map((step,i)=>(
-                  <div key={i} style={{display:'flex',gap:9,marginBottom:6,alignItems:'flex-start'}}>
+                <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:10}}>{si+1}. {s.title}</div>
+                {s.steps.map((step,i)=>(
+                  <div key={i} style={{display:'flex',gap:9,marginBottom:5}}>
                     <div style={{width:18,height:18,borderRadius:'50%',background:T.blueBg,border:`1px solid ${T.blueBorder}`,color:T.blue,fontSize:9,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:1}}>{i+1}</div>
                     <span style={{fontSize:12,color:T.textMuted,lineHeight:1.5}}>{step}</span>
                   </div>
@@ -697,35 +766,69 @@ export default function PaidAds() {
           <div style={{maxWidth:900}}>
             <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'12px 14px',marginBottom:12}}>
               <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
-                <span style={{fontSize:12,fontWeight:600,color:T.text}}>Overall task progress</span>
-                <span style={{fontSize:11,color:T.textMuted}}>{allTasks.filter(t=>tasksDone[t.id]).length}/{allTasks.length} · {donePct}%</span>
+                <span style={{fontSize:12,fontWeight:600,color:T.text}}>All Paid Ads actions — tick as you complete each one in Google Ads</span>
+                <span style={{fontSize:11,color:T.textMuted}}>{doneCount}/{ALL_TASK_IDS.length} · {donePct}%</span>
               </div>
               <div style={{height:6,background:T.borderLight,borderRadius:99,border:`0.5px solid ${T.border}`,overflow:'hidden'}}>
                 <div style={{height:'100%',width:`${donePct}%`,background:donePct===100?T.green:T.blue,borderRadius:99,transition:'width 0.3s'}}/>
               </div>
+              <div style={{fontSize:10,color:T.textMuted,marginTop:6}}>Ticking here also updates the daily overview progress bar. Ticking in any other tab updates this bar too — everything is connected.</div>
             </div>
-            {TASKS.map((group,gi)=>(
+            {[
+              {title:'🚨 Critical — do today first', color:T.red, items:[
+                {id:'t_neg_energy',text:'Add energy drink negative keywords (Monster, Red Bull, Sour Patch)',how:'Block Keywords tab → select → Copy → paste into Google Ads Shared Library → Negative keyword lists'},
+                {id:'t_pause_wigs',text:'PAUSE Synthetic Wigs 2026 campaign — losing £1,240 at 0.48x ROAS',how:'Campaigns → Synthetic Wigs 2026 → click green status dot → Paused'},
+                {id:'t_delete_2018',text:'DELETE March 2018 campaign — dead test campaign',how:'Campaigns → March 2018 → 3-dot menu → Remove'},
+                {id:'t_scale_hh',text:'Scale Human Hair Brands to £500/month — 11.29x ROAS, only £62 in 2 years!',how:'Campaigns → Human Hair - Brands → Budget → £16.67/day'},
+              ]},
+              {title:'📱 Device changes', color:T.blue, items:[
+                {id:'t_mobile_reduce',text:'Reduce mobile bid -40% on Shopify All Products',how:'Campaigns → Shopify All Products → Devices → Mobile → -40%'},
+                {id:'t_desktop_scale',text:'Increase desktop budget +50% on Shopify All Products',how:'Campaigns → Shopify All Products → Devices → Desktop → +50%'},
+                {id:'t_tablet_bid',text:'Add +20% tablet bid modifier on all campaigns',how:'Each Campaign → Devices → Tablets → +20%'},
+              ]},
+              {title:'⏰ Timing changes', color:T.purple, items:[
+                {id:'t_excl_night',text:'Exclude 12am–6am completely — wasting £2,137',how:'Campaigns → Ad Schedule → Add → 12am–6am → -100%'},
+                {id:'t_fri_eve',text:'Add +20% bid on 6pm–9pm — best ROAS window',how:'Campaigns → Ad Schedule → 6pm–9pm → +20%'},
+                {id:'t_sat_day',text:'Add +20% bid on Saturday — best day (3.89x ROAS)',how:'Campaigns → Ad Schedule → Saturday → +20%'},
+              ]},
+              {title:'📍 Location changes', color:T.amber, items:[
+                {id:'t_pause_glasgow',text:'PAUSE Glasgow targeting — 0.71x ROAS',how:'Campaigns → Settings → Locations → Glasgow → Excluded'},
+                {id:'t_reduce_london',text:'Reduce London bid -40% — 1.24x ROAS, £4,210 wasted',how:'Campaigns → Settings → Locations → London → -40%'},
+                {id:'t_scale_leeds',text:'Increase Leeds bid +15% — home city, 3.21x ROAS',how:'Campaigns → Settings → Locations → Leeds → +15%'},
+                {id:'t_scale_bradford',text:'Increase Bradford bid +10% — 2.84x ROAS',how:'Campaigns → Settings → Locations → Bradford → +10%'},
+              ]},
+              {title:'🚀 Keyword bid increases', color:T.green, items:[
+                {id:'t_kw_matrix',text:'Add exact match [matrix matte definer] — 1000x ROAS, £0.03 CPA',how:'Keywords → + Add → [matrix matte definer] → £0.80 bid'},
+                {id:'t_kw_nst',text:'Add exact match [naturally straight beautiful textures] — 735x ROAS',how:'Keywords → + Add → [naturally straight beautiful textures] → £0.60'},
+                {id:'t_kw_bsset',text:'Increase bsset curl cream bid to £1.40 — 24 conversions',how:'Keywords → bsset curl cream → Edit bid → £1.40'},
+                {id:'t_kw_hh',text:'Add [human hair extensions] exact match — 11.29x ROAS',how:'Keywords → + Add → [human hair extensions] → £1.80 bid'},
+                {id:'t_kw_edge',text:'Increase edge control bid to £1.30 — 7x ROAS',how:'Keywords → edge control → Edit bid → £1.30'},
+              ]},
+              {title:'🚫 Block keywords', color:T.red, items:[
+                {id:'t_neg_redbull',text:'Block red bull and monster energy separately',how:'Block Keywords tab → Copy → paste into Google Ads negative keyword list'},
+                {id:'t_neg_salon',text:'Block all hair salon / service intent searches',how:'Block Keywords tab → select salon searches → Copy → add to negative list'},
+                {id:'t_neg_tutorial',text:'Block all tutorial / info intent searches',how:'Block Keywords tab → select tutorial searches → Copy → add to negative list'},
+              ]},
+            ].map((group,gi)=>(
               <div key={gi} style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,overflow:'hidden',marginBottom:10}}>
                 <div style={{padding:'9px 14px',borderBottom:`0.5px solid ${T.border}`,background:T.bg,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                  <span style={{fontSize:12,fontWeight:600,color:T.text}}>{group.group}</span>
-                  <span style={{fontSize:11,color:T.textMuted}}>{group.items.filter(i=>tasksDone[i.id]).length}/{group.items.length}</span>
+                  <span style={{fontSize:12,fontWeight:600,color:T.text}}>{group.title}</span>
+                  <span style={{fontSize:11,color:T.textMuted}}>{group.items.filter(i=>tasks[i.id]).length}/{group.items.length} done</span>
                 </div>
                 {group.items.map((item,ii)=>(
-                  <div key={item.id}>
-                    <div onClick={()=>toggleTask(item.id)} style={{display:'flex',alignItems:'flex-start',gap:10,padding:'9px 14px',borderBottom:`0.5px solid ${T.borderLight}`,cursor:'pointer',background:tasksDone[item.id]?T.greenBg:'transparent'}}>
-                      <div style={{width:15,height:15,borderRadius:4,border:`1.5px solid ${tasksDone[item.id]?T.green:T.border}`,background:tasksDone[item.id]?T.green:'transparent',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',marginTop:1}}>
-                        {tasksDone[item.id]&&<svg width="9" height="7" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                      </div>
-                      <div style={{flex:1}}>
-                        <div style={{fontSize:12,color:tasksDone[item.id]?T.textMuted:T.text,textDecoration:tasksDone[item.id]?'line-through':'none',lineHeight:1.4,marginBottom:3}}>{item.text}</div>
-                        <div style={{fontSize:10,color:T.blue,lineHeight:1.4}}>→ {item.how}</div>
-                      </div>
+                  <div key={item.id} onClick={()=>tick(item.id)} style={{display:'flex',alignItems:'flex-start',gap:10,padding:'9px 14px',borderBottom:ii<group.items.length-1?`0.5px solid ${T.borderLight}`:'none',cursor:'pointer',background:tasks[item.id]?T.greenBg:'transparent',transition:'background 0.1s'}}>
+                    <div style={{width:15,height:15,borderRadius:4,border:`1.5px solid ${tasks[item.id]?T.green:T.border}`,background:tasks[item.id]?T.green:'transparent',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',marginTop:1}}>
+                      {tasks[item.id]&&<svg width="9" height="7" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                    </div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,color:tasks[item.id]?T.textMuted:T.text,textDecoration:tasks[item.id]?'line-through':'none',lineHeight:1.4,marginBottom:3}}>{item.text}</div>
+                      <div style={{fontSize:10,color:T.blue,lineHeight:1.4}}>→ {item.how}</div>
                     </div>
                   </div>
                 ))}
               </div>
             ))}
-            <button onClick={()=>{setTasksDone({});localStorage.removeItem('cc_ads_tasks2')}} style={{fontSize:11,color:T.textMuted,background:'none',border:`0.5px solid ${T.border}`,borderRadius:6,padding:'6px 14px',marginTop:4}}>Reset all</button>
+            <button onClick={()=>{setTasks({});localStorage.removeItem('cc_ads_v3')}} style={{fontSize:11,color:T.textMuted,background:'none',border:`0.5px solid ${T.border}`,borderRadius:6,padding:'6px 14px',marginTop:4,cursor:'pointer'}}>Reset all</button>
           </div>
         )}
       </Shell>
