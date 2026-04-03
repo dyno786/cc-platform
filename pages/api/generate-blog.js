@@ -1,6 +1,6 @@
 export const config = { maxDuration: 60 }
 
-const BIZ = `CC Hair & Beauty is Leeds' largest afro hair and beauty retailer established in 1979.
+const BIZ = `CC Hair and Beauty is Leeds' largest afro hair and beauty retailer established in 1979.
 3 branches: Chapeltown LS7 (Chapeltown Road), Roundhay LS8 (Roundhay Road), City Centre (New York Street).
 Shopify store: cchairandbeauty.com with 23,000+ products.
 Discount codes: WIGDEAL15 (15% wigs), COLOUR10 (10% hair dye), EDGE15 (15% edge control), BRAID10 (10% braiding hair), OIL10 (10% hair oils), GROW10 (10% hair growth).
@@ -11,14 +11,15 @@ export default async function handler(req, res) {
   const { title, seoTitle, metaDesc, keywords, slug, cat, data } = req.body
 
   const catContext = {
-    local: 'This is a LOCAL SEO blog post for CC Hair & Beauty Leeds. Focus on local Leeds context — mention specific branches (Chapeltown LS7, Roundhay LS8, City Centre), local customers, in-store experience, click and collect, parking. End with a call to action to visit the nearest branch or shop online at cchairandbeauty.com.',
+    local: 'This is a LOCAL SEO blog post for CC Hair and Beauty Leeds. Focus on local Leeds context — mention specific branches (Chapeltown LS7, Roundhay LS8, City Centre), local customers, in-store experience, click and collect, parking. End with a call to action to visit the nearest branch or shop online at cchairandbeauty.com.',
     ads: 'This is a PRODUCT REVIEW blog post. This keyword converts extremely well in Google Ads. Write a genuine, helpful product review covering: what it is, who it is for, how to use it, results, pros and cons, price point, and where to buy. End with a call to action to buy at cchairandbeauty.com with the relevant discount code.',
-    org: 'This is an ORGANIC SEO blog post targeting national search volume. Write a comprehensive, helpful guide that genuinely answers the search query. Include product recommendations available at CC Hair & Beauty, tips from experts, and practical advice. End with a call to action to shop at cchairandbeauty.com.'
+    org: 'This is an ORGANIC SEO blog post targeting national search volume. Write a comprehensive, helpful guide that genuinely answers the search query. Include product recommendations available at CC Hair and Beauty, tips from experts, and practical advice. End with a call to action to shop at cchairandbeauty.com.',
+    community: 'This is a COMMUNITY blog post for CC Hair and Beauty Leeds. Write about local Leeds community news, events or stories — Chapeltown, Roundhay or Leeds city centre. Connect it naturally to CC Hair and Beauty as a community-rooted local business established since 1979. Mention the relevant branch. End with a warm call to action to visit us in store or shop at cchairandbeauty.com.'
   }
 
   const prompt = `${BIZ}
 
-Write a complete, publish-ready blog post for CC Hair & Beauty website.
+Write a complete, publish-ready blog post for CC Hair and Beauty website.
 
 TITLE: ${title}
 SEO TITLE: ${seoTitle}  
@@ -35,7 +36,7 @@ Write the full blog post in HTML format ready to paste into Shopify. Requirement
 - Use <ul><li> for any lists
 - Include the primary keyword naturally in: title, first paragraph, at least 2 subheadings, throughout body, last paragraph
 - Include secondary keywords naturally throughout
-- Mention CC Hair & Beauty by name at least 3 times
+- Mention CC Hair and Beauty by name at least 3 times
 - Mention cchairandbeauty.com at least once
 - End with a strong call to action paragraph with the most relevant discount code
 - Write in a friendly, expert, helpful tone
