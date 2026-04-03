@@ -155,10 +155,19 @@ export default function BlogPlanner() {
         body: JSON.stringify({ title:post.title, seoTitle:post.seoTitle, metaDesc:post.metaDesc, keywords:post.keywords, slug:post.slug, cat:post.cat, data:post.data })
       })
       const d = await r.json()
-      const u = { ...generated, [post.slug]: d.content }
-      setGenerated(u); localStorage.setItem('cc_blog_gen', JSON.stringify(u))
+      const blogContent = d.content || ''
+      if (!blogContent || blogContent.trim() === '') {
+        alert('Generation failed — please try again')
+        setGenerating(g => { const u = {...g}; delete u[post.slug]; return u })
+        return
+      }
+      setGenerated(prev => {
+        const u = { ...prev, [post.slug]: blogContent }
+        try { localStorage.setItem('cc_blog_gen', JSON.stringify(u)) } catch(e) {}
+        return u
+      })
     } catch(e) {}
-    setGenerating(g => ({ ...g, [post.slug]: false }))
+    setGenerating(g => { const u = {...g}; delete u[post.slug]; return u })
   }
 
   function copyBlog(slug) {
