@@ -16,6 +16,8 @@ export default function Debug() {
   const [loading, setLoading] = useState({})
   const [blogTest, setBlogTest] = useState(null)
   const [blogLoading, setBlogLoading] = useState(false)
+  const [imageTest, setImageTest] = useState(null)
+  const [imageLoading, setImageLoading] = useState(false)
   const [envCheck, setEnvCheck] = useState(null)
 
   async function testAPI(api) {
@@ -44,6 +46,35 @@ export default function Debug() {
 
   async function testAllAPIs() {
     for (const api of APIS) await testAPI(api)
+  }
+
+  async function testImageGen() {
+    setImageLoading(true); setImageTest(null)
+    try {
+      const r = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Edge Control UK — Best Products 2026',
+          cat: 'ads',
+          keywords: ['edge control uk', 'best edge control', 'style factor'],
+        })
+      })
+      const d = await r.json()
+      setImageTest({
+        ok: d.ok,
+        error: d.error,
+        hasImage: !!d.imageUrl,
+        imageUrl: d.imageUrl,
+        altText: d.altText,
+        filename: d.filename,
+        prompt: d.prompt,
+        status: r.status,
+      })
+    } catch(e) {
+      setImageTest({ ok: false, error: e.message, hasImage: false, status: 0 })
+    }
+    setImageLoading(false)
   }
 
   async function testBlogGen() {
@@ -95,6 +126,10 @@ export default function Debug() {
           <button onClick={testAllAPIs}
             style={{ padding:'7px 16px', fontSize:12, fontWeight:600, color:'#fff', background:T.blue, border:'none', borderRadius:7, cursor:'pointer' }}>
             ↺ Test all APIs
+          </button>
+          <button onClick={testImageGen} disabled={imageLoading}
+            style={{ padding:'7px 16px', fontSize:12, fontWeight:600, color:'#fff', background:imageLoading?T.border:'#7c3aed', border:'none', borderRadius:7, cursor:'pointer' }}>
+            {imageLoading ? '⟳ Generating...' : '🖼️ Test image generation'}
           </button>
           <button onClick={testBlogGen} disabled={blogLoading}
             style={{ padding:'7px 16px', fontSize:12, fontWeight:600, color:'#fff', background:blogLoading?T.border:T.green, border:'none', borderRadius:7, cursor:'pointer' }}>
@@ -156,7 +191,36 @@ export default function Debug() {
           </div>
         )}
 
-        {/* Detailed API responses */}
+        {/* Image test result */}
+        {imageTest && (
+          <div style={{ background:T.surface, border:`0.5px solid ${imageTest.ok?T.greenBorder:T.redBorder}`, borderRadius:8, padding:'14px 16px', marginBottom:14 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+              <div style={{ width:8, height:8, borderRadius:'50%', background:imageTest.ok?T.green:T.red, flexShrink:0 }}/>
+              <span style={{ fontSize:13, fontWeight:600, color:T.text }}>Image generation test (DALL-E 3)</span>
+              <span style={{ fontSize:11, color:imageTest.ok?T.green:T.red, fontWeight:600 }}>
+                {imageTest.ok ? '✓ Working — image generated' : `✗ Failed — ${imageTest.error}`}
+              </span>
+            </div>
+            {imageTest.ok && imageTest.imageUrl && (
+              <div style={{ display:'grid', gridTemplateColumns:'200px 1fr', gap:12, alignItems:'start' }}>
+                <img src={imageTest.imageUrl} alt={imageTest.altText} style={{ width:'100%', borderRadius:6, border:`0.5px solid ${T.border}` }}/>
+                <div>
+                  <div style={{ fontSize:11, fontWeight:600, color:T.text, marginBottom:4 }}>✓ Image generated successfully</div>
+                  <div style={{ fontSize:10, color:T.textMuted, marginBottom:3 }}><span style={{ fontWeight:600 }}>Alt text:</span> {imageTest.altText}</div>
+                  <div style={{ fontSize:10, color:T.textMuted, marginBottom:8 }}><span style={{ fontWeight:600 }}>Filename:</span> {imageTest.filename}</div>
+                  <div style={{ fontSize:10, color:T.textMuted, fontStyle:'italic', lineHeight:1.4 }}><span style={{ fontWeight:600, fontStyle:'normal' }}>Prompt used:</span><br/>{imageTest.prompt}</div>
+                </div>
+              </div>
+            )}
+            {!imageTest.ok && (
+              <div style={{ background:T.redBg, borderRadius:6, padding:'8px 10px', fontSize:11, color:T.red }}>
+                Error: {imageTest.error}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Detailed API responses */}}
         <div style={{ fontSize:12, fontWeight:600, color:T.text, marginBottom:10 }}>API response detail</div>
         {APIS.map(api => {
           const r = results[api.id]
