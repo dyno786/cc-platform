@@ -12,6 +12,7 @@ const NAV = [
   ]},
   { section:'SEO', items:[
     { id:'/local-seo',      label:'Local SEO',      icon:'📍' },
+    { id:'/website-seo',    label:'Website SEO',    icon:'🌐' },
     { id:'/organic-seo',    label:'Organic SEO',    icon:'🔍' },
     { id:'/blog-planner',   label:'Blog planner',   icon:'📝' },
   ]},
