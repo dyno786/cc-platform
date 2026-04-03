@@ -39,13 +39,19 @@ export default async function handler(req, res) {
     const imageUrl = d.data?.[0]?.url
     if (!imageUrl) return res.status(200).json({ ok: false, error: 'No image returned' })
 
-    // Also generate a suggested alt text and filename
+    // Fetch the image immediately and convert to base64
+    // This avoids OpenAI URL expiry issues — image is self-contained
+    const imgResponse = await fetch(imageUrl)
+    const arrayBuffer = await imgResponse.arrayBuffer()
+    const base64 = Buffer.from(arrayBuffer).toString('base64')
+    const dataUrl = `data:image/png;base64,${base64}`
+
     const altText = `${title} - CC Hair & Beauty Leeds`
-    const filename = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.jpg'
+    const filename = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.png'
 
     res.status(200).json({
       ok: true,
-      imageUrl,
+      imageUrl: dataUrl,
       altText,
       filename,
       prompt,
