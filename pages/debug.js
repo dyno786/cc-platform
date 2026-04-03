@@ -1,6 +1,5 @@
 import Head from 'next/head'
 import { useState, useEffect } from 'react'
-import Shell from '../components/Shell'
 import { T } from '../lib/theme'
 
 const APIS = [
@@ -134,7 +133,10 @@ export default function Debug() {
   return (
     <>
       <Head><title>Debug — CC Intelligence</title></Head>
-      <Shell title="Debug & API Status" subtitle="Live API health check · response times · raw data preview">
+      <div style={{minHeight:'100vh',background:T.bg,padding:20}}>
+      <div style={{maxWidth:1200,margin:'0 auto'}}>
+      <div style={{fontSize:18,fontWeight:700,color:T.text,marginBottom:4}}>🔧 Debug & API Status</div>
+      <div style={{fontSize:12,color:T.textMuted,marginBottom:16}}>Live API health check · response times · raw data preview</div>
 
         <div style={{ display:'flex', gap:8, marginBottom:14, flexWrap:'wrap' }}>
           <button onClick={testAllAPIs}
@@ -303,7 +305,8 @@ export default function Debug() {
           <span style={{ fontWeight:600 }}>Runtime logs:</span> Go to vercel.com → cc-platform → Deployments → latest → Functions tab to see server-side console.log output in real time. Or use Vercel CLI: <code style={{ fontFamily:'monospace', background:'rgba(0,0,0,0.05)', padding:'1px 4px', borderRadius:3 }}>vercel logs cc-platform-two.vercel.app</code>
         </div>
 
-      </Shell>
+      </div>
+      </div>
     </>
   )
 }
