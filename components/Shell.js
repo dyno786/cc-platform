@@ -1,9 +1,25 @@
 import { useRouter } from 'next/router'
+import { useState, useEffect } from 'react'
 import Nav from './Nav'
 import { T } from '../lib/theme'
 import { useAuth } from './Auth'
 
 export default function Shell({ children, title, subtitle }) {
+  const [fontSize, setFontSize] = useState(14)
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('cc_fontsize')
+      if (saved) { const f = parseInt(saved); setFontSize(f); document.body.style.fontSize = f + 'px' }
+    } catch(e) {}
+  }, [])
+
+  function changeFontSize(delta) {
+    const next = Math.max(11, Math.min(18, fontSize + delta))
+    setFontSize(next)
+    document.body.style.fontSize = next + 'px'
+    try { localStorage.setItem('cc_fontsize', String(next)) } catch(e) {}
+  }
   const router = useRouter()
   const { isManager, logout } = useAuth()
   const isHome = router.pathname === '/'
