@@ -269,7 +269,7 @@ export default function Debug() {
           </div>
         )}
 
-        {/* Detailed API responses */}}
+        {/* Detailed API responses */}
         <div style={{ fontSize:12, fontWeight:600, color:T.text, marginBottom:10 }}>API response detail</div>
         {APIS.map(api => {
           const r = results[api.id]
