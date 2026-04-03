@@ -408,11 +408,6 @@ export default function BlogPlanner() {
                           style={{padding:'5px 12px',borderRadius:6,border:'none',background:publishing[post.slug]==='generating'?C.surface2:publishing[post.slug]==='failed'?'#cf222e':col,color:publishing[post.slug]==='generating'?C.text3:'#fff',fontWeight:700,fontSize:11,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap'}}>
                           {publishing[post.slug]==='generating'?'⟳ Publishing...':publishing[post.slug]==='failed'?'↺ Retry':'🚀 Publish'}
                         </button>
-                      ) : (
-                        <button onClick={()=>copyBlog(post.slug)}
-                          style={{padding:'5px 12px',borderRadius:6,border:'none',background:copied[post.slug]?C.green:C.teal,color:'#000',fontWeight:700,fontSize:11,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap'}}>
-                          {copied[post.slug]?'✓ Copied!':'📋 Copy Post'}
-                        </button>
                       )}
                       {/* Expand */}
                       <div style={{color:C.text3,fontSize:14,cursor:'pointer'}} onClick={()=>setExpanded(isExp?null:post.slug)}>{isExp?'▲':'▼'}</div>
