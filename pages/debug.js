@@ -18,6 +18,8 @@ export default function Debug() {
   const [blogLoading, setBlogLoading] = useState(false)
   const [imageTest, setImageTest] = useState(null)
   const [imageLoading, setImageLoading] = useState(false)
+  const [publishTest, setPublishTest] = useState(null)
+  const [publishLoading, setPublishLoading] = useState(false)
   const [envCheck, setEnvCheck] = useState(null)
 
   async function testAPI(api) {
@@ -46,6 +48,18 @@ export default function Debug() {
 
   async function testAllAPIs() {
     for (const api of APIS) await testAPI(api)
+  }
+
+  async function testShopifyPublish() {
+    setPublishLoading(true); setPublishTest(null)
+    try {
+      const r = await fetch('/api/test-publish', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+      const d = await r.json()
+      setPublishTest(d)
+    } catch(e) {
+      setPublishTest({ ok: false, log: [], error: e.message })
+    }
+    setPublishLoading(false)
   }
 
   async function testImageGen() {
@@ -126,6 +140,10 @@ export default function Debug() {
           <button onClick={testAllAPIs}
             style={{ padding:'7px 16px', fontSize:12, fontWeight:600, color:'#fff', background:T.blue, border:'none', borderRadius:7, cursor:'pointer' }}>
             ↺ Test all APIs
+          </button>
+          <button onClick={testShopifyPublish} disabled={publishLoading}
+            style={{ padding:'7px 16px', fontSize:12, fontWeight:600, color:'#fff', background:publishLoading?T.border:'#1f883d', border:'none', borderRadius:7, cursor:'pointer' }}>
+            {publishLoading ? '⟳ Testing...' : '🛍️ Test Shopify publish'}
           </button>
           <button onClick={testImageGen} disabled={imageLoading}
             style={{ padding:'7px 16px', fontSize:12, fontWeight:600, color:'#fff', background:imageLoading?T.border:'#7c3aed', border:'none', borderRadius:7, cursor:'pointer' }}>
@@ -220,7 +238,38 @@ export default function Debug() {
           </div>
         )}
 
-        {/* Detailed API responses */}
+        {/* Shopify publish test result */}
+        {publishTest && (
+          <div style={{ background:T.surface, border:`0.5px solid ${publishTest.ok?T.greenBorder:T.redBorder}`, borderRadius:8, padding:'14px 16px', marginBottom:14 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
+              <div style={{ width:8, height:8, borderRadius:'50%', background:publishTest.ok?T.green:T.red }}/>
+              <span style={{ fontSize:13, fontWeight:600, color:T.text }}>Shopify publish test</span>
+              <span style={{ fontSize:11, color:publishTest.ok?T.green:T.red, fontWeight:600 }}>
+                {publishTest.ok ? '✓ Working — draft article created in Shopify' : `✗ Failed — ${publishTest.error}`}
+              </span>
+            </div>
+            {/* Step by step log */}
+            <div style={{ background:T.bg, border:`0.5px solid ${T.border}`, borderRadius:6, padding:'8px 10px', marginBottom:publishTest.article?10:0 }}>
+              {(publishTest.log||[]).map((line, i) => (
+                <div key={i} style={{ fontSize:11, color:line.startsWith('✓')?T.green:line.startsWith('Found')||line.startsWith('Using')?T.blue:T.textMuted, padding:'2px 0', fontFamily:'monospace' }}>
+                  {line}
+                </div>
+              ))}
+            </div>
+            {publishTest.article && (
+              <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
+                <span style={{ fontSize:12, color:T.text }}>Article created in blog: <strong>{publishTest.article.blog}</strong></span>
+                <a href={publishTest.article.adminUrl} target="_blank" rel="noreferrer"
+                  style={{ fontSize:11, color:'#fff', background:T.blue, borderRadius:5, padding:'4px 12px', textDecoration:'none', fontWeight:600 }}>
+                  View in Shopify admin →
+                </a>
+                <span style={{ fontSize:10, color:T.red }}>⚠️ Delete this test post when done</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Detailed API responses */}}
         <div style={{ fontSize:12, fontWeight:600, color:T.text, marginBottom:10 }}>API response detail</div>
         {APIS.map(api => {
           const r = results[api.id]
