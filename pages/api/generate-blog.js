@@ -18,11 +18,18 @@ async function searchProducts(shop, token, keywords) {
   const allProducts = []
   const seen = new Set()
 
-  // Search for each keyword — take first 3 results each
+  // Try each keyword — use individual words if phrase search fails
+  const searchTerms = []
   for (const kw of keywords.slice(0, 3)) {
+    searchTerms.push(kw)
+    // Also add individual meaningful words from the keyword
+    kw.split(' ').filter(w => w.length > 4).forEach(w => searchTerms.push(w))
+  }
+
+  for (const term of [...new Set(searchTerms)].slice(0, 6)) {
     try {
       const r = await fetch(
-        `https://${shop}/admin/api/2024-01/products.json?title=${encodeURIComponent(kw)}&limit=3&fields=id,title,handle,images,variants`,
+        `https://${shop}/admin/api/2024-01/products.json?title=${encodeURIComponent(term)}&limit=4&fields=id,title,handle,images,variants`,
         { headers }
       )
       const d = await r.json()
@@ -39,9 +46,11 @@ async function searchProducts(shop, token, keywords) {
         }
       }
     } catch(e) {
-      console.error(`[generate-blog] Product search failed for "${kw}":`, e.message)
+      console.error(`[generate-blog] Product search failed for "${term}":`, e.message)
     }
   }
+
+  console.log(`[generate-blog] Product search found ${allProducts.length} products`)
   return allProducts.slice(0, 6)
 }
 
