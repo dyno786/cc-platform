@@ -6,14 +6,14 @@ import { T } from '../lib/theme'
 const TABS = ['Overview','Quick Wins','Top Keywords','Top Pages','Content Gaps','Technical','Tasks']
 
 const CONTENT_GAPS = [
-  { topic:'4C hair care routine UK',          vol:8900,  comp:'Low',    opp:'High',   action:'Write 1,200 word guide — drives leave-in and oil sales' },
-  { topic:'Best relaxer for natural hair UK', vol:6700,  comp:'Low',    opp:'High',   action:'Already in Blog Planner Day 1 — publish this week' },
-  { topic:'How to grow natural hair fast UK', vol:5400,  comp:'Low',    opp:'High',   action:'Evergreen guide — drives hair growth product sales' },
-  { topic:'Braiding hair brands UK',          vol:4200,  comp:'Medium', opp:'High',   action:'Comparison — Xpression vs Freetress vs Outre' },
-  { topic:'Best edge control UK 2026',        vol:3800,  comp:'Low',    opp:'High',   action:'Already in Blog Planner — publish this week' },
-  { topic:'Mielle rosemary oil review',       vol:3200,  comp:'Medium', opp:'Medium', action:'Product review — trending 2026' },
-  { topic:'LOC method natural hair',          vol:2900,  comp:'Low',    opp:'High',   action:'Educational guide — drives leave-in and oil sales' },
-  { topic:'Crochet braids at home',           vol:2400,  comp:'Low',    opp:'High',   action:'Tutorial — drives crochet hair sales' },
+  { topic:'4C hair care routine UK',          vol:8900,  comp:'Low',    opp:'High',   cat:'org', blog:'hair-care-guides', keywords:['4c hair','leave in conditioner','hair oil'], action:'Write 1,200 word guide — drives leave-in and oil sales' },
+  { topic:'Best relaxer for natural hair UK', vol:6700,  comp:'Low',    opp:'High',   cat:'org', blog:'hair-care-guides', keywords:['relaxer','natural hair relaxer','ors relaxer'], action:'Already in Blog Planner Day 1 — publish this week' },
+  { topic:'How to grow natural hair fast UK', vol:5400,  comp:'Low',    opp:'High',   cat:'org', blog:'hair-care-guides', keywords:['hair growth','rosemary oil','hair growth products'], action:'Evergreen guide — drives hair growth product sales' },
+  { topic:'Braiding hair brands UK',          vol:4200,  comp:'Medium', opp:'High',   cat:'org', blog:'leeds',            keywords:['braiding hair','xpression','freetress'], action:'Comparison — Xpression vs Freetress vs Outre' },
+  { topic:'Best edge control UK 2026',        vol:3800,  comp:'Low',    opp:'High',   cat:'ads', blog:'product-reviews',  keywords:['edge control','edge booster','style factor'], action:'Already in Blog Planner — publish this week' },
+  { topic:'Mielle rosemary oil review',       vol:3200,  comp:'Medium', opp:'Medium', cat:'ads', blog:'product-reviews',  keywords:['mielle','rosemary oil','mielle organics'], action:'Product review — trending 2026' },
+  { topic:'LOC method natural hair',          vol:2900,  comp:'Low',    opp:'High',   cat:'org', blog:'hair-care-guides', keywords:['loc method','leave in conditioner','hair oil'], action:'Educational guide — drives leave-in and oil sales' },
+  { topic:'Crochet braids at home',           vol:2400,  comp:'Low',    opp:'High',   cat:'org', blog:'leeds',            keywords:['crochet braids','crochet hair','braiding hair'], action:'Tutorial — drives crochet hair sales' },
 ]
 
 const TECHNICAL = [
@@ -46,6 +46,9 @@ export default function OrganicSEO() {
   const [sort, setSort] = useState({ key: 'impressions', dir: 'desc' })
   const [generating, setGenerating] = useState(null)
   const [generatedContent, setGeneratedContent] = useState({})
+  const [gapPublishing, setGapPublishing] = useState({})
+  const [gapPublished, setGapPublished] = useState({})
+  const [gapStatus, setGapStatus] = useState({})
   const [copied, setCopied] = useState(null)
 
   useEffect(() => {
@@ -81,26 +84,58 @@ export default function OrganicSEO() {
     })
   }
 
-  async function generateBlogFromGap(topic) {
-    setGenerating(topic)
+  async function generateAndPublishGap(g) {
+    const topic = g.topic
+    setGapPublishing(p => ({...p, [topic]: true}))
+    setGapStatus(p => ({...p, [topic]: 'Writing blog post...'}))
     try {
-      const r = await fetch('/api/generate-blog', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      // Step 1 — generate blog with real product links
+      const slug = topic.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+      const blogRes = await fetch('/api/generate-blog', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: topic,
           seoTitle: `${topic} | CC Hair and Beauty Leeds`,
-          metaDesc: `Complete guide to ${topic.toLowerCase()} at CC Hair and Beauty Leeds. Expert advice and product recommendations.`,
-          keywords: [topic.toLowerCase(), `${topic.toLowerCase()} uk`, `${topic.toLowerCase()} leeds`],
-          slug: topic.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-          cat: 'org',
+          metaDesc: `Complete guide to ${topic.toLowerCase()} at CC Hair and Beauty Leeds. Expert advice, product recommendations and where to buy.`,
+          keywords: g.keywords,
+          slug,
+          cat: g.cat,
           data: 'Content gap — high search volume, low competition',
         })
       })
-      const d = await r.json()
-      if (d.content) setGeneratedContent(prev => ({ ...prev, [topic]: d.content }))
-    } catch(e) {}
-    setGenerating(null)
+      const blogData = await blogRes.json()
+      if (!blogData.ok || !blogData.content) {
+        setGapStatus(p => ({...p, [topic]: '✗ Blog generation failed: ' + (blogData.error || 'unknown')}))
+        setGapPublishing(p => ({...p, [topic]: false}))
+        return
+      }
+      setGeneratedContent(prev => ({...prev, [topic]: blogData.content}))
+      setGapStatus(p => ({...p, [topic]: 'Publishing to Shopify...'}))
+
+      // Step 2 — publish directly to correct Shopify blog
+      const imageUrl = blogData.featuredImage?.src || null
+      const pubRes = await fetch('/api/publish-to-shopify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: topic,
+          seoTitle: `${topic} | CC Hair and Beauty Leeds`,
+          metaDesc: `Complete guide to ${topic.toLowerCase()} at CC Hair and Beauty Leeds.`,
+          slug, content: blogData.content, cat: g.cat,
+          keywords: g.keywords, imageUrl,
+          imageAlt: imageUrl ? `${topic} - CC Hair and Beauty Leeds` : null,
+        })
+      })
+      const pubData = await pubRes.json()
+      if (pubData.ok) {
+        setGapStatus(p => ({...p, [topic]: `✓ Live at ${pubData.articleUrl}`}))
+        setGapPublished(p => ({...p, [topic]: pubData.articleUrl}))
+      } else {
+        setGapStatus(p => ({...p, [topic]: '✗ Publish failed: ' + (pubData.error || 'unknown')}))
+      }
+    } catch(e) {
+      setGapStatus(p => ({...p, [topic]: '✗ Error: ' + e.message}))
+    }
+    setGapPublishing(p => ({...p, [topic]: false}))
   }
 
   function copyContent(topic) {
@@ -393,7 +428,7 @@ export default function OrganicSEO() {
         {tab === 'Content Gaps' && (
           <div>
             <div style={{ background: T.blueBg, border: `0.5px solid ${T.blueBorder}`, borderRadius: 7, padding: '9px 13px', marginBottom: 12, fontSize: 11, color: T.blue }}>
-              Topics with high search volume you currently rank nowhere for. Click "Write this" to generate a full SEO blog post instantly.
+              Topics with high search volume you currently rank nowhere for. Click 🚀 Generate & Publish to write the blog with real product links and publish directly to the correct Shopify blog.
             </div>
             {CONTENT_GAPS.map((g, i) => (
               <div key={i} style={{ background: T.surface, border: `0.5px solid ${T.border}`, borderRadius: 8, padding: '12px 14px', marginBottom: 8 }}>
@@ -401,22 +436,36 @@ export default function OrganicSEO() {
                   <span style={{ fontSize: 12, fontWeight: 600, color: T.text, flex: 1 }}>{g.topic}</span>
                   <span style={{ fontSize: 11, color: T.textMuted }}>{g.vol.toLocaleString()}/mo</span>
                   <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: g.comp === 'Low' ? T.greenBg : T.amberBg, color: g.comp === 'Low' ? T.green : T.amber }}>{g.comp} competition</span>
-                  {!generatedContent[g.topic] ? (
-                    <button onClick={() => generateBlogFromGap(g.topic)} disabled={generating === g.topic}
-                      style={{ fontSize: 11, fontWeight: 600, color: '#fff', background: generating === g.topic ? T.border : T.blue, border: 'none', borderRadius: 6, padding: '5px 14px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                      {generating === g.topic ? '⟳ Writing...' : '✍️ Write this'}
-                    </button>
+                  {gapPublished[g.topic] ? (
+                    <a href={gapPublished[g.topic]} target="_blank" rel="noreferrer"
+                      style={{ fontSize: 11, fontWeight: 700, color: '#fff', background: '#1a7f37', borderRadius: 6, padding: '5px 14px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                      ✓ Live →
+                    </a>
                   ) : (
-                    <button onClick={() => copyContent(g.topic)}
-                      style={{ fontSize: 11, fontWeight: 600, color: '#fff', background: copied === g.topic ? T.green : T.teal, border: 'none', borderRadius: 6, padding: '5px 14px', cursor: 'pointer' }}>
-                      {copied === g.topic ? '✓ Copied!' : '📋 Copy post'}
+                    <button onClick={() => generateAndPublishGap(g)} disabled={gapPublishing[g.topic]}
+                      style={{ fontSize: 11, fontWeight: 600, color: '#fff', background: gapPublishing[g.topic] ? T.border : T.blue, border: 'none', borderRadius: 6, padding: '5px 14px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                      {gapPublishing[g.topic] ? '⟳ Publishing...' : '🚀 Generate & Publish'}
                     </button>
                   )}
                 </div>
-                <div style={{ fontSize: 11, color: T.textMuted, marginBottom: generatedContent[g.topic] ? 8 : 0 }}>{g.action}</div>
-                {generatedContent[g.topic] && (
-                  <textarea readOnly value={generatedContent[g.topic]} rows={6}
-                    style={{ width: '100%', background: T.bg, border: `0.5px solid ${T.border}`, borderRadius: 6, padding: '8px 10px', fontSize: 11, color: T.textMuted, resize: 'vertical', fontFamily: 'monospace', lineHeight: 1.5 }} />
+                <div style={{ fontSize: 11, color: T.textMuted, marginBottom: gapStatus[g.topic] ? 6 : 0 }}>
+                  {g.action} · <span style={{color:T.textMuted}}>Blog: <strong>{g.blog}</strong></span>
+                </div>
+                {gapStatus[g.topic] && (
+                  <div style={{padding:'8px 12px',borderRadius:6,fontSize:12,fontWeight:500,
+                    background: gapStatus[g.topic].startsWith('✓') ? '#dafbe1' : gapStatus[g.topic].startsWith('✗') ? '#fff0f0' : '#ddf4ff',
+                    color: gapStatus[g.topic].startsWith('✓') ? '#1a7f37' : gapStatus[g.topic].startsWith('✗') ? '#cf222e' : T.blue,
+                    border: `1px solid ${gapStatus[g.topic].startsWith('✓') ? '#1a7f37' : gapStatus[g.topic].startsWith('✗') ? '#cf222e' : T.blueBorder}`,
+                    display:'flex',alignItems:'center',gap:8}}>
+                    {gapPublishing[g.topic] && <span>⟳</span>}
+                    {gapStatus[g.topic]}
+                    {gapPublished[g.topic] && (
+                      <a href={gapPublished[g.topic]} target="_blank" rel="noreferrer"
+                        style={{marginLeft:'auto',color:'#1a7f37',fontWeight:700,textDecoration:'underline'}}>
+                        View live post →
+                      </a>
+                    )}
+                  </div>
                 )}
               </div>
             ))}
