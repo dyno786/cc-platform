@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   const b = BRANCHES[branch]
 
   const prompts = {
-    spotlight: `Write a Google Business Profile post for CC Hair & Beauty ${b.name} branch (${b.address}).
+    spotlight: `Write a Google Business Profile post for CC Hair and Beauty ${b.name} branch (${b.address}).
 Post type: Product Spotlight.
 Product to feature: ${product}
 Week: ${week}
@@ -30,7 +30,7 @@ Requirements:
 - Friendly, expert tone
 - No markdown, plain text only`,
 
-    promo: `Write a Google Business Profile post for CC Hair & Beauty ${b.name} branch (${b.address}).
+    promo: `Write a Google Business Profile post for CC Hair and Beauty ${b.name} branch (${b.address}).
 Post type: Weekly Promotion/Offer.
 Discount code to promote: ${code}
 Week: ${week}
