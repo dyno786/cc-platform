@@ -431,10 +431,15 @@ export default function BlogPlanner() {
                                   </div>
                                 </div>
                                 <div style={{display:'flex',gap:6}}>
-                                  <a href={images[post.slug].url} target="_blank" rel="noreferrer"
-                                    style={{flex:1,padding:'8px',borderRadius:6,border:'none',background:'#7c3aed',color:'#fff',fontWeight:700,fontSize:12,cursor:'pointer',textAlign:'center',textDecoration:'none',display:'block'}}>
+                                  <button onClick={()=>{
+                                    const a = document.createElement('a')
+                                    a.href = images[post.slug].url
+                                    a.download = images[post.slug].filename
+                                    a.click()
+                                  }}
+                                    style={{flex:1,padding:'8px',borderRadius:6,border:'none',background:'#7c3aed',color:'#fff',fontWeight:700,fontSize:12,cursor:'pointer',textAlign:'center'}}>
                                     ⬇️ Download Image
-                                  </a>
+                                  </button>
                                   <button onClick={()=>generateImage(post)}
                                     style={{padding:'8px 14px',borderRadius:6,border:`1px solid ${C.border}`,background:C.surface2,color:C.text3,fontWeight:600,fontSize:11,cursor:'pointer'}}>
                                     ↺ New Image
