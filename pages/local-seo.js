@@ -16,6 +16,60 @@ const STATIC_BRANCHES = [
   { name:'City Centre', addr:'1-19 New York St, Leeds LS2 7DT',        phone:'',              rating:3.6, reviews:41 },
 ]
 
+const TRUSTPILOT = 'https://uk.trustpilot.com/review/www.cchairandbeauty.com'
+const COMMUNITY_BLOG = 'https://cchairandbeauty.com/blogs/news'
+
+// Calculate how many 5-star reviews needed to reach a target rating
+function reviewsNeeded(currentRating, currentCount, targetRating) {
+  // (currentRating * currentCount + 5 * x) / (currentCount + x) = targetRating
+  // Solve for x: x = (targetRating * currentCount - currentRating * currentCount) / (5 - targetRating)
+  if (targetRating >= 5) return Math.ceil((5 * currentCount - currentRating * currentCount) / (5 - 4.99))
+  const x = (targetRating * currentCount - currentRating * currentCount) / (5 - targetRating)
+  return Math.max(0, Math.ceil(x))
+}
+
+function buildReviewWhatsApp(branch) {
+  const googleLink = branch.reviewLink || `https://search.google.com/local/writereview?placeid=${branch.placeId}`
+  const msg = [
+    `Hi, thank you for visiting CC Hair and Beauty ${branch.name}!`,
+    ``,
+    `We hope you enjoyed your experience with us. Would you mind leaving us a quick Google review? It takes less than 2 minutes and really helps us as a Leeds community business.`,
+    ``,
+    `Leave a review here: ${googleLink}`,
+    ``,
+    `We have been serving the Leeds community since 1979 and your support means everything to us.`,
+    ``,
+    `You can read more about our community work here: ${COMMUNITY_BLOG}`,
+    ``,
+    `Thank you so much.`,
+    `CC Hair and Beauty ${branch.name}`,
+  ].join('\n')
+  return `https://wa.me/?text=${encodeURIComponent(msg)}`
+}
+
+function buildReviewEmail(branch) {
+  const googleLink = branch.reviewLink || `https://search.google.com/local/writereview?placeid=${branch.placeId}`
+  const subj = `Thank you for visiting CC Hair and Beauty ${branch.name}`
+  const body = [
+    `Hi,`,
+    ``,
+    `Thank you for visiting CC Hair and Beauty ${branch.name}!`,
+    ``,
+    `We hope you enjoyed your experience. Would you mind leaving us a quick Google review? It takes less than 2 minutes and really helps us as a Leeds community business serving customers since 1979.`,
+    ``,
+    `Leave a review here: ${googleLink}`,
+    ``,
+    `You can also read more about our community work here: ${COMMUNITY_BLOG}`,
+    ``,
+    `Thank you so much for your support.`,
+    ``,
+    `Warm regards,`,
+    `CC Hair and Beauty ${branch.name}`,
+    `cchairandbeauty.com`,
+  ].join('\n')
+  return `mailto:?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`
+}
+
 const REPLY_TEMPLATES = {
   5: `Thank you so much for your kind words! We're delighted you had a great experience at CC Hair and Beauty [BRANCH]. Our team works hard to give every customer the best service and product knowledge. We look forward to seeing you again soon! — CC Hair and Beauty`,
   4: `Thank you for your lovely review! We're glad you enjoyed your visit to CC Hair and Beauty [BRANCH]. We appreciate your feedback and hope to see you again soon! — CC Hair and Beauty`,
@@ -190,17 +244,57 @@ export default function LocalSEO() {
               <div style={{ fontSize:12, fontWeight:600, color:T.text, marginBottom:10 }}>Rating comparison — live from Google</div>
               {branches.map((b, i) => {
                 const ratingColor = b.rating >= 4 ? T.green : b.rating >= 3.5 ? T.amber : T.red
+                // Build review targets from current rating up to 5.0 in 0.1 steps
+                const targets = []
+                let t = Math.ceil(b.rating * 10) / 10
+                while (t <= 5.0 && targets.length < 8) {
+                  t = parseFloat((t + 0.1).toFixed(1))
+                  if (t > b.rating) targets.push({ target: t, needed: reviewsNeeded(b.rating, b.reviews, t) })
+                }
                 return (
-                  <div key={i} style={{ marginBottom:14 }}>
+                  <div key={i} style={{ marginBottom:16, paddingBottom:16, borderBottom: i < branches.length-1 ? `0.5px solid ${T.border}` : 'none' }}>
                     <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                      <span style={{ fontSize:12, fontWeight:500, color:T.text }}>{b.name}</span>
-                      <span style={{ fontSize:12, fontWeight:700, color:ratingColor }}>{b.rating}★</span>
+                      <span style={{ fontSize:12, fontWeight:700, color:T.text }}>{b.name}</span>
+                      <span style={{ fontSize:12, fontWeight:700, color:ratingColor }}>{b.rating}★ ({b.reviews} reviews)</span>
                     </div>
-                    <div style={{ height:5, background:T.borderLight, borderRadius:99, overflow:'hidden', border:`0.5px solid ${T.border}` }}>
+                    <div style={{ height:5, background:T.borderLight, borderRadius:99, overflow:'hidden', border:`0.5px solid ${T.border}`, marginBottom:8 }}>
                       <div style={{ width:`${(b.rating/5)*100}%`, height:'100%', background:ratingColor, borderRadius:99 }}/>
                     </div>
-                    <div style={{ fontSize:10, color:T.textMuted, marginTop:2 }}>
-                      {b.rating < 4 ? `Target 4.0★ — need more 5★ reviews` : '✓ Above 4.0 target'}
+                    {/* Review targets — how many 5★ reviews to reach next milestone */}
+                    <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginTop:6, marginBottom:8 }}>
+                      {[0.1,0.2,0.3,0.4,0.5].map((inc,ti) => {
+                        const target = parseFloat((Math.ceil(b.rating*10)/10 + inc).toFixed(1))
+                        if (target > 5) return null
+                        const needed = reviewsNeeded(b.rating, b.reviews, target)
+                        return (
+                          <div key={ti} style={{
+                            fontSize:10, padding:'2px 8px', borderRadius:4,
+                            background: ti===0 ? T.greenBg : T.bg,
+                            border:`1px solid ${ti===0 ? T.greenBorder : T.border}`,
+                            color: ti===0 ? T.green : T.textMuted,
+                            fontWeight: ti===0 ? 700 : 400,
+                          }}>
+                            {target}★ — {needed} more 5★ review{needed!==1?'s':''}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {/* Review request buttons */}
+                    <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
+                      <a href={buildReviewWhatsApp(b)} target="_blank" rel="noreferrer"
+                        style={{ fontSize:10, fontWeight:700, color:'#fff', background:'#25D366', borderRadius:5, padding:'4px 10px', textDecoration:'none' }}>
+                        WhatsApp review request
+                      </a>
+                      <a href={buildReviewEmail(b)} target="_blank" rel="noreferrer"
+                        style={{ fontSize:10, fontWeight:700, color:'#fff', background:T.blue, borderRadius:5, padding:'4px 10px', textDecoration:'none' }}>
+                        Email review request
+                      </a>
+                      {b.reviewLink && (
+                        <a href={b.reviewLink} target="_blank" rel="noreferrer"
+                          style={{ fontSize:10, color:T.blue, background:T.blueBg, border:`0.5px solid ${T.blueBorder}`, borderRadius:5, padding:'4px 9px', textDecoration:'none' }}>
+                          Google review link →
+                        </a>
+                      )}
                     </div>
                   </div>
                 )
