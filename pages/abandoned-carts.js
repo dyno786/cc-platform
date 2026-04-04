@@ -78,7 +78,7 @@ function cartEmail(cart) {
     `CC Hair and Beauty Leeds`,
     `Chapeltown LS7 | Roundhay LS8 | City Centre`,
   ].join('\n')
-  return `mailto:${CC_EMAIL}?to=${encodeURIComponent(cart.email)}&subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`
+  return `mailto:${cart.email}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`
 }
 
 function reorderWhatsApp(order, inStockItems) {
@@ -189,7 +189,7 @@ function reviewEmail(order) {
     `Chapeltown LS7 | Roundhay LS8 | City Centre`,
     `cchairandbeauty.com`,
   ].filter(l => l !== null).join('\n')
-  return `mailto:${CC_EMAIL}?to=${encodeURIComponent(order.email)}&subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`
+  return `mailto:${order.email}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`
 }
 
 // ── MAIN COMPONENT ──
@@ -533,7 +533,7 @@ export default function AbandonedCarts() {
                                         </a>
                                       )}
                                       {order.email && (
-                                        <a href={`mailto:${order.email}?subject=${encodeURIComponent('Regarding your recent CC Hair and Beauty order')}&body=${encodeURIComponent(msg)}`}
+                                        <a href={`mailto:${order.email}?subject=${encodeURIComponent("Regarding your recent CC Hair and Beauty order")}&body=${encodeURIComponent(msg)}`}
                                           target="_blank" rel="noreferrer"
                                           onClick={()=>markContacted(`reorder_${order.id}`,'Email')}
                                           style={{padding:'5px 12px',fontSize:11,fontWeight:700,color:'#fff',background:T.blue,borderRadius:6,textDecoration:'none'}}>
