@@ -66,70 +66,115 @@ export default async function handler(req, res) {
       const endDate = new Date().toISOString().split('T')[0]
       const startDate = new Date(Date.now() - 90 * 86400000).toISOString().split('T')[0]
 
-      // Fetch keywords and pages in parallel
-      const [kwRes, pageRes, summaryRes] = await Promise.all([
+      // Fetch keywords (1000 rows), pages (50 rows), and content gap keywords in parallel
+      const scHeaders = { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' }
+      const [kwRes, pageRes, gapRes] = await Promise.all([
+        // Top keywords by clicks
         fetch(`${base}/sites/${site}/searchAnalytics/query`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ startDate, endDate, dimensions: ['query'], rowLimit: 100, startRow: 0 })
+          method: 'POST', headers: scHeaders,
+          body: JSON.stringify({ startDate, endDate, dimensions: ['query'], rowLimit: 1000, startRow: 0 })
         }),
+        // Top pages by clicks
         fetch(`${base}/sites/${site}/searchAnalytics/query`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ startDate, endDate, dimensions: ['page'], rowLimit: 25 })
+          method: 'POST', headers: scHeaders,
+          body: JSON.stringify({ startDate, endDate, dimensions: ['page'], rowLimit: 50 })
         }),
+        // Content gaps — high impressions, low CTR (sorted by impressions desc)
         fetch(`${base}/sites/${site}/searchAnalytics/query`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ startDate, endDate, dimensions: ['date'], rowLimit: 90 })
+          method: 'POST', headers: scHeaders,
+          body: JSON.stringify({
+            startDate, endDate, dimensions: ['query'], rowLimit: 1000,
+            dimensionFilterGroups: [{
+              filters: [{
+                dimension: 'query',
+                operator: 'notContains',
+                expression: 'cc hair' // exclude branded terms
+              }]
+            }]
+          })
         }),
       ])
 
-      const [kwData, pageData, summaryData] = await Promise.all([
-        kwRes.json(), pageRes.json(), summaryRes.json()
+      const [kwData, pageData, gapData] = await Promise.all([
+        kwRes.json(), pageRes.json(), gapRes.json()
       ])
 
-      const keywords = (kwData.rows || []).map(r => ({
+      const mapKeyword = r => ({
         query: r.keys[0],
         clicks: r.clicks,
         impressions: r.impressions,
-        ctr: (r.ctr * 100).toFixed(1) + '%',
+        ctr: parseFloat((r.ctr * 100).toFixed(1)),
+        ctrStr: (r.ctr * 100).toFixed(1) + '%',
         position: parseFloat(r.position.toFixed(1)),
-      }))
+      })
 
+      const keywords = (kwData.rows || []).map(mapKeyword)
       const pages = (pageData.rows || []).map(r => ({
-        page: r.keys[0].replace('https://cchairandbeauty.com', ''),
+        page: r.keys[0].replace('https://cchairandbeauty.com','').replace('http://www.cchairandbeauty.com','').replace('https://www.cchairandbeauty.com','') || '/',
+        rawPage: r.keys[0],
         clicks: r.clicks,
         impressions: r.impressions,
-        ctr: (r.ctr * 100).toFixed(1) + '%',
+        ctr: parseFloat((r.ctr * 100).toFixed(1)),
+        ctrStr: (r.ctr * 100).toFixed(1) + '%',
         position: parseFloat(r.position.toFixed(1)),
       }))
 
-      const totals = (summaryData.rows || []).reduce((acc, r) => ({
-        clicks: acc.clicks + r.clicks,
-        impressions: acc.impressions + r.impressions,
+      // Totals from all keywords
+      const totals = keywords.reduce((acc, k) => ({
+        clicks: acc.clicks + k.clicks,
+        impressions: acc.impressions + k.impressions,
       }), { clicks: 0, impressions: 0 })
 
-      const avgPos = keywords.length ? (keywords.reduce((s, k) => s + k.position, 0) / keywords.length).toFixed(1) : 0
-      const avgCtr = keywords.length ? (keywords.reduce((s, k) => s + parseFloat(k.ctr), 0) / keywords.length).toFixed(1) : 0
+      const avgPos = keywords.length
+        ? (keywords.reduce((s, k) => s + k.position, 0) / keywords.length).toFixed(1)
+        : 0
+      const avgCtr = totals.impressions
+        ? ((totals.clicks / totals.impressions) * 100).toFixed(1)
+        : 0
 
-      // Find quick wins - pos 4-15 with high impressions
+      // Quick wins — positions 4-20, impressions 200+, not brand terms
+      const brand = ['cc hair','cchairandbeauty','continental hair']
       const quickWins = keywords
-        .filter(k => k.position >= 4 && k.position <= 15 && k.impressions > 200)
+        .filter(k => k.position >= 4 && k.position <= 20 && k.impressions >= 200)
+        .filter(k => !brand.some(b => k.query.toLowerCase().includes(b)))
         .sort((a, b) => b.impressions - a.impressions)
-        .slice(0, 10)
+        .slice(0, 20)
         .map(k => ({
           ...k,
-          potentialClicks: Math.round((k.impressions * 0.03) - k.clicks),
+          potentialClicks: Math.round((k.impressions * 0.05) - k.clicks),
+          fix: k.position <= 10
+            ? `Improve meta title and description for "${k.query}" — you rank page 1 but CTR is low`
+            : `Create a dedicated page or blog post targeting "${k.query}" — ${k.impressions.toLocaleString()} people search this monthly`,
         }))
+
+      // Content gaps — 100+ impressions, under 3% CTR, not brand, not already ranking top 5
+      const contentGaps = (gapData.rows || [])
+        .map(mapKeyword)
+        .filter(k => k.impressions >= 100 && k.ctr < 3 && k.position > 5)
+        .filter(k => !brand.some(b => k.query.toLowerCase().includes(b)))
+        .sort((a, b) => b.impressions - a.impressions)
+        .slice(0, 30)
+
+      // Low CTR pages — pages with 1000+ impressions and under 2% CTR
+      const lowCtrPages = pages
+        .filter(p => p.impressions >= 500 && p.ctr < 2)
+        .sort((a, b) => b.impressions - a.impressions)
 
       res.status(200).json({
         ok: true, live: true,
         period: `${startDate} to ${endDate}`,
-        totals: { ...totals, avgPosition: avgPos, avgCtr: avgCtr + '%' },
-        keywords: keywords.slice(0, 50),
-        pages: pages.slice(0, 20),
+        totals: {
+          clicks: totals.clicks,
+          impressions: totals.impressions,
+          avgPosition: avgPos,
+          avgCtr: avgCtr + '%',
+        },
+        keywords: keywords.slice(0, 100),
+        pages,
         quickWins,
+        contentGaps,
+        lowCtrPages,
+        keywordCount: keywords.length,
       })
 
     } else if (source === 'gbp') {
