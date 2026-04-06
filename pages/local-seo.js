@@ -110,6 +110,17 @@ export default function LocalSEO() {
       .then(r => r.json())
       .then(d => {
         if (d.ok && d.branches) {
+          // Save weekly rating snapshot to history
+          const weekKey = new Date().toISOString().slice(0,10) // YYYY-MM-DD
+          const snapshot = {}
+          d.branches.forEach(b => { snapshot[b.name] = { rating: b.rating, reviews: b.reviewCount, date: weekKey } })
+          const history = JSON.parse(localStorage.getItem('cc_rating_history') || '{}')
+          history[weekKey] = snapshot
+          // Keep last 12 weeks only
+          const keys = Object.keys(history).sort().slice(-12)
+          const trimmed = {}; keys.forEach(k => { trimmed[k] = history[k] })
+          localStorage.setItem('cc_rating_history', JSON.stringify(trimmed))
+          setRatingHistory(trimmed)
           // Merge live data over static
           const merged = STATIC_BRANCHES.map(sb => {
             const live = d.branches.find(lb => lb.name === sb.name)
@@ -137,6 +148,16 @@ export default function LocalSEO() {
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
+
+  async function loadCompetitors() {
+    setCompLoading(true)
+    try {
+      const r = await fetch('/api/competitor-ratings')
+      const d = await r.json()
+      if (d.ok) setCompetitors(d.competitors)
+    } catch(e) {}
+    setCompLoading(false)
+  }
 
   function tick(id) {
     const u = { ...tasks, [id]: !tasks[id] }
@@ -233,7 +254,7 @@ export default function LocalSEO() {
 
         {/* Tabs */}
         <div style={{ display:'flex', gap:0, borderBottom:`0.5px solid ${T.border}`, marginBottom:14, overflowX:'auto' }}>
-          {['Branches','Reviews','Reply Templates','GBP Actions','Tasks'].map(t => (
+          {['Branches','Reviews','Competitors','Rating History','Conversions','Reply Templates','GBP Actions','Tasks'].map(t => (
             <button key={t} onClick={() => setTab(t)} style={{ padding:'7px 14px', fontSize:11, fontWeight:tab===t?600:400, color:tab===t?T.blue:T.textMuted, background:'none', border:'none', borderBottom:tab===t?`2px solid ${T.blue}`:'2px solid transparent', whiteSpace:'nowrap', cursor:'pointer' }}>
               {t}{t==='Reviews' && reviews.length > 0 ? ` (${reviews.length})` : ''}
             </button>
@@ -442,6 +463,219 @@ export default function LocalSEO() {
         )}
 
         {/* TASKS tab */}
+        {/* COMPETITORS TAB */}
+        {tab === 'Competitors' && (
+          <div>
+            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+              <div style={{fontSize:12,color:T.textMuted,flex:1}}>
+                Live Google ratings for your main Leeds competitors. Updated each time you load this tab.
+              </div>
+              <button onClick={loadCompetitors} disabled={compLoading}
+                style={{padding:'6px 14px',fontSize:11,fontWeight:600,background:T.blue,color:'#fff',border:'none',borderRadius:6,cursor:'pointer'}}>
+                {compLoading ? '⟳ Loading...' : '↺ Load competitor ratings'}
+              </button>
+            </div>
+
+            {/* CC branches for comparison */}
+            <div style={{background:T.greenBg,border:`0.5px solid ${T.greenBorder}`,borderRadius:8,padding:'12px 14px',marginBottom:10}}>
+              <div style={{fontSize:11,fontWeight:700,color:T.green,marginBottom:8}}>CC Hair and Beauty</div>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
+                {branches.map((b,i) => (
+                  <div key={i} style={{background:'#fff',borderRadius:6,padding:'8px 10px',border:`1px solid ${T.greenBorder}`}}>
+                    <div style={{fontSize:11,fontWeight:700,color:T.text}}>{b.name}</div>
+                    <div style={{fontSize:16,fontWeight:700,color:b.rating>=4?T.green:T.amber}}>{b.rating}★</div>
+                    <div style={{fontSize:10,color:T.textMuted}}>{b.reviews} reviews</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {competitors.length === 0 && !compLoading && (
+              <div style={{padding:20,textAlign:'center',color:T.textMuted,background:T.surface,borderRadius:8,border:`0.5px solid ${T.border}`,fontSize:12}}>
+                Click "Load competitor ratings" to fetch live data from Google
+              </div>
+            )}
+
+            {competitors.map((comp,i) => {
+              // Compare against our lowest branch rating
+              const ourLowest = Math.min(...branches.map(b=>b.rating))
+              const ourHighest = Math.max(...branches.map(b=>b.rating))
+              const weBeat = comp.rating && comp.rating < ourHighest
+              const theyBeat = comp.rating && comp.rating > ourHighest
+              return (
+                <div key={i} style={{
+                  background:T.surface,
+                  border:`0.5px solid ${theyBeat?T.redBorder:weBeat?T.greenBorder:T.border}`,
+                  borderLeft:`4px solid ${theyBeat?T.red:weBeat?T.green:T.amber}`,
+                  borderRadius:8,padding:'12px 14px',marginBottom:6,
+                }}>
+                  <div style={{display:'flex',alignItems:'center',gap:10}}>
+                    <div style={{flex:1}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+                        <span style={{fontSize:13,fontWeight:700,color:T.text}}>{comp.name}</span>
+                        {comp.found && comp.rating && (
+                          <>
+                            <span style={{fontSize:16,fontWeight:700,color:theyBeat?T.red:T.green}}>{comp.rating}★</span>
+                            <span style={{fontSize:11,color:T.textMuted}}>({comp.reviews} reviews)</span>
+                            <span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:4,
+                              background:theyBeat?T.redBg:weBeat?T.greenBg:T.amberBg,
+                              color:theyBeat?T.red:weBeat?T.green:T.amber}}>
+                              {theyBeat?'They beat us':'We beat them'}
+                            </span>
+                          </>
+                        )}
+                        {!comp.found && <span style={{fontSize:11,color:T.textMuted}}>Not found on Google</span>}
+                      </div>
+                      {comp.address && <div style={{fontSize:10,color:T.textMuted}}>{comp.address}</div>}
+                    </div>
+                    {comp.placeId && (
+                      <a href={`https://www.google.com/maps/place/?q=place_id:${comp.placeId}`} target="_blank" rel="noreferrer"
+                        style={{padding:'5px 10px',fontSize:11,color:T.blue,border:`0.5px solid ${T.border}`,borderRadius:5,textDecoration:'none'}}>
+                        View on Google →
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* RATING HISTORY TAB */}
+        {tab === 'Rating History' && (
+          <div>
+            <div style={{fontSize:11,color:T.textMuted,marginBottom:14}}>
+              Weekly rating snapshots saved automatically each time you load the Local SEO page. Builds up over time.
+            </div>
+            {Object.keys(ratingHistory).length === 0 && (
+              <div style={{padding:30,textAlign:'center',color:T.textMuted,background:T.surface,borderRadius:8,border:`0.5px solid ${T.border}`}}>
+                No history yet — ratings are saved each time you visit this page. Come back next week to see the change.
+              </div>
+            )}
+            {Object.keys(ratingHistory).sort().reverse().map(dateKey => {
+              const snap = ratingHistory[dateKey]
+              return (
+                <div key={dateKey} style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'12px 14px',marginBottom:8}}>
+                  <div style={{fontSize:11,fontWeight:700,color:T.textMuted,marginBottom:8}}>
+                    {new Date(dateKey).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
+                  </div>
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
+                    {Object.entries(snap).map(([branch, data]) => {
+                      // Find previous week's rating for this branch
+                      const prevKey = Object.keys(ratingHistory).sort().reverse().find(k => k < dateKey)
+                      const prevRating = prevKey ? ratingHistory[prevKey][branch]?.rating : null
+                      const diff = prevRating ? (data.rating - prevRating).toFixed(1) : null
+                      return (
+                        <div key={branch} style={{background:T.bg,borderRadius:6,padding:'8px 10px',border:`0.5px solid ${T.border}`}}>
+                          <div style={{fontSize:11,fontWeight:700,color:T.text,marginBottom:2}}>{branch}</div>
+                          <div style={{fontSize:18,fontWeight:700,color:data.rating>=4?T.green:T.amber}}>{data.rating}★</div>
+                          <div style={{fontSize:10,color:T.textMuted,marginBottom:2}}>{data.reviews} reviews</div>
+                          {diff !== null && parseFloat(diff) !== 0 && (
+                            <div style={{fontSize:11,fontWeight:700,color:parseFloat(diff)>0?T.green:T.red}}>
+                              {parseFloat(diff)>0?'+':''}{diff} vs prev week
+                            </div>
+                          )}
+                          {diff !== null && parseFloat(diff) === 0 && (
+                            <div style={{fontSize:10,color:T.textMuted}}>No change</div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* CONVERSIONS TAB */}
+        {tab === 'Conversions' && (
+          <div>
+            <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:12}}>
+              How to convert more Google clicks into actual sales — based on your live data
+            </div>
+
+            {[
+              {
+                priority:'critical', title:'Fix Relaxers collection CTR — 37,671 impressions at 0.5%',
+                problem:'People search for relaxers and see your listing but do not click. Your title is generic.',
+                fix:'Change meta title to: "Buy Hair Relaxers UK — ORS, Dark & Lovely, TCB | CC Hair and Beauty Leeds"',
+                impact:'Even going from 0.5% to 2% CTR = 600 more clicks per month',
+                action:'Website SEO tab → Relaxers → Edit SEO → Push to Shopify',
+              },
+              {
+                priority:'critical', title:'Add click-to-call to Google Business Profile',
+                problem:'Roundhay and Chapeltown show phone numbers but City Centre does not. Calls convert at 40%+.',
+                fix:'Add City Centre phone number to GBP listing',
+                impact:'Could generate 20-30 more calls per month from City Centre searches',
+                action:'Google Business Profile → City Centre → Edit → Contact info → Add phone',
+              },
+              {
+                priority:'high', title:'Add Google Reviews widget to homepage',
+                problem:'Your 4.1★ Chapeltown rating is not shown on your website. Reviews increase conversion by 15-20%.',
+                fix:'Add a Google Reviews section to your Shopify homepage showing your best reviews',
+                impact:'Builds trust immediately for new visitors',
+                action:'Shopify → Themes → Customize → Add reviews section',
+              },
+              {
+                priority:'high', title:'Improve product page photos',
+                problem:'Cherish French Curl gets 1,157 impressions but 1.2% CTR. Better product images increase CTR.',
+                fix:'Upload multiple product angles, lifestyle shots showing the product in use',
+                impact:'Better images can double CTR on product pages',
+                action:'Shopify → Products → upload 3-4 photos per product for top sellers',
+              },
+              {
+                priority:'high', title:'Add bundle deals to abandoned cart recovery',
+                problem:'50 abandoned carts worth £1,430. Average order £28. Customers abandon at checkout.',
+                fix:'Offer a bundle deal in recovery message — "buy 2 get 10% off" increases order value and recovers carts',
+                impact:'Recovering 10 of 50 carts = £280 additional revenue this month',
+                action:'Abandoned Carts tab → Contact customers → mention bundle deal',
+              },
+              {
+                priority:'high', title:'Post on Google Business Profile weekly',
+                problem:'GBP posts appear in local search results and increase click-through rates by 5-10%.',
+                fix:'Post one product update per week per branch — use Blog Planner GBP Posts tab',
+                impact:'Consistent posting improves local ranking over 3-6 months',
+                action:'Blog Planner → GBP Posts tab → Generate and copy to each branch',
+              },
+              {
+                priority:'medium', title:'Add Leeds-specific landing pages',
+                problem:'"Hair shop Leeds" gets 468 impressions at position 2.7 — great position but only 5.3% CTR.',
+                fix:'Create a dedicated "Leeds Hair Shop" page with Chapeltown, Roundhay, City Centre content',
+                impact:'Local landing pages convert 2-3x better than generic collection pages',
+                action:'Shopify → Pages → Add page → "Leeds Hair Shop" with branch info',
+              },
+              {
+                priority:'medium', title:'Enable abandoned cart emails in Shopify',
+                problem:'Shopify can send automated abandoned cart emails. Currently only manual outreach being done.',
+                fix:'Enable Shopify automated abandoned cart recovery emails',
+                impact:'Shopify reports average 5-15% cart recovery rate from automated emails',
+                action:'Shopify → Marketing → Automations → Abandoned checkout',
+              },
+            ].map((item,i) => (
+              <div key={i} style={{
+                background:T.surface,
+                border:`0.5px solid ${item.priority==='critical'?T.redBorder:item.priority==='high'?T.amberBorder:T.border}`,
+                borderLeft:`4px solid ${item.priority==='critical'?T.red:item.priority==='high'?T.amber:T.blue}`,
+                borderRadius:8,padding:'12px 14px',marginBottom:8,
+              }}>
+                <div style={{display:'flex',alignItems:'flex-start',gap:10,marginBottom:8}}>
+                  <span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:4,flexShrink:0,
+                    background:item.priority==='critical'?T.redBg:item.priority==='high'?T.amberBg:T.blueBg,
+                    color:item.priority==='critical'?T.red:item.priority==='high'?T.amber:T.blue}}>
+                    {item.priority}
+                  </span>
+                  <span style={{fontSize:12,fontWeight:700,color:T.text}}>{item.title}</span>
+                </div>
+                <div style={{fontSize:11,color:T.textMuted,marginBottom:4}}><strong>Problem:</strong> {item.problem}</div>
+                <div style={{fontSize:11,color:T.blue,marginBottom:4}}><strong>Fix:</strong> {item.fix}</div>
+                <div style={{fontSize:11,color:T.green,marginBottom:4}}><strong>Impact:</strong> {item.impact}</div>
+                <div style={{fontSize:11,color:T.textMuted,fontStyle:'italic'}}><strong>How:</strong> {item.action}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {tab === 'Tasks' && (
           <div style={{ maxWidth:860 }}>
             <div style={{ background:T.surface, border:`0.5px solid ${T.border}`, borderRadius:8, padding:'10px 14px', marginBottom:12 }}>
