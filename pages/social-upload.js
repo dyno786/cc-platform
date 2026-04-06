@@ -116,13 +116,13 @@ Look at the product image and generate the following. Return as JSON only, no ma
           {/* Step 1 — Upload image */}
           <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:10,padding:16,marginBottom:12}}>
             <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:10}}>1. Upload product photo</div>
-            <input ref={fileRef} type="file" accept="image/*,video/*" capture="environment"
+            <input ref={fileRef} type="file" accept="image/*,video/*"
               onChange={handleImage} style={{display:'none'}}/>
             {!imagePreview ? (
               <button onClick={()=>fileRef.current?.click()}
                 style={{width:'100%',height:160,border:`2px dashed ${T.border}`,borderRadius:8,background:T.bg,color:T.textMuted,fontSize:14,cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8}}>
                 <span style={{fontSize:32}}>📷</span>
-                <span style={{fontSize:13,fontWeight:600}}>Tap to take photo or upload from camera roll</span>
+                <span style={{fontSize:13,fontWeight:600}}>Tap to choose from camera roll or take a photo</span>
                 <span style={{fontSize:11}}>Best for: new arrivals, back in stock, product shots</span>
               </button>
             ) : (
