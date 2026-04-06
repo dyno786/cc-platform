@@ -33,8 +33,26 @@ export default function SocialUpload() {
     if (!file) return
     setImage(file)
     setResult(null)
+
+    // Compress image to max 800px wide and ~500KB before storing
     const reader = new FileReader()
-    reader.onload = ev => setImagePreview(ev.target.result)
+    reader.onload = ev => {
+      const img = new window.Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        const MAX = 800
+        let w = img.width, h = img.height
+        if (w > MAX) { h = Math.round(h * MAX / w); w = MAX }
+        canvas.width = w
+        canvas.height = h
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0, w, h)
+        // Compress to JPEG at 0.7 quality — keeps it under 500KB
+        const compressed = canvas.toDataURL('image/jpeg', 0.7)
+        setImagePreview(compressed)
+      }
+      img.src = ev.target.result
+    }
     reader.readAsDataURL(file)
   }
 
