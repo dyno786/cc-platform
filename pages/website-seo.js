@@ -63,8 +63,10 @@ export default function WebsiteSEO() {
   const [pushed, setPushed] = useState({})
   const [errors, setErrors] = useState({})
   const [editValues, setEditValues] = useState({})
-  const [shopifyCollections, setShopifyCollections] = useState({}) // handle -> {id, adminUrl}
+  const [shopifyCollections, setShopifyCollections] = useState({})
   const [loadingCollections, setLoadingCollections] = useState(true)
+  const [liveSeo, setLiveSeo] = useState({}) // handle -> {currentSeoTitle, currentSeoDesc}
+  const [loadingSeo, setLoadingSeo] = useState({})
 
   useEffect(() => {
     async function loadCollections() {
@@ -90,14 +92,53 @@ export default function WebsiteSEO() {
     return 'https://admin.shopify.com/store/cchairandbeauty/collections'
   }
 
-  function startEdit(col) {
-    setEditValues(v => ({
-      ...v,
-      [col.handle]: {
-        title: v[col.handle]?.title ?? col.suggestedTitle,
-        desc:  v[col.handle]?.desc  ?? col.suggestedDesc,
+  async function startEdit(col) {
+    // Fetch live SEO from Shopify first
+    if (!liveSeo[col.handle]) {
+      setLoadingSeo(l => ({...l, [col.handle]: true}))
+      try {
+        const r = await fetch(`/api/shopify-collection-seo?handle=${col.handle}`)
+        const d = await r.json()
+        if (d.ok) {
+          setLiveSeo(s => ({...s, [col.handle]: d}))
+          // Pre-fill edit with CURRENT Shopify values if they exist, otherwise use suggested
+          setEditValues(v => ({
+            ...v,
+            [col.handle]: {
+              title: d.currentSeoTitle || col.suggestedTitle,
+              desc:  d.currentSeoDesc  || col.suggestedDesc,
+            }
+          }))
+        } else {
+          setEditValues(v => ({
+            ...v,
+            [col.handle]: {
+              title: v[col.handle]?.title ?? col.suggestedTitle,
+              desc:  v[col.handle]?.desc  ?? col.suggestedDesc,
+            }
+          }))
+        }
+      } catch(e) {
+        setEditValues(v => ({
+          ...v,
+          [col.handle]: {
+            title: v[col.handle]?.title ?? col.suggestedTitle,
+            desc:  v[col.handle]?.desc  ?? col.suggestedDesc,
+          }
+        }))
       }
-    }))
+      setLoadingSeo(l => ({...l, [col.handle]: false}))
+    } else {
+      // Already fetched — pre-fill from cached live data
+      const live = liveSeo[col.handle]
+      setEditValues(v => ({
+        ...v,
+        [col.handle]: {
+          title: v[col.handle]?.title ?? live.currentSeoTitle ?? col.suggestedTitle,
+          desc:  v[col.handle]?.desc  ?? live.currentSeoDesc  ?? col.suggestedDesc,
+        }
+      }))
+    }
     setEditing(e => ({...e, [col.handle]: true}))
   }
 
@@ -172,7 +213,15 @@ export default function WebsiteSEO() {
                       </span>
                       <span style={{fontSize:13,fontWeight:700,color:T.text}}>{col.name}</span>
                       {!loadingCollections && !shopifyCollections[col.handle] && (
-                        <span style={{fontSize:10,color:'#cf222e',fontWeight:600}}>⚠ Handle not found in Shopify — check handle</span>
+                        <span style={{fontSize:10,color:'#cf222e',fontWeight:600}}>⚠ Handle not found in Shopify</span>
+                      )}
+                      {/* Show current SEO status from live Shopify data */}
+                      {liveSeo[col.handle] && !editing[col.handle] && (
+                        <span style={{fontSize:10,padding:'2px 7px',borderRadius:4,
+                          background:liveSeo[col.handle].currentSeoTitle?'#dafbe1':'#fff0f0',
+                          color:liveSeo[col.handle].currentSeoTitle?'#1a7f37':'#cf222e',fontWeight:600}}>
+                          {liveSeo[col.handle].currentSeoTitle?'✓ Has SEO title':'✗ No SEO title in Shopify'}
+                        </span>
                       )}
                       <span style={{fontSize:10,color:T.textMuted}}>
                         {col.impr.toLocaleString()} impr · {col.clicks} clicks · pos {col.pos} · CTR {col.ctr}%
@@ -208,7 +257,23 @@ export default function WebsiteSEO() {
                   {/* Edit panel */}
                   {isEditing && (
                     <div style={{padding:'0 14px 14px',borderTop:`0.5px solid ${T.border}`}}>
-                      {err && <div style={{fontSize:11,color:'#cf222e',margin:'8px 0',padding:'6px 10px',background:'#fff0f0',borderRadius:5}}>{err}</div>}
+                      {loadingSeo[col.handle] && <div style={{fontSize:11,color:T.textMuted,margin:'8px 0'}}>Loading current SEO from Shopify...</div>}
+                  {err && <div style={{fontSize:11,color:'#cf222e',margin:'8px 0',padding:'6px 10px',background:'#fff0f0',borderRadius:5}}>{err}</div>}
+                  {/* Show what's currently in Shopify */}
+                  {liveSeo[col.handle] && (
+                    <div style={{background:T.bg,borderRadius:6,padding:'8px 10px',marginTop:8,marginBottom:6,fontSize:11}}>
+                      <div style={{fontWeight:700,color:T.textMuted,marginBottom:4,fontSize:10,textTransform:'uppercase'}}>Currently in Shopify:</div>
+                      <div style={{color:liveSeo[col.handle].currentSeoTitle?T.text:T.red,marginBottom:3}}>
+                        Title: {liveSeo[col.handle].currentSeoTitle || 'Not set'}
+                      </div>
+                      <div style={{color:liveSeo[col.handle].currentSeoDesc?T.text:T.red}}>
+                        Description: {liveSeo[col.handle].currentSeoDesc?liveSeo[col.handle].currentSeoDesc.slice(0,80)+'...':'Not set'}
+                      </div>
+                      {liveSeo[col.handle].hasDescription===false && (
+                        <div style={{color:T.red,fontWeight:600,marginTop:4}}>⚠ Collection has no body description text</div>
+                      )}
+                    </div>
+                  )}
                       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginTop:10}}>
                         <div>
                           <div style={{fontSize:10,fontWeight:700,color:T.textMuted,textTransform:'uppercase',marginBottom:4}}>
