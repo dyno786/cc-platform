@@ -1,4 +1,7 @@
-export const config = { maxDuration: 60 }
+export const config = {
+  maxDuration: 60,
+  api: { bodyParser: { sizeLimit: '10mb' } }
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
@@ -60,9 +63,15 @@ Look at the product image provided and generate the following. Return as JSON on
 
     const d = await r.json()
     const text = d.content?.[0]?.text || ''
-    const clean = text.replace(/```json|```/g, '').trim()
-    const parsed = JSON.parse(clean)
-
+    // Strip any markdown fences and find the JSON object
+    let clean = text.replace(/```json|```/g, '').trim()
+    // Extract just the JSON object if there's surrounding text
+    const jsonMatch = clean.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      console.error('[generate-social] No JSON found in response:', text.slice(0, 200))
+      return res.status(200).json({ ok: false, error: 'AI did not return valid JSON', raw: text.slice(0, 500) })
+    }
+    const parsed = JSON.parse(jsonMatch[0])
     res.status(200).json({ ok: true, ...parsed })
   } catch(e) {
     res.status(200).json({ ok: false, error: e.message })
