@@ -4,7 +4,37 @@ import Shell from '../components/Shell'
 import { T } from '../lib/theme'
 
 const STORE_URL = 'https://cchairandbeauty.com'
+
+function buildCallScript(cart) {
+  const name = cart.customer?.replace(/null/g,'').trim().split(' ')[0] || 'the customer'
+  const item = cart.items?.split(',')[0]?.trim()?.slice(0,50) || 'some items'
+  return [
+    `CALL SCRIPT — ${cart.customer?.replace(/null/g,'').trim() || 'Customer'} | ${cart.total}`,
+    ``,
+    `1. Introduce yourself:`,
+    `   "Hi, is that ${name}? This is [your name] calling from CC Hair and Beauty Leeds."`,
+    ``,
+    `2. Reason for calling:`,
+    `   "I noticed you had ${item} in your cart and wanted to check if you needed any help completing your order."`,
+    ``,
+    `3. If they say they forgot:`,
+    `   "No problem at all! I can give you the link now — it's cchairandbeauty.com/cart and everything should still be there."`,
+    ``,
+    `4. If they say they had an issue:`,
+    `   "I'm sorry to hear that. Can I help sort that out for you now? We can also take payment over the phone if that's easier."`,
+    ``,
+    `5. Offer discount if hesitant:`,
+    `   "As a thank you for your patience, I can offer you 10% off today with code SAVE10."`,
+    ``,
+    `6. Close:`,
+    `   "Is there anything else I can help you with? We also have 3 stores in Leeds if you'd prefer to come in — Chapeltown, Roundhay and City Centre."`,
+  ].join('\n')
+}
 const CC_EMAIL = 'cchndorders@gmail.com'
+function gmailLink(to, subject, body) {
+  // Opens Gmail compose with pre-filled fields — works from any browser
+  return `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+}
 const TRUSTPILOT = 'https://uk.trustpilot.com/review/www.cchairandbeauty.com'
 const COMMUNITY_BLOG = 'https://cchairandbeauty.com/blogs/news'
 const ROYAL_MAIL_BASE = 'https://www.royalmail.com/track-your-item#/tracking-results/'
@@ -78,7 +108,7 @@ function cartEmail(cart) {
     `CC Hair and Beauty Leeds`,
     `Chapeltown LS7 | Roundhay LS8 | City Centre`,
   ].join('\n')
-  return `mailto:${cart.email}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`
+  return gmailLink(cart.email, subj, body)
 }
 
 function reorderWhatsApp(order, inStockItems) {
@@ -189,7 +219,7 @@ function reviewEmail(order) {
     `Chapeltown LS7 | Roundhay LS8 | City Centre`,
     `cchairandbeauty.com`,
   ].filter(l => l !== null).join('\n')
-  return `mailto:${order.email}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`
+  return gmailLink(order.email, subj, body)
 }
 
 // ── MAIN COMPONENT ──
@@ -205,6 +235,10 @@ export default function AbandonedCarts() {
 
   const MONTH_OPTS = getMonthOptions()
   const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTS[0].value)
+  // Auto-load previous month on mount
+  useEffect(() => {
+    loadMonth(MONTH_OPTS[0].value)
+  }, [])
   const [monthOrders, setMonthOrders] = useState([])
   const [monthLoading, setMonthLoading] = useState(false)
 
@@ -384,18 +418,31 @@ export default function AbandonedCarts() {
                         {!cart.phone && !cart.email && <span style={{color:T.red,fontWeight:600}}>No contact info</span>}
                       </div>
                     </div>
-                    <div style={{display:'flex',flexDirection:'column',gap:5,flexShrink:0}}>
+                    <div style={{display:'flex',flexDirection:'column',gap:5,flexShrink:0,minWidth:160}}>
                       {cart.phone && (
-                        <a href={cartWhatsApp(cart)} target="_blank" rel="noreferrer"
-                          onClick={()=>markContacted(cart.id,'WhatsApp')}
-                          style={{padding:'7px 14px',fontSize:12,fontWeight:700,color:'#fff',background:'#25D366',borderRadius:7,textDecoration:'none'}}>
-                          WhatsApp {name}
-                        </a>
+                        <>
+                          <a href={`tel:${cart.phone}`}
+                            style={{padding:'6px 12px',fontSize:12,fontWeight:700,color:'#fff',background:'#1a7f37',borderRadius:7,textDecoration:'none',textAlign:'center'}}>
+                            Call {name}: {cart.phone}
+                          </a>
+                          <button onClick={()=>{
+                            const script = buildCallScript(cart)
+                            alert(script)
+                          }}
+                            style={{padding:'5px 12px',fontSize:11,fontWeight:600,color:T.text,background:T.bg,border:`1px solid ${T.border}`,borderRadius:6,cursor:'pointer'}}>
+                            View call script
+                          </button>
+                          <a href={cartWhatsApp(cart)} target="_blank" rel="noreferrer"
+                            onClick={()=>markContacted(cart.id,'WhatsApp')}
+                            style={{padding:'6px 12px',fontSize:11,fontWeight:700,color:'#fff',background:'#25D366',borderRadius:7,textDecoration:'none',textAlign:'center'}}>
+                            WhatsApp {name}
+                          </a>
+                        </>
                       )}
                       {cart.email && (
                         <a href={cartEmail(cart)} target="_blank" rel="noreferrer"
                           onClick={()=>markContacted(cart.id,'Email')}
-                          style={{padding:'7px 14px',fontSize:12,fontWeight:700,color:'#fff',background:T.blue,borderRadius:7,textDecoration:'none'}}>
+                          style={{padding:'6px 12px',fontSize:11,fontWeight:700,color:'#fff',background:T.blue,borderRadius:7,textDecoration:'none',textAlign:'center'}}>
                           Email {name}
                         </a>
                       )}
@@ -410,7 +457,7 @@ export default function AbandonedCarts() {
         {/* ── REORDER REMINDERS ── */}
         {tab==='Reorder Reminders' && (
           <div>
-            <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:14,flexWrap:'wrap'}}>
+            <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:10,flexWrap:'wrap'}}>
               <span style={{fontSize:12,fontWeight:600,color:T.text}}>Month:</span>
               <select value={selectedMonth} onChange={e=>loadMonth(e.target.value)}
                 style={{padding:'6px 12px',fontSize:12,border:`1px solid ${T.border}`,borderRadius:7,background:T.bg,color:T.text}}>
@@ -418,10 +465,29 @@ export default function AbandonedCarts() {
               </select>
               {monthOrders.length > 0 && (
                 <span style={{fontSize:11,color:T.textMuted}}>
-                  {monthOrders.length} orders · £{monthOrders.reduce((s,o)=>s+o.totalRaw,0).toFixed(0)} total
+                  {monthOrders.filter(o=>o.email||o.phone).length} contactable · {monthOrders.filter(o=>o.phone).length} WhatsApp · {monthOrders.filter(o=>o.email&&!o.phone).length} email only
                 </span>
               )}
             </div>
+
+            {/* Filter buttons */}
+            {monthOrders.length > 0 && (
+              <div style={{display:'flex',gap:6,marginBottom:12,flexWrap:'wrap'}}>
+                {[
+                  {id:'all', label:`All (${monthOrders.filter(o=>o.email||o.phone).length})`},
+                  {id:'whatsapp', label:`WhatsApp (${monthOrders.filter(o=>o.phone).length})`},
+                  {id:'email', label:`Email only (${monthOrders.filter(o=>o.email&&!o.phone).length})`},
+                  {id:'outofstock', label:`Out of stock items (${monthOrders.filter(o=>o.anyOutOfStock).length})`},
+                ].map(f => (
+                  <button key={f.id} onClick={()=>setReorderFilter(f.id)} style={{
+                    padding:'4px 12px',fontSize:11,fontWeight:600,borderRadius:20,
+                    border:`1px solid ${reorderFilter===f.id?T.blue:T.border}`,
+                    background:reorderFilter===f.id?T.blueBg:T.bg,
+                    color:reorderFilter===f.id?T.blue:T.textMuted,cursor:'pointer',
+                  }}>{f.label}</button>
+                ))}
+              </div>
+            )}
 
             {monthLoading && <div style={{padding:30,textAlign:'center',color:T.textMuted}}>Loading orders...</div>}
 
@@ -431,7 +497,12 @@ export default function AbandonedCarts() {
               </div>
             )}
 
-            {!monthLoading && monthOrders.filter(o=>o.email||o.phone).map(order => {
+            {!monthLoading && monthOrders.filter(o=>{
+              if (reorderFilter==='whatsapp') return o.phone
+              if (reorderFilter==='email') return o.email && !o.phone
+              if (reorderFilter==='outofstock') return o.anyOutOfStock
+              return o.email||o.phone
+            }).map(order => {
               const done = contacted[`reorder_${order.id}`]
               const inStock = (order.lineItems||[]).filter(i=>i.inStock)
               const outOfStock = (order.lineItems||[]).filter(i=>!i.inStock)
