@@ -235,10 +235,7 @@ export default function AbandonedCarts() {
 
   const MONTH_OPTS = getMonthOptions()
   const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTS[0].value)
-  // Auto-load previous month on mount
-  useEffect(() => {
-    loadMonth(MONTH_OPTS[0].value)
-  }, [])
+  // auto-load handled below after loadMonth defined
   const [monthOrders, setMonthOrders] = useState([])
   const [monthLoading, setMonthLoading] = useState(false)
 
@@ -272,6 +269,10 @@ export default function AbandonedCarts() {
     } catch(e) {}
     setMonthLoading(false)
   }
+
+  // Auto-load previous month once loadMonth is defined
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { loadMonth(MONTH_OPTS[0].value) }, [])
 
   function markContacted(id, method) {
     const u = { ...contacted, [id]: { method, time: new Date().toISOString() } }
