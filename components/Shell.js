@@ -29,7 +29,7 @@ export default function Shell({ children, title, subtitle }) {
       <Nav />
       <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',minWidth:0}}>
         {/* Top bar */}
-        <div style={{height:48,background:T.surface,borderBottom:`0.5px solid ${T.border}`,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',flexShrink:0}}>
+        <div style={{height:48,background:T.surface,borderBottom:`0.5px solid ${T.border}`,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',flexShrink:0}} className="shell-topbar">
           <div style={{display:'flex',alignItems:'center',gap:12}}>
             {!isHome && (
               <button onClick={()=>router.push('/')} style={{display:'flex',alignItems:'center',gap:5,padding:'4px 10px',fontSize:12,color:T.textMuted,background:T.bg,border:`0.5px solid ${T.border}`,borderRadius:6}}>
