@@ -21,10 +21,13 @@ const COMMUNITY_BLOG = 'https://cchairandbeauty.com/blogs/news'
 
 // Calculate how many 5-star reviews needed to reach a target rating
 function reviewsNeeded(currentRating, currentCount, targetRating) {
-  // (currentRating * currentCount + 5 * x) / (currentCount + x) = targetRating
-  // Solve for x: x = (targetRating * currentCount - currentRating * currentCount) / (5 - targetRating)
-  if (targetRating >= 5) return Math.ceil((5 * currentCount - currentRating * currentCount) / (5 - 4.99))
-  const x = (targetRating * currentCount - currentRating * currentCount) / (5 - targetRating)
+  // Correct formula: x = (currentCount × (targetRating - currentRating)) / (5 - targetRating)
+  // Source: kentseocompany.co.uk — verified against ReviewTrackers calculator
+  if (targetRating >= 5) {
+    // Special case for 5.0 — practically impossible with many reviews
+    return Math.ceil(currentCount * (4.99 - currentRating) / (5 - 4.99))
+  }
+  const x = (currentCount * (targetRating - currentRating)) / (5 - targetRating)
   return Math.max(0, Math.ceil(x))
 }
 
@@ -260,24 +263,29 @@ export default function LocalSEO() {
                     <div style={{ height:5, background:T.borderLight, borderRadius:99, overflow:'hidden', border:`0.5px solid ${T.border}`, marginBottom:8 }}>
                       <div style={{ width:`${(b.rating/5)*100}%`, height:'100%', background:ratingColor, borderRadius:99 }}/>
                     </div>
-                    {/* Review targets — how many 5★ reviews to reach next milestone */}
-                    <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginTop:6, marginBottom:8 }}>
-                      {[0.1,0.2,0.3,0.4,0.5].map((inc,ti) => {
-                        const target = parseFloat((Math.ceil(b.rating*10)/10 + inc).toFixed(1))
-                        if (target > 5) return null
+                    {/* Review targets using correct formula: x = n(t-r)/(5-t) */}
+                    <div style={{ fontSize:10, color:T.textMuted, marginTop:6, marginBottom:5 }}>
+                      5★ reviews needed to reach each target:
+                    </div>
+                    <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginBottom:8 }}>
+                      {[4.0,4.1,4.2,4.3,4.4,4.5,4.7,5.0].filter(t => t > b.rating).map((target, ti) => {
                         const needed = reviewsNeeded(b.rating, b.reviews, target)
+                        const isNext = ti === 0
                         return (
                           <div key={ti} style={{
-                            fontSize:10, padding:'2px 8px', borderRadius:4,
-                            background: ti===0 ? T.greenBg : T.bg,
-                            border:`1px solid ${ti===0 ? T.greenBorder : T.border}`,
-                            color: ti===0 ? T.green : T.textMuted,
-                            fontWeight: ti===0 ? 700 : 400,
+                            fontSize:10, padding:'3px 9px', borderRadius:4,
+                            background: isNext ? T.greenBg : T.bg,
+                            border:`1px solid ${isNext ? T.greenBorder : T.border}`,
+                            color: isNext ? T.green : T.textMuted,
+                            fontWeight: isNext ? 700 : 400,
                           }}>
-                            {target}★ — {needed} more 5★ review{needed!==1?'s':''}
+                            {target.toFixed(1)}★ = {needed} review{needed!==1?'s':''}
                           </div>
                         )
                       })}
+                    </div>
+                    <div style={{ fontSize:9, color:T.textMuted, marginBottom:8, fontStyle:'italic' }}>
+                      Formula: x = {'{'}n × (target - current){'}'}  ÷ (5 - target) where n = {b.reviews} total reviews
                     </div>
                     {/* Review request buttons */}
                     <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
