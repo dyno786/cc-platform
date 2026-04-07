@@ -5,29 +5,26 @@ import { T } from '../lib/theme'
 
 const BRANCHES = ['Chapeltown', 'Roundhay', 'City Centre']
 const POST_TYPES = [
-  { id:'new_arrival',   label:'New Arrival',      desc:'Just landed in store' },
-  { id:'back_instore',  label:'Back In Store',     desc:'Popular product back in stock' },
-  { id:'new_colour',    label:'New Colour',        desc:'New shade or colour option' },
-  { id:'deal_of_day',   label:'Deal of the Day',   desc:'Special offer or bundle' },
-  { id:'staff_pick',    label:'Staff Pick',        desc:'Our team recommends this product' },
-  { id:'trending',      label:'Trending Now',      desc:'Flying off the shelves' },
-]
-const MEDIA_TYPES = [
-  { id:'photo', label:'Photo Post', desc:'Static image — best for product shots' },
-  { id:'reel',  label:'Reel / Video', desc:'Short video — best for demos and trending sounds' },
+  { id:'new_arrival',  label:'New Arrival',    desc:'Just landed in store' },
+  { id:'back_instore', label:'Back In Store',   desc:'Popular product back in stock' },
+  { id:'new_colour',   label:'New Colour',      desc:'New shade or colour option' },
+  { id:'deal_of_day',  label:'Deal of the Day', desc:'Special offer or bundle' },
+  { id:'staff_pick',   label:'Staff Pick',      desc:'Our team recommends this' },
+  { id:'trending',     label:'Trending Now',    desc:'Flying off the shelves' },
 ]
 
 export default function SocialUpload() {
   const [branch, setBranch] = useState('')
   const [postType, setPostType] = useState('')
   const [mediaType, setMediaType] = useState('photo')
+  const [inputMode, setInputMode] = useState('photo')
   const [image, setImage] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
+  const [productText, setProductText] = useState('')
   const [generating, setGenerating] = useState(false)
   const [result, setResult] = useState(null)
+  const [error, setError] = useState(null)
   const [copied, setCopied] = useState({})
-  const [inputMode, setInputMode] = useState('photo') // 'photo' | 'text'
-  const [productText, setProductText] = useState('')
   const fileRef = useRef()
 
   function handleImage(e) {
@@ -35,8 +32,7 @@ export default function SocialUpload() {
     if (!file) return
     setImage(file)
     setResult(null)
-
-    // Compress image to max 800px wide and ~500KB before storing
+    setError(null)
     const reader = new FileReader()
     reader.onload = ev => {
       const img = new window.Image()
@@ -47,11 +43,8 @@ export default function SocialUpload() {
         if (w > MAX) { h = Math.round(h * MAX / w); w = MAX }
         canvas.width = w
         canvas.height = h
-        const ctx = canvas.getContext('2d')
-        ctx.drawImage(img, 0, 0, w, h)
-        // Compress to JPEG at 0.7 quality — keeps it under 500KB
-        const compressed = canvas.toDataURL('image/jpeg', 0.7)
-        setImagePreview(compressed)
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+        setImagePreview(canvas.toDataURL('image/jpeg', 0.7))
       }
       img.src = ev.target.result
     }
@@ -59,61 +52,33 @@ export default function SocialUpload() {
   }
 
   async function generate() {
-    if (!branch || !postType || !imagePreview) return
+    if (!branch || !postType) return
+    if (inputMode === 'photo' && !imagePreview) return
+    if (inputMode === 'text' && productText.trim().length < 3) return
+
     setGenerating(true)
     setResult(null)
+    setError(null)
 
     try {
-      // Convert image to base64 for Claude vision
-      const base64 = imagePreview.split(',')[1]
-      const mimeType = image.type || 'image/jpeg'
-      const isVideo = mediaType === 'reel'
       const postTypeLabel = POST_TYPES.find(p => p.id === postType)?.label || postType
-
-      // prompt built server-side
-      const _unused = `You are writing social media content for CC Hair and Beauty Leeds, a community hair and beauty retailer established in 1979 with 3 branches (Chapeltown LS7, Roundhay LS8, City Centre).
-
-This is a ${postTypeLabel} post for the ${branch} branch.
-Media type: ${isVideo ? 'Short video/Reel' : 'Photo post'}
-
-Look at the product image and generate the following. Return as JSON only, no markdown:
-
-{
-  "productName": "Your best guess at the product name from the image",
-  "instagram": {
-    "caption": "Engaging Instagram caption, 2-3 short paragraphs, friendly tone, mentions ${branch} branch, ends with call to action to visit or shop online at cchairandbeauty.com. ${isVideo ? 'Written for a Reel — punchy opening hook, fast energy.' : 'Written for a photo post.'}",
-    "hashtags": "20-25 relevant hashtags as a single string starting with # — mix of product-specific, Leeds local, and afro hair community hashtags"
-  },
-  "facebook": {
-    "caption": "Facebook post — more conversational, slightly longer than Instagram, mentions CC Hair and Beauty Leeds community since 1979, includes cchairandbeauty.com link. Warm community tone."
-  },
-  "tiktok": {
-    "hook": "${isVideo ? 'First 3 seconds hook — short punchy line that stops the scroll, written for spoken word' : 'TikTok photo mode caption — trend-aware, fun, uses current TikTok language'}",
-    "caption": "TikTok caption — short, energetic, ${isVideo ? 'includes trending audio suggestion relevant to the product' : 'uses trending TikTok phrases'}, 3-5 hashtags only"
-  },
-  "gbp": {
-    "post": "Google Business Profile post — max 300 characters, professional, mentions the branch address, includes product name"
-  }
-}`
+      const body = inputMode === 'text'
+        ? { productText: productText.trim(), branch, postType, postTypeLabel, mediaType }
+        : { imageBase64: imagePreview.split(',')[1], mimeType: image?.type || 'image/jpeg', branch, postType, postTypeLabel, mediaType }
 
       const r = await fetch('/api/generate-social', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageBase64: base64,
-          mimeType,
-          branch,
-          postType,
-          postTypeLabel: POST_TYPES.find(p => p.id === postType)?.label || postType,
-          mediaType,
-        })
+        body: JSON.stringify(body),
       })
-
       const d = await r.json()
-      if (!d.ok) throw new Error(d.error || 'Generation failed')
-      setResult(d)
+      if (!d.ok) {
+        setError(d.error || 'Generation failed')
+      } else {
+        setResult(d)
+      }
     } catch(e) {
-      setResult({ error: 'Generation failed: ' + e.message })
+      setError('Connection error: ' + e.message)
     }
     setGenerating(false)
   }
@@ -124,57 +89,69 @@ Look at the product image and generate the following. Return as JSON only, no ma
     setTimeout(() => setCopied(c => ({...c, [key]: false})), 2000)
   }
 
-  const canGenerate = branch && postType && (inputMode === 'photo' ? !!imagePreview : productText.trim().length > 3)
+  function reset() {
+    setResult(null); setImage(null); setImagePreview(null)
+    setBranch(''); setPostType(''); setProductText(''); setError(null)
+  }
+
+  const canGenerate = branch && postType && (
+    inputMode === 'photo' ? !!imagePreview : productText.trim().length > 3
+  )
 
   return (
     <>
-      <Head><title>Social Media Upload — CC Intelligence</title></Head>
-      <Shell title="Social Media" subtitle="Upload a product photo — get Instagram, Facebook, TikTok and GBP posts instantly">
+      <Head><title>Social Media — CC Intelligence</title></Head>
+      <Shell title="Social Media" subtitle="Upload a photo or type product details — get Instagram, Facebook, TikTok and GBP posts instantly">
+        <div style={{maxWidth:560,margin:'0 auto'}}>
 
-        <div style={{maxWidth:600,margin:'0 auto'}}>
-
-          {/* Step 1 — Upload image OR type product details */}
-          <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:10,padding:16,marginBottom:12}}>
-            <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:10}}>1. Product — photo or text</div>
-
-            {/* Toggle: photo vs text */}
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:12}}>
-              {[{id:'photo',label:'Upload Photo'},{id:'text',label:'Type Product Details'}].map(m => (
-                <button key={m.id} onClick={()=>{setInputMode(m.id);setResult(null)}} style={{
+          {/* Step 1 — Photo or Text */}
+          <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:10,padding:16,marginBottom:10}}>
+            <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:10}}>1. Product</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:10}}>
+              {['photo','text'].map(m => (
+                <button key={m} onClick={()=>{setInputMode(m);setResult(null);setError(null)}} style={{
                   padding:'8px',fontSize:11,fontWeight:600,borderRadius:7,cursor:'pointer',
-                  background:inputMode===m.id?T.blue:T.bg,
-                  color:inputMode===m.id?'#fff':T.text,
-                  border:`2px solid ${inputMode===m.id?T.blue:T.border}`,
-                }}>{m.label}</button>
+                  background:inputMode===m?T.blue:T.bg,
+                  color:inputMode===m?'#fff':T.text,
+                  border:`2px solid ${inputMode===m?T.blue:T.border}`,
+                }}>
+                  {m==='photo'?'Upload Photo':'Type Product Details'}
+                </button>
               ))}
             </div>
 
-            <input ref={fileRef} type="file" accept="image/*,video/*"
-              onChange={handleImage} style={{display:'none'}}/>
+            <input ref={fileRef} type="file" accept="image/*" onChange={handleImage} style={{display:'none'}}/>
 
-            {inputMode === 'photo' && (!imagePreview ? (
-              <button onClick={()=>fileRef.current?.click()}
-                style={{width:'100%',height:140,border:`2px dashed ${T.border}`,borderRadius:8,background:T.bg,color:T.textMuted,fontSize:14,cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8}}>
-                <span style={{fontSize:32}}>📷</span>
-                <span style={{fontSize:13,fontWeight:600}}>Tap to choose from camera roll or take a photo</span>
-              </button>
-            ) : (
-              <div style={{position:'relative'}}>
-                <img src={imagePreview} alt="Product" style={{width:'100%',maxHeight:220,objectFit:'cover',borderRadius:8,border:`1px solid ${T.border}`}}/>
-                <button onClick={()=>{setImage(null);setImagePreview(null);setResult(null)}}
-                  style={{position:'absolute',top:8,right:8,background:'rgba(0,0,0,0.6)',color:'#fff',border:'none',borderRadius:20,padding:'4px 10px',fontSize:11,cursor:'pointer'}}>
-                  Change
+            {inputMode === 'photo' && (
+              imagePreview ? (
+                <div style={{position:'relative'}}>
+                  <img src={imagePreview} alt="Product" style={{width:'100%',maxHeight:220,objectFit:'cover',borderRadius:8,border:`1px solid ${T.border}`}}/>
+                  <button onClick={()=>{setImage(null);setImagePreview(null);setResult(null)}}
+                    style={{position:'absolute',top:8,right:8,background:'rgba(0,0,0,0.6)',color:'#fff',border:'none',borderRadius:20,padding:'4px 10px',fontSize:11,cursor:'pointer'}}>
+                    Change
+                  </button>
+                </div>
+              ) : (
+                <button onClick={()=>fileRef.current?.click()} style={{
+                  width:'100%',height:130,border:`2px dashed ${T.border}`,borderRadius:8,
+                  background:T.bg,color:T.textMuted,cursor:'pointer',
+                  display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8,
+                }}>
+                  <span style={{fontSize:28}}>📷</span>
+                  <span style={{fontSize:12,fontWeight:600}}>Choose from camera roll or take photo</span>
                 </button>
-              </div>
-            ))}
+              )
+            )}
 
             {inputMode === 'text' && (
               <div>
-                <div style={{fontSize:11,color:T.textMuted,marginBottom:6}}>Format: Brand Name — Product — Size (e.g. ORS — Curl Jam — 340g)</div>
+                <div style={{fontSize:11,color:T.textMuted,marginBottom:5}}>
+                  Format: Brand — Product — Size (e.g. ORS — Curl Jam — 340g)
+                </div>
                 <textarea
                   value={productText}
                   onChange={e=>setProductText(e.target.value)}
-                  placeholder="e.g. Dark and Lovely — Optimum Care Relaxer — Super&#10;or: Cantu — Shea Butter Leave-In Conditioning Repair Cream — 400ml"
+                  placeholder={'e.g. Dark and Lovely — Optimum Care Relaxer — Super\nor: Cantu — Shea Butter Leave-In Cream — 400ml'}
                   rows={3}
                   style={{width:'100%',padding:'8px 10px',fontSize:12,border:`1px solid ${T.border}`,borderRadius:7,background:T.bg,color:T.text,resize:'vertical',fontFamily:'inherit',lineHeight:1.5,boxSizing:'border-box'}}
                 />
@@ -183,12 +160,12 @@ Look at the product image and generate the following. Return as JSON only, no ma
           </div>
 
           {/* Step 2 — Branch */}
-          <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:10,padding:16,marginBottom:12}}>
+          <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:10,padding:16,marginBottom:10}}>
             <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:10}}>2. Which branch?</div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}}>
               {BRANCHES.map(b => (
                 <button key={b} onClick={()=>setBranch(b)} style={{
-                  padding:'10px 8px',fontSize:12,fontWeight:600,borderRadius:8,cursor:'pointer',
+                  padding:'10px 6px',fontSize:11,fontWeight:600,borderRadius:7,cursor:'pointer',
                   background:branch===b?T.blue:T.bg,
                   color:branch===b?'#fff':T.text,
                   border:`2px solid ${branch===b?T.blue:T.border}`,
@@ -198,133 +175,118 @@ Look at the product image and generate the following. Return as JSON only, no ma
           </div>
 
           {/* Step 3 — Post type */}
-          <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:10,padding:16,marginBottom:12}}>
-            <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:10}}>3. What type of post?</div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8}}>
+          <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:10,padding:16,marginBottom:10}}>
+            <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:10}}>3. Type of post?</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
               {POST_TYPES.map(p => (
                 <button key={p.id} onClick={()=>setPostType(p.id)} style={{
-                  padding:'10px 12px',textAlign:'left',borderRadius:8,cursor:'pointer',
+                  padding:'9px 10px',textAlign:'left',borderRadius:7,cursor:'pointer',
                   background:postType===p.id?T.blueBg:T.bg,
                   border:`2px solid ${postType===p.id?T.blue:T.border}`,
                 }}>
-                  <div style={{fontSize:12,fontWeight:700,color:postType===p.id?T.blue:T.text}}>{p.label}</div>
-                  <div style={{fontSize:10,color:T.textMuted,marginTop:2}}>{p.desc}</div>
+                  <div style={{fontSize:11,fontWeight:700,color:postType===p.id?T.blue:T.text}}>{p.label}</div>
+                  <div style={{fontSize:10,color:T.textMuted,marginTop:1}}>{p.desc}</div>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Step 4 — Photo or Video */}
-          <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:10,padding:16,marginBottom:16}}>
-            <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:10}}>4. Photo post or Reel/Video?</div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-              {MEDIA_TYPES.map(m => (
+          {/* Step 4 — Photo or Reel */}
+          <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:10,padding:16,marginBottom:14}}>
+            <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:10}}>4. Photo post or Reel?</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+              {[{id:'photo',label:'Photo Post',icon:'🖼️'},{id:'reel',label:'Reel / Video',icon:'🎬'}].map(m => (
                 <button key={m.id} onClick={()=>setMediaType(m.id)} style={{
-                  padding:'10px 12px',textAlign:'left',borderRadius:8,cursor:'pointer',
+                  padding:'10px',textAlign:'left',borderRadius:7,cursor:'pointer',
                   background:mediaType===m.id?T.blueBg:T.bg,
                   border:`2px solid ${mediaType===m.id?T.blue:T.border}`,
                 }}>
-                  <div style={{fontSize:20,marginBottom:4}}>{m.id==='photo'?'🖼️':'🎬'}</div>
-                  <div style={{fontSize:12,fontWeight:700,color:mediaType===m.id?T.blue:T.text}}>{m.label}</div>
-                  <div style={{fontSize:10,color:T.textMuted,marginTop:2}}>{m.desc}</div>
+                  <div style={{fontSize:18,marginBottom:4}}>{m.icon}</div>
+                  <div style={{fontSize:11,fontWeight:700,color:mediaType===m.id?T.blue:T.text}}>{m.label}</div>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Generate button */}
-          <button onClick={generate} disabled={!canGenerate||generating}
-            style={{width:'100%',padding:'14px',fontSize:15,fontWeight:700,
-              background:canGenerate&&!generating?T.blue:T.border,
-              color:'#fff',border:'none',borderRadius:10,cursor:canGenerate&&!generating?'pointer':'not-allowed',
-              marginBottom:16,
-            }}>
-            {generating ? 'Generating posts...' : canGenerate ? 'Generate All Posts' : 'Complete steps above to generate'}
+          {/* Generate */}
+          <button
+            onClick={generate}
+            disabled={!canGenerate || generating}
+            style={{
+              width:'100%',padding:'14px',fontSize:14,fontWeight:700,
+              background:canGenerate&&!generating?T.blue:'#d0d7de',
+              color:'#fff',border:'none',borderRadius:10,
+              cursor:canGenerate&&!generating?'pointer':'not-allowed',
+              marginBottom:14,
+            }}
+          >
+            {generating ? 'Generating...' : canGenerate ? 'Generate All Posts' : 'Complete steps above'}
           </button>
 
-          {result?.error && (
-            <div style={{background:'#fff0f0',border:`1px solid ${T.redBorder}`,borderRadius:8,padding:12,fontSize:12,color:T.red,marginBottom:12}}>
-              {result.error}
+          {error && (
+            <div style={{background:'#fff0f0',border:`1px solid #ffa0a0`,borderRadius:8,padding:'10px 14px',fontSize:12,color:T.red,marginBottom:12}}>
+              Error: {error}
             </div>
           )}
 
           {/* Results */}
-          {result && !result.error && (
+          {result && (
             <div>
               {result.productName && (
-                <div style={{fontSize:12,color:T.textMuted,marginBottom:12,textAlign:'center'}}>
-                  Detected product: <strong style={{color:T.text}}>{result.productName}</strong>
+                <div style={{fontSize:11,color:T.textMuted,marginBottom:10,textAlign:'center'}}>
+                  Product detected: <strong style={{color:T.text}}>{result.productName}</strong>
                 </div>
               )}
 
-              {/* Instagram */}
-              <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:10,padding:14,marginBottom:10}}>
-                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
-                  <span style={{fontSize:20}}>📸</span>
-                  <span style={{fontSize:13,fontWeight:700,color:T.text}}>Instagram {mediaType==='reel'?'Reel':'Post'}</span>
-                  <button onClick={()=>copy('ig',`${result.instagram?.caption}\n\n${result.instagram?.hashtags}`)}
-                    style={{marginLeft:'auto',padding:'4px 12px',fontSize:11,fontWeight:600,background:copied.ig?T.green:T.blue,color:'#fff',border:'none',borderRadius:5,cursor:'pointer'}}>
-                    {copied.ig?'Copied!':'Copy all'}
-                  </button>
-                </div>
-                <div style={{fontSize:12,color:T.text,lineHeight:1.6,marginBottom:8,whiteSpace:'pre-wrap'}}>{result.instagram?.caption}</div>
-                <div style={{fontSize:11,color:'#7c3aed',lineHeight:1.8}}>{result.instagram?.hashtags}</div>
-              </div>
-
-              {/* Facebook */}
-              <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:10,padding:14,marginBottom:10}}>
-                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
-                  <span style={{fontSize:20}}>👥</span>
-                  <span style={{fontSize:13,fontWeight:700,color:T.text}}>Facebook Post</span>
-                  <button onClick={()=>copy('fb',result.facebook?.caption)}
-                    style={{marginLeft:'auto',padding:'4px 12px',fontSize:11,fontWeight:600,background:copied.fb?T.green:'#1877F2',color:'#fff',border:'none',borderRadius:5,cursor:'pointer'}}>
-                    {copied.fb?'Copied!':'Copy'}
-                  </button>
-                </div>
-                <div style={{fontSize:12,color:T.text,lineHeight:1.6,whiteSpace:'pre-wrap'}}>{result.facebook?.caption}</div>
-              </div>
-
-              {/* TikTok */}
-              <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:10,padding:14,marginBottom:10}}>
-                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
-                  <span style={{fontSize:20}}>🎵</span>
-                  <span style={{fontSize:13,fontWeight:700,color:T.text}}>TikTok {mediaType==='reel'?'Video':'Photo Mode'}</span>
-                  <button onClick={()=>copy('tt',`${result.tiktok?.hook}\n\n${result.tiktok?.caption}`)}
-                    style={{marginLeft:'auto',padding:'4px 12px',fontSize:11,fontWeight:600,background:copied.tt?T.green:'#000',color:'#fff',border:'none',borderRadius:5,cursor:'pointer'}}>
-                    {copied.tt?'Copied!':'Copy'}
-                  </button>
-                </div>
-                {mediaType==='reel' && (
-                  <div style={{background:T.bg,borderRadius:6,padding:'6px 10px',marginBottom:8,fontSize:11,fontWeight:600,color:T.text}}>
-                    Hook (first 3 seconds): {result.tiktok?.hook}
+              {[
+                { key:'ig', icon:'📸', label:`Instagram ${mediaType==='reel'?'Reel':'Post'}`, color:T.blue,
+                  text:`${result.instagram?.caption || ''}\n\n${result.instagram?.hashtags || ''}` },
+                { key:'fb', icon:'👥', label:'Facebook Post', color:'#1877F2',
+                  text: result.facebook?.caption || '' },
+                { key:'tt', icon:'🎵', label:`TikTok ${mediaType==='reel'?'Video':'Photo Mode'}`, color:'#000',
+                  text: mediaType==='reel' ? `Hook: ${result.tiktok?.hook || ''}\n\n${result.tiktok?.caption || ''}` : result.tiktok?.caption || '' },
+                { key:'gbp', icon:'📍', label:'Google Business Profile', color:'#34A853',
+                  text: result.gbp?.post || '', charLimit: 300 },
+              ].map(p => p.text && (
+                <div key={p.key} style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:10,padding:14,marginBottom:8}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
+                    <span style={{fontSize:18}}>{p.icon}</span>
+                    <span style={{fontSize:13,fontWeight:700,color:T.text,flex:1}}>{p.label}</span>
+                    <button onClick={()=>copy(p.key, p.text)} style={{
+                      padding:'4px 12px',fontSize:11,fontWeight:600,
+                      background:copied[p.key]?T.green:p.color,
+                      color:'#fff',border:'none',borderRadius:5,cursor:'pointer',
+                    }}>
+                      {copied[p.key]?'Copied!':'Copy'}
+                    </button>
                   </div>
-                )}
-                <div style={{fontSize:12,color:T.text,lineHeight:1.6,whiteSpace:'pre-wrap'}}>{result.tiktok?.caption}</div>
-              </div>
-
-              {/* GBP */}
-              <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:10,padding:14,marginBottom:10}}>
-                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
-                  <span style={{fontSize:20}}>📍</span>
-                  <span style={{fontSize:13,fontWeight:700,color:T.text}}>Google Business Profile Post</span>
-                  <button onClick={()=>copy('gbp',result.gbp?.post)}
-                    style={{marginLeft:'auto',padding:'4px 12px',fontSize:11,fontWeight:600,background:copied.gbp?T.green:'#34A853',color:'#fff',border:'none',borderRadius:5,cursor:'pointer'}}>
-                    {copied.gbp?'Copied!':'Copy'}
-                  </button>
+                  {p.key==='ig' && result.instagram?.hashtags && (
+                    <>
+                      <div style={{fontSize:12,color:T.text,lineHeight:1.6,marginBottom:6,whiteSpace:'pre-wrap'}}>{result.instagram.caption}</div>
+                      <div style={{fontSize:11,color:'#7c3aed',lineHeight:1.8}}>{result.instagram.hashtags}</div>
+                    </>
+                  )}
+                  {p.key!=='ig' && (
+                    <div style={{fontSize:12,color:T.text,lineHeight:1.6,whiteSpace:'pre-wrap'}}>{p.text}</div>
+                  )}
+                  {p.charLimit && (
+                    <div style={{fontSize:10,color:p.text.length>p.charLimit?T.red:T.textMuted,marginTop:4}}>
+                      {p.text.length}/{p.charLimit} characters
+                    </div>
+                  )}
                 </div>
-                <div style={{fontSize:12,color:T.text,lineHeight:1.6}}>{result.gbp?.post}</div>
-                <div style={{fontSize:10,color:T.textMuted,marginTop:6}}>{result.gbp?.post?.length || 0}/300 characters</div>
-              </div>
+              ))}
 
-              {/* Post another */}
-              <button onClick={()=>{setResult(null);setImage(null);setImagePreview(null);setBranch('');setPostType('');setMediaType('photo')}}
-                style={{width:'100%',padding:12,fontSize:13,fontWeight:600,background:T.bg,color:T.text,border:`1px solid ${T.border}`,borderRadius:10,cursor:'pointer',marginBottom:16}}>
+              <button onClick={reset} style={{
+                width:'100%',padding:12,fontSize:12,fontWeight:600,
+                background:T.bg,color:T.text,border:`1px solid ${T.border}`,
+                borderRadius:10,cursor:'pointer',marginBottom:16,
+              }}>
                 Post another product
               </button>
             </div>
           )}
         </div>
-
       </Shell>
     </>
   )
