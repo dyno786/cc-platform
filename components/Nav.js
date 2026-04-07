@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { section:'Content', items:[
     { id:'/blog-planner',    label:'Blog Planner',         icon:'📝' },
     { id:'/social-upload',   label:'Social Media',         icon:'📱' },
+    { id:'/brand-videos',    label:'Brand Videos',         icon:'🎬' },
   ]},
   { section:'Store', items:[
     { id:'/shopify-content', label:'Shopify Content',      icon:'🛍️' },
