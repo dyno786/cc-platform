@@ -101,9 +101,14 @@ export default function LocalSEO() {
   const [copiedReply, setCopiedReply] = useState(null)
 
   useEffect(() => {
+    // Load localStorage data client-side only
     try {
       const t = localStorage.getItem('cc_local_tasks')
       if (t) setTasks(JSON.parse(t))
+    } catch(e) {}
+    try {
+      const h = localStorage.getItem('cc_rating_history')
+      if (h) setRatingHistory(JSON.parse(h))
     } catch(e) {}
 
     fetch('/api/live-data?source=gbp')
@@ -497,9 +502,8 @@ export default function LocalSEO() {
             )}
 
             {competitors.map((comp,i) => {
-              // Compare against our lowest branch rating
-              const ourLowest = Math.min(...branches.map(b=>b.rating))
-              const ourHighest = Math.max(...branches.map(b=>b.rating))
+              const ourHighest = branches.length > 0 ? Math.max(...branches.map(b=>b.rating)) : 0
+              const ourLowest = branches.length > 0 ? Math.min(...branches.map(b=>b.rating)) : 0
               const weBeat = comp.rating && comp.rating < ourHighest
               const theyBeat = comp.rating && comp.rating > ourHighest
               return (
