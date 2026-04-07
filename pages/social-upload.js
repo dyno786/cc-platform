@@ -26,6 +26,8 @@ export default function SocialUpload() {
   const [generating, setGenerating] = useState(false)
   const [result, setResult] = useState(null)
   const [copied, setCopied] = useState({})
+  const [inputMode, setInputMode] = useState('photo') // 'photo' | 'text'
+  const [productText, setProductText] = useState('')
   const fileRef = useRef()
 
   function handleImage(e) {
@@ -122,7 +124,7 @@ Look at the product image and generate the following. Return as JSON only, no ma
     setTimeout(() => setCopied(c => ({...c, [key]: false})), 2000)
   }
 
-  const canGenerate = branch && postType && imagePreview
+  const canGenerate = branch && postType && (inputMode === 'photo' ? !!imagePreview : productText.trim().length > 3)
 
   return (
     <>
@@ -131,25 +133,51 @@ Look at the product image and generate the following. Return as JSON only, no ma
 
         <div style={{maxWidth:600,margin:'0 auto'}}>
 
-          {/* Step 1 — Upload image */}
+          {/* Step 1 — Upload image OR type product details */}
           <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:10,padding:16,marginBottom:12}}>
-            <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:10}}>1. Upload product photo</div>
+            <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:10}}>1. Product — photo or text</div>
+
+            {/* Toggle: photo vs text */}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:12}}>
+              {[{id:'photo',label:'Upload Photo'},{id:'text',label:'Type Product Details'}].map(m => (
+                <button key={m.id} onClick={()=>{setInputMode(m.id);setResult(null)}} style={{
+                  padding:'8px',fontSize:11,fontWeight:600,borderRadius:7,cursor:'pointer',
+                  background:inputMode===m.id?T.blue:T.bg,
+                  color:inputMode===m.id?'#fff':T.text,
+                  border:`2px solid ${inputMode===m.id?T.blue:T.border}`,
+                }}>{m.label}</button>
+              ))}
+            </div>
+
             <input ref={fileRef} type="file" accept="image/*,video/*"
               onChange={handleImage} style={{display:'none'}}/>
-            {!imagePreview ? (
+
+            {inputMode === 'photo' && (!imagePreview ? (
               <button onClick={()=>fileRef.current?.click()}
-                style={{width:'100%',height:160,border:`2px dashed ${T.border}`,borderRadius:8,background:T.bg,color:T.textMuted,fontSize:14,cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8}}>
+                style={{width:'100%',height:140,border:`2px dashed ${T.border}`,borderRadius:8,background:T.bg,color:T.textMuted,fontSize:14,cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8}}>
                 <span style={{fontSize:32}}>📷</span>
                 <span style={{fontSize:13,fontWeight:600}}>Tap to choose from camera roll or take a photo</span>
-                <span style={{fontSize:11}}>Best for: new arrivals, back in stock, product shots</span>
               </button>
             ) : (
               <div style={{position:'relative'}}>
-                <img src={imagePreview} alt="Product" style={{width:'100%',maxHeight:250,objectFit:'cover',borderRadius:8,border:`1px solid ${T.border}`}}/>
+                <img src={imagePreview} alt="Product" style={{width:'100%',maxHeight:220,objectFit:'cover',borderRadius:8,border:`1px solid ${T.border}`}}/>
                 <button onClick={()=>{setImage(null);setImagePreview(null);setResult(null)}}
                   style={{position:'absolute',top:8,right:8,background:'rgba(0,0,0,0.6)',color:'#fff',border:'none',borderRadius:20,padding:'4px 10px',fontSize:11,cursor:'pointer'}}>
-                  Change photo
+                  Change
                 </button>
+              </div>
+            ))}
+
+            {inputMode === 'text' && (
+              <div>
+                <div style={{fontSize:11,color:T.textMuted,marginBottom:6}}>Format: Brand Name — Product — Size (e.g. ORS — Curl Jam — 340g)</div>
+                <textarea
+                  value={productText}
+                  onChange={e=>setProductText(e.target.value)}
+                  placeholder="e.g. Dark and Lovely — Optimum Care Relaxer — Super&#10;or: Cantu — Shea Butter Leave-In Conditioning Repair Cream — 400ml"
+                  rows={3}
+                  style={{width:'100%',padding:'8px 10px',fontSize:12,border:`1px solid ${T.border}`,borderRadius:7,background:T.bg,color:T.text,resize:'vertical',fontFamily:'inherit',lineHeight:1.5,boxSizing:'border-box'}}
+                />
               </div>
             )}
           </div>
