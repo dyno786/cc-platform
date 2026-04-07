@@ -97,6 +97,9 @@ export default function LocalSEO() {
   const [reviews, setReviews] = useState([])
   const [loading, setLoading] = useState(true)
   const [tasks, setTasks] = useState({})
+  const [competitors, setCompetitors] = useState([])
+  const [compLoading, setCompLoading] = useState(false)
+  const [ratingHistory, setRatingHistory] = useState({})
   const [replyRating, setReplyRating] = useState(null)
   const [copiedReply, setCopiedReply] = useState(null)
 
@@ -119,13 +122,15 @@ export default function LocalSEO() {
           const weekKey = new Date().toISOString().slice(0,10) // YYYY-MM-DD
           const snapshot = {}
           d.branches.forEach(b => { snapshot[b.name] = { rating: b.rating, reviews: b.reviewCount, date: weekKey } })
-          const history = JSON.parse(localStorage.getItem('cc_rating_history') || '{}')
-          history[weekKey] = snapshot
-          // Keep last 12 weeks only
-          const keys = Object.keys(history).sort().slice(-12)
-          const trimmed = {}; keys.forEach(k => { trimmed[k] = history[k] })
-          localStorage.setItem('cc_rating_history', JSON.stringify(trimmed))
-          setRatingHistory(trimmed)
+          try {
+            const history = JSON.parse(localStorage.getItem('cc_rating_history') || '{}')
+            history[weekKey] = snapshot
+            const keys = Object.keys(history).sort().slice(-12)
+            const trimmed = {}
+            keys.forEach(k => { trimmed[k] = history[k] })
+            localStorage.setItem('cc_rating_history', JSON.stringify(trimmed))
+            setRatingHistory(trimmed)
+          } catch(e) {}
           // Merge live data over static
           const merged = STATIC_BRANCHES.map(sb => {
             const live = d.branches.find(lb => lb.name === sb.name)
