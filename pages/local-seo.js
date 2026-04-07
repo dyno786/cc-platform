@@ -100,6 +100,9 @@ export default function LocalSEO() {
   const [competitors, setCompetitors] = useState([])
   const [compLoading, setCompLoading] = useState(false)
   const [ratingHistory, setRatingHistory] = useState({})
+  const [keywords, setKeywords] = useState([])
+  const [kwLoading, setKwLoading] = useState(false)
+  const [kwLoaded, setKwLoaded] = useState(false)
   const [replyRating, setReplyRating] = useState(null)
   const [copiedReply, setCopiedReply] = useState(null)
 
@@ -158,6 +161,16 @@ export default function LocalSEO() {
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
+
+  async function loadKeywords() {
+    setKwLoading(true)
+    try {
+      const r = await fetch('/api/local-keywords')
+      const d = await r.json()
+      if (d.ok) { setKeywords(d.keywords); setKwLoaded(true) }
+    } catch(e) {}
+    setKwLoading(false)
+  }
 
   async function loadCompetitors() {
     setCompLoading(true)
@@ -264,7 +277,7 @@ export default function LocalSEO() {
 
         {/* Tabs */}
         <div style={{ display:'flex', gap:0, borderBottom:`0.5px solid ${T.border}`, marginBottom:14, overflowX:'auto' }}>
-          {['Branches','Reviews','Competitors','Rating History','Conversions','Reply Templates','GBP Actions','Tasks'].map(t => (
+          {['Branches','Reviews','Competitors','Local Keywords','Rating History','Conversions','Reply Templates','GBP Actions','Tasks'].map(t => (
             <button key={t} onClick={() => setTab(t)} style={{ padding:'7px 14px', fontSize:11, fontWeight:tab===t?600:400, color:tab===t?T.blue:T.textMuted, background:'none', border:'none', borderBottom:tab===t?`2px solid ${T.blue}`:'2px solid transparent', whiteSpace:'nowrap', cursor:'pointer' }}>
               {t}{t==='Reviews' && reviews.length > 0 ? ` (${reviews.length})` : ''}
             </button>
@@ -547,6 +560,77 @@ export default function LocalSEO() {
                 </div>
               )
             })}
+          </div>
+        )}
+
+        {/* LOCAL KEYWORDS TAB */}
+        {tab === 'Local Keywords' && (
+          <div>
+            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:2}}>Leeds local search position tracker</div>
+                <div style={{fontSize:11,color:T.textMuted}}>Live from Search Console — how you rank for key Leeds searches vs last 28 days</div>
+              </div>
+              <button onClick={loadKeywords} disabled={kwLoading}
+                style={{padding:'6px 14px',fontSize:11,fontWeight:600,background:T.blue,color:'#fff',border:'none',borderRadius:6,cursor:'pointer',whiteSpace:'nowrap'}}>
+                {kwLoading ? '⟳ Loading...' : kwLoaded ? '↺ Refresh' : 'Load keyword positions'}
+              </button>
+            </div>
+
+            {!kwLoaded && !kwLoading && (
+              <div style={{padding:30,textAlign:'center',color:T.textMuted,background:T.surface,borderRadius:8,border:`0.5px solid ${T.border}`,fontSize:12}}>
+                Click "Load keyword positions" to fetch your current Google rankings for Leeds searches
+              </div>
+            )}
+
+            {kwLoaded && (
+              <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,overflow:'auto'}}>
+                <table style={{width:'100%',borderCollapse:'collapse',minWidth:500}}>
+                  <thead>
+                    <tr style={{background:T.bg}}>
+                      {['Keyword','Position','vs Last Month','Clicks','Impressions','CTR'].map(h => (
+                        <th key={h} style={{padding:'7px 12px',fontSize:10,fontWeight:600,color:T.textMuted,textTransform:'uppercase',textAlign:'left',borderBottom:`0.5px solid ${T.border}`,whiteSpace:'nowrap'}}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {keywords.map((kw, i) => {
+                      const pos = kw.current?.position
+                      const posColor = pos ? (pos <= 3 ? T.green : pos <= 10 ? T.amber : T.red) : T.textMuted
+                      const change = kw.change
+                      return (
+                        <tr key={i} style={{background:i%2===0?T.surface:T.bg}}>
+                          <td style={{padding:'8px 12px',fontSize:12,fontWeight:600,color:T.text,borderBottom:`0.5px solid ${T.borderLight}`}}>{kw.keyword}</td>
+                          <td style={{padding:'8px 12px',borderBottom:`0.5px solid ${T.borderLight}`}}>
+                            {pos ? (
+                              <span style={{fontSize:13,fontWeight:700,color:posColor}}>{pos}</span>
+                            ) : (
+                              <span style={{fontSize:11,color:T.textMuted}}>Not ranking</span>
+                            )}
+                          </td>
+                          <td style={{padding:'8px 12px',borderBottom:`0.5px solid ${T.borderLight}`}}>
+                            {change !== null ? (
+                              <span style={{fontSize:11,fontWeight:700,color:change>0?T.green:change<0?T.red:T.textMuted}}>
+                                {change > 0 ? '↑ +' : change < 0 ? '↓ ' : '— '}{Math.abs(change)} {change > 0 ? 'better' : change < 0 ? 'worse' : 'same'}
+                              </span>
+                            ) : <span style={{fontSize:11,color:T.textMuted}}>No data</span>}
+                          </td>
+                          <td style={{padding:'8px 12px',fontSize:11,fontWeight:600,color:T.green,borderBottom:`0.5px solid ${T.borderLight}`}}>{kw.current?.clicks ?? '—'}</td>
+                          <td style={{padding:'8px 12px',fontSize:11,color:T.textMuted,borderBottom:`0.5px solid ${T.borderLight}`}}>{kw.current?.impressions?.toLocaleString() ?? '—'}</td>
+                          <td style={{padding:'8px 12px',fontSize:11,color:T.textMuted,borderBottom:`0.5px solid ${T.borderLight}`}}>{kw.current?.ctr ? kw.current.ctr + '%' : '—'}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {kwLoaded && (
+              <div style={{marginTop:10,padding:'10px 14px',background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,fontSize:11,color:T.textMuted}}>
+                <strong style={{color:T.text}}>What to do with this data:</strong> Any keyword at position 4-20 with 200+ impressions is a Quick Win — go to Organic SEO → Quick Wins to fix those pages. Keywords where you are not ranking at all need new content — go to Organic SEO → Content Gaps.
+              </div>
+            )}
           </div>
         )}
 
