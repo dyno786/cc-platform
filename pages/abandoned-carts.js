@@ -319,7 +319,8 @@ export default function AbandonedCarts() {
   const doneCount = Object.keys(contacted).length
   const totalVal = carts.reduce((s,c) => s + (c.totalRaw||0), 0)
 
-  const fulfilled = monthOrders.filter(o => o.fulfilled)
+  const fulfilled = monthOrders.filter(o => o.fulfilled && !o.isRefunded)
+            const refunded = monthOrders.filter(o => o.isRefunded)
   const unfulfilled = monthOrders.filter(o => !o.fulfilled)
 
   const TABS = ['Abandoned', 'Reorder Reminders', 'Order Tracking & Reviews']
@@ -498,12 +499,21 @@ export default function AbandonedCarts() {
               </div>
             )}
 
-            {!monthLoading && monthOrders.filter(o=>{
-              if (reorderFilter==='whatsapp') return o.phone
-              if (reorderFilter==='email') return o.email && !o.phone
-              if (reorderFilter==='outofstock') return o.anyOutOfStock
-              return o.email||o.phone
-            }).map(order => {
+            {/* Info banner about filter */}
+            {!monthLoading && monthOrders.length > 0 && (
+              <div style={{background:'#ddf4ff',border:`0.5px solid ${T.blueBorder}`,borderRadius:6,padding:'6px 12px',marginBottom:10,fontSize:11,color:T.blue}}>
+                Showing dispatched orders only — refunded orders are hidden automatically
+              </div>
+            )}
+
+            {!monthLoading && monthOrders
+              .filter(o => o.isDispatched && !o.isRefunded) // Only show dispatched + not refunded
+              .filter(o=>{
+                if (reorderFilter==='whatsapp') return o.phone
+                if (reorderFilter==='email') return o.email && !o.phone
+                if (reorderFilter==='outofstock') return o.anyOutOfStock
+                return o.email||o.phone
+              }).map(order => {
               const done = contacted[`reorder_${order.id}`]
               const inStock = (order.lineItems||[]).filter(i=>i.inStock)
               const outOfStock = (order.lineItems||[]).filter(i=>!i.inStock)
