@@ -53,6 +53,10 @@ export default async function handler(req, res) {
       const inStock = itemsWithStock.filter(i => i.inStock)
       const outOfStock = itemsWithStock.filter(i => !i.inStock)
 
+      // Check if order was refunded
+      const isRefunded = o.financial_status === 'refunded' || o.financial_status === 'partially_refunded'
+      const isDispatched = o.fulfillment_status === 'fulfilled' || (o.fulfillments && o.fulfillments.length > 0)
+
       return {
         id: o.id,
         name: o.name,
@@ -63,6 +67,9 @@ export default async function handler(req, res) {
         totalRaw: parseFloat(o.total_price),
         createdAt: o.created_at,
         fulfillmentStatus: o.fulfillment_status || 'unfulfilled',
+        financialStatus: o.financial_status,
+        isRefunded,
+        isDispatched,
         items: lineItems.map(i => i.title).join(', '),
         lineItems: itemsWithStock,
         inStockItems: inStock,
