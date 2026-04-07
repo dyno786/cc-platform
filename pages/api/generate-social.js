@@ -5,8 +5,9 @@ export const config = {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
-  const { imageBase64, mimeType, branch, postType, postTypeLabel, mediaType } = req.body
-  if (!imageBase64 || !branch || !postType) return res.status(400).json({ ok: false, error: 'Missing required fields' })
+  const { imageBase64, mimeType, branch, postType, postTypeLabel, mediaType, productText } = req.body
+  const isTextMode = !imageBase64 && !!productText
+  if (!branch || !postType || (!imageBase64 && !productText)) return res.status(400).json({ ok: false, error: 'Missing required fields — need either image or product text' })
 
   const isVideo = mediaType === 'reel'
 
@@ -14,8 +15,9 @@ export default async function handler(req, res) {
 
 This is a ${postTypeLabel} post for the ${branch} branch.
 Media type: ${isVideo ? 'Short video/Reel' : 'Photo post'}
+${isTextMode ? `Product details: ${productText}` : 'Look at the product image provided.'}
 
-Look at the product image provided and generate the following. Return as JSON only, no markdown, no backticks:
+Generate the following social media content. Return as JSON only, no markdown, no backticks, no extra text:
 
 {
   "productName": "Your best guess at the product name from the image",
