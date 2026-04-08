@@ -103,6 +103,9 @@ export default function LocalSEO() {
   const [keywords, setKeywords] = useState([])
   const [kwLoading, setKwLoading] = useState(false)
   const [kwLoaded, setKwLoaded] = useState(false)
+  const [kwFilter, setKwFilter] = useState('all') // all | ranking | not-ranking | page1 | page2plus
+  const [blogGen, setBlogGen] = useState({}) // keyword -> generating state
+  const [blogDone, setBlogDone] = useState({}) // keyword -> published url
   const [replyRating, setReplyRating] = useState(null)
   const [copiedReply, setCopiedReply] = useState(null)
 
@@ -584,45 +587,96 @@ export default function LocalSEO() {
             )}
 
             {kwLoaded && (
-              <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,overflow:'auto'}}>
-                <table style={{width:'100%',borderCollapse:'collapse',minWidth:500}}>
-                  <thead>
-                    <tr style={{background:T.bg}}>
-                      {['Keyword','Position','vs Last Month','Clicks','Impressions','CTR'].map(h => (
-                        <th key={h} style={{padding:'7px 12px',fontSize:10,fontWeight:600,color:T.textMuted,textTransform:'uppercase',textAlign:'left',borderBottom:`0.5px solid ${T.border}`,whiteSpace:'nowrap'}}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {keywords.map((kw, i) => {
-                      const pos = kw.current?.position
-                      const posColor = pos ? (pos <= 3 ? T.green : pos <= 10 ? T.amber : T.red) : T.textMuted
-                      const change = kw.change
-                      return (
-                        <tr key={i} style={{background:i%2===0?T.surface:T.bg}}>
-                          <td style={{padding:'8px 12px',fontSize:12,fontWeight:600,color:T.text,borderBottom:`0.5px solid ${T.borderLight}`}}>{kw.keyword}</td>
-                          <td style={{padding:'8px 12px',borderBottom:`0.5px solid ${T.borderLight}`}}>
-                            {pos ? (
-                              <span style={{fontSize:13,fontWeight:700,color:posColor}}>{pos}</span>
-                            ) : (
-                              <span style={{fontSize:11,color:T.textMuted}}>Not ranking</span>
-                            )}
-                          </td>
-                          <td style={{padding:'8px 12px',borderBottom:`0.5px solid ${T.borderLight}`}}>
-                            {change !== null ? (
-                              <span style={{fontSize:11,fontWeight:700,color:change>0?T.green:change<0?T.red:T.textMuted}}>
-                                {change > 0 ? '↑ +' : change < 0 ? '↓ ' : '— '}{Math.abs(change)} {change > 0 ? 'better' : change < 0 ? 'worse' : 'same'}
-                              </span>
-                            ) : <span style={{fontSize:11,color:T.textMuted}}>No data</span>}
-                          </td>
-                          <td style={{padding:'8px 12px',fontSize:11,fontWeight:600,color:T.green,borderBottom:`0.5px solid ${T.borderLight}`}}>{kw.current?.clicks ?? '—'}</td>
-                          <td style={{padding:'8px 12px',fontSize:11,color:T.textMuted,borderBottom:`0.5px solid ${T.borderLight}`}}>{kw.current?.impressions?.toLocaleString() ?? '—'}</td>
-                          <td style={{padding:'8px 12px',fontSize:11,color:T.textMuted,borderBottom:`0.5px solid ${T.borderLight}`}}>{kw.current?.ctr ? kw.current.ctr + '%' : '—'}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+              <div>
+                {/* Filter buttons */}
+                <div style={{display:'flex',gap:5,marginBottom:10,flexWrap:'wrap'}}>
+                  {[
+                    {id:'all',label:`All (${keywords.length})`},
+                    {id:'page1',label:`Page 1 (${keywords.filter(k=>k.current?.position&&k.current.position<=10).length})`},
+                    {id:'page2plus',label:`Page 2+ (${keywords.filter(k=>k.current?.position&&k.current.position>10).length})`},
+                    {id:'not-ranking',label:`Not ranking (${keywords.filter(k=>!k.current).length})`},
+                    {id:'improved',label:`Improved (${keywords.filter(k=>k.change&&k.change>0).length})`},
+                    {id:'dropped',label:`Dropped (${keywords.filter(k=>k.change&&k.change<0).length})`},
+                  ].map(f => (
+                    <button key={f.id} onClick={()=>setKwFilter(f.id)} style={{
+                      padding:'3px 10px',fontSize:11,fontWeight:600,borderRadius:20,cursor:'pointer',
+                      background:kwFilter===f.id?T.blue:T.bg,
+                      color:kwFilter===f.id?'#fff':T.textMuted,
+                      border:`1px solid ${kwFilter===f.id?T.blue:T.border}`,
+                    }}>{f.label}</button>
+                  ))}
+                </div>
+
+                <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,overflow:'auto'}}>
+                  <table style={{width:'100%',borderCollapse:'collapse',minWidth:600}}>
+                    <thead>
+                      <tr style={{background:T.bg}}>
+                        {['Keyword','Position','vs Last Month','Clicks','Impressions','Blog'].map(h => (
+                          <th key={h} style={{padding:'7px 12px',fontSize:10,fontWeight:600,color:T.textMuted,textTransform:'uppercase',textAlign:'left',borderBottom:`0.5px solid ${T.border}`,whiteSpace:'nowrap'}}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {keywords
+                        .filter(kw => {
+                          if (kwFilter==='page1') return kw.current?.position && kw.current.position <= 10
+                          if (kwFilter==='page2plus') return kw.current?.position && kw.current.position > 10
+                          if (kwFilter==='not-ranking') return !kw.current
+                          if (kwFilter==='improved') return kw.change && kw.change > 0
+                          if (kwFilter==='dropped') return kw.change && kw.change < 0
+                          return true
+                        })
+                        .map((kw, i) => {
+                          const pos = kw.current?.position
+                          const posColor = pos ? (pos <= 3 ? T.green : pos <= 10 ? T.amber : T.red) : T.textMuted
+                          const change = kw.change
+                          const isGen = blogGen[kw.keyword]
+                          const isDone = blogDone[kw.keyword]
+                          return (
+                            <tr key={i} style={{background:i%2===0?T.surface:T.bg}}>
+                              <td style={{padding:'8px 12px',fontSize:12,fontWeight:600,color:T.text,borderBottom:`0.5px solid ${T.borderLight}`}}>{kw.keyword}</td>
+                              <td style={{padding:'8px 12px',borderBottom:`0.5px solid ${T.borderLight}`}}>
+                                {pos ? <span style={{fontSize:13,fontWeight:700,color:posColor}}>{pos}</span>
+                                     : <span style={{fontSize:11,color:T.textMuted}}>Not ranking</span>}
+                              </td>
+                              <td style={{padding:'8px 12px',borderBottom:`0.5px solid ${T.borderLight}`}}>
+                                {change !== null
+                                  ? <span style={{fontSize:11,fontWeight:700,color:change>0?T.green:change<0?T.red:T.textMuted}}>
+                                      {change>0?'↑ +':change<0?'↓ ':'— '}{Math.abs(change)} {change>0?'better':change<0?'worse':'same'}
+                                    </span>
+                                  : <span style={{fontSize:11,color:T.textMuted}}>No data</span>}
+                              </td>
+                              <td style={{padding:'8px 12px',fontSize:11,fontWeight:600,color:T.green,borderBottom:`0.5px solid ${T.borderLight}`}}>{kw.current?.clicks??'—'}</td>
+                              <td style={{padding:'8px 12px',fontSize:11,color:T.textMuted,borderBottom:`0.5px solid ${T.borderLight}`}}>{kw.current?.impressions?.toLocaleString()??'—'}</td>
+                              <td style={{padding:'8px 12px',borderBottom:`0.5px solid ${T.borderLight}`}}>
+                                {isDone
+                                  ? <a href={isDone} target="_blank" rel="noreferrer" style={{fontSize:10,color:T.green,fontWeight:700,textDecoration:'none'}}>✓ Live →</a>
+                                  : <button onClick={async()=>{
+                                      setBlogGen(b=>({...b,[kw.keyword]:true}))
+                                      try {
+                                        const slug = kw.keyword.toLowerCase().replace(/[^a-z0-9]+/g,'-')
+                                        const titleized = kw.keyword.replace(/\w/g,c=>c.toUpperCase())
+                                        const blogRes = await fetch('/api/generate-blog',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:`${titleized} | Leeds`,seoTitle:`${titleized} Leeds | CC Hair and Beauty`,metaDesc:`Find everything for ${kw.keyword.toLowerCase()} at CC Hair and Beauty Leeds — Chapeltown, Roundhay and Leeds City Centre.`,keywords:[kw.keyword,kw.keyword+' Leeds'],slug,cat:'local',data:`Leeds local keyword: ${kw.keyword}, position ${pos||'not ranking'}, ${kw.current?.impressions||0} impressions`})})
+                                        const blogData = await blogRes.json()
+                                        if(blogData.ok){
+                                          const pubRes = await fetch('/api/publish-to-shopify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:`${titleized} Leeds`,seoTitle:`${titleized} Leeds | CC Hair and Beauty`,metaDesc:`Find everything for ${kw.keyword.toLowerCase()} at CC Hair and Beauty Leeds.`,slug,content:blogData.content,cat:'local',keywords:[kw.keyword],imageUrl:blogData.featuredImage?.src||null,imageAlt:blogData.featuredImage?.alt||null})})
+                                          const pubData = await pubRes.json()
+                                          if(pubData.ok) setBlogDone(b=>({...b,[kw.keyword]:pubData.articleUrl}))
+                                        }
+                                      } catch(e){}
+                                      setBlogGen(b=>({...b,[kw.keyword]:false}))
+                                    }} disabled={isGen}
+                                      style={{padding:'3px 9px',fontSize:10,fontWeight:600,background:isGen?T.border:T.blue,color:'#fff',border:'none',borderRadius:4,cursor:'pointer',whiteSpace:'nowrap'}}>
+                                      {isGen?'Writing...':'Write blog'}
+                                    </button>
+                                }
+                              </td>
+                            </tr>
+                          )
+                        })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 

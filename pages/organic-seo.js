@@ -49,6 +49,12 @@ export default function OrganicSEO() {
   const [gapPublishing, setGapPublishing] = useState({})
   const [gapPublished, setGapPublished] = useState({})
   const [gapStatus, setGapStatus] = useState({})
+  const [qwTitles, setQwTitles] = useState({}) // quick win -> {suggested title, current title}
+  const [qwLoading, setQwLoading] = useState({})
+  const [qwPushing, setQwPushing] = useState({})
+  const [qwPushed, setQwPushed] = useState({})
+  const [fixLoading, setFixLoading] = useState({})
+  const [fixPushed, setFixPushed] = useState({})
 
   useEffect(() => {
     fetch('/api/live-data?source=searchconsole')
@@ -75,6 +81,85 @@ export default function OrganicSEO() {
       const bv = typeof b[sort.key] === 'string' ? parseFloat(b[sort.key]) : b[sort.key]
       return sort.dir === 'desc' ? bv - av : av - bv
     })
+  }
+
+  async function getSuggestedTitle(qw) {
+    const key = qw.query
+    setQwLoading(l=>({...l,[key]:true}))
+    try {
+      // Try to find matching Shopify collection
+      const r = await fetch(`/api/shopify-collections-search?q=${encodeURIComponent(qw.query)}&limit=3`)
+      const d = await r.json()
+      const col = d.collections?.[0]
+      const currentTitle = col ? (col.seoTitle || col.title) : null
+      const brand = qw.query.split(' ')[0]
+      const suggested = col
+        ? `Buy ${col.title} UK | CC Hair and Beauty Leeds`
+        : `${qw.query.replace(/\w/g,c=>c.toUpperCase())} | CC Hair and Beauty Leeds`
+      setQwTitles(t=>({...t,[key]:{
+        suggested,
+        currentTitle,
+        handle: col?.handle,
+        collectionTitle: col?.title,
+      }}))
+    } catch(e){}
+    setQwLoading(l=>({...l,[key]:false}))
+  }
+
+  async function pushQwTitle(qw, title) {
+    const key = qw.query
+    const info = qwTitles[key]
+    if (!info?.handle) return
+    setQwPushing(p=>({...p,[key]:true}))
+    try {
+      const r = await fetch('/api/push-collection-seo',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({handle:info.handle,seoTitle:title,metaDesc:`Shop ${info.collectionTitle} at CC Hair and Beauty Leeds — Chapeltown, Roundhay and Leeds City Centre. UK delivery available.`})
+      })
+      const d = await r.json()
+      if(d.ok) setQwPushed(p=>({...p,[key]:true}))
+    } catch(e){}
+    setQwPushing(p=>({...p,[key]:false}))
+  }
+
+  async function pushLowCtrFix(page) {
+    const key = page.page
+    setFixLoading(f=>({...f,[key]:true}))
+    const suggestions = {
+      '/collections/relaxers': {
+        title: 'Buy Hair Relaxers UK — ORS, Dark & Lovely, TCB | CC Hair and Beauty Leeds',
+        desc: 'Shop professional hair relaxers at CC Hair and Beauty Leeds. Huge range including ORS, Dark and Lovely, TCB and more. In store and online. Free UK delivery over £50.'
+      },
+      '/blogs/cantu-product-blog/the-ultimate-guide-to-cantu-hair-care-products-for-every-hair-type': {
+        title: 'The Ultimate Guide to Cantu Hair Care Products | CC Hair and Beauty Leeds',
+        desc: 'Complete guide to Cantu hair care — shea butter, leave-in conditioner, curl cream and more. Shop the full Cantu range at CC Hair and Beauty Leeds.'
+      },
+      '/products/casting-creme-gloss-semi-permanent-hair-dye': {
+        title: 'Casting Creme Gloss Semi Permanent Hair Dye — Colour Chart UK | CC Hair and Beauty',
+        desc: 'Buy Casting Creme Gloss semi permanent hair dye at CC Hair and Beauty. Full UK colour chart available. Free delivery over £50.'
+      },
+      '/collections/hair-extensions': {
+        title: 'Buy Hair Extensions UK — Human Hair & Synthetic | CC Hair and Beauty Leeds',
+        desc: 'Shop hair extensions at CC Hair and Beauty Leeds. Human hair, synthetic, clip-in, weave and more. 3 stores in Leeds. Free UK delivery over £50.'
+      },
+    }
+    const fix = suggestions[key] || {
+      title: page.page.split('/').pop().replace(/-/g,' ').replace(/\w/g,c=>c.toUpperCase()) + ' | CC Hair and Beauty Leeds',
+      desc: `Shop at CC Hair and Beauty Leeds — Chapeltown LS7, Roundhay LS8 and Leeds City Centre. Free UK delivery over £50.`
+    }
+    try {
+      const isCollection = key.includes('/collections/')
+      const handle = key.split('/').pop().split('?')[0]
+      const endpoint = isCollection ? '/api/push-collection-seo' : '/api/push-product-seo'
+      const r = await fetch(endpoint,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({handle,seoTitle:fix.title,metaDesc:fix.desc})
+      })
+      const d = await r.json()
+      if(d.ok) setFixPushed(f=>({...f,[key]:'done'}))
+      else setFixPushed(f=>({...f,[key]:'error: '+d.error}))
+    } catch(e){ setFixPushed(f=>({...f,[key]:'error: '+e.message})) }
+    setFixLoading(f=>({...f,[key]:false}))
   }
 
   async function publishGap(gap) {
@@ -287,6 +372,33 @@ export default function OrganicSEO() {
                     Check on Google →
                   </a>
                 </div>
+                {/* Title preview + push */}
+                {qwTitles[k.query] && !qwPushed[k.query] && (
+                  <div style={{marginTop:8,padding:'10px 12px',background:T.bg,border:`1px solid ${T.border}`,borderRadius:7}}>
+                    {qwTitles[k.query].currentTitle && (
+                      <div style={{fontSize:11,color:T.textMuted,marginBottom:5}}>
+                        Current Shopify title: <span style={{color:T.red}}>{qwTitles[k.query].currentTitle}</span>
+                      </div>
+                    )}
+                    <div style={{fontSize:11,color:T.text,marginBottom:8}}>
+                      Suggested: <strong style={{color:T.green}}>{qwTitles[k.query].suggested}</strong>
+                    </div>
+                    <div style={{display:'flex',gap:6}}>
+                      {qwTitles[k.query].handle ? (
+                        <button onClick={()=>pushQwTitle(k, qwTitles[k.query].suggested)} disabled={qwPushing[k.query]}
+                          style={{padding:'5px 14px',fontSize:11,fontWeight:700,background:qwPushing[k.query]?T.border:T.green,color:'#fff',border:'none',borderRadius:5,cursor:'pointer'}}>
+                          {qwPushing[k.query]?'Pushing...':'✓ Accept & push to Shopify'}
+                        </button>
+                      ) : (
+                        <span style={{fontSize:11,color:T.textMuted}}>No matching Shopify collection found — fix manually</span>
+                      )}
+                      <button onClick={()=>setQwTitles(t=>({...t,[k.query]:undefined}))}
+                        style={{padding:'5px 10px',fontSize:11,color:T.textMuted,background:'none',border:`0.5px solid ${T.border}`,borderRadius:5,cursor:'pointer'}}>
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

@@ -195,18 +195,20 @@ export default function BrandVideos() {
 function InstagramDownloader({ brand }) {
   const [url, setUrl] = useState('')
   const [status, setStatus] = useState('')
+  const [copied, setCopied] = useState(false)
 
   function openDownloader() {
     if (!url.trim()) return
-    // Sanitise — must be instagram.com URL
     if (!url.includes('instagram.com')) {
-      setStatus('Please paste an Instagram URL')
+      setStatus('Please paste an Instagram URL (must include instagram.com)')
       return
     }
-    // Open in popular free Instagram downloader
-    const encoded = encodeURIComponent(url.trim())
-    window.open(`https://snapinsta.app/?url=${encoded}`, '_blank')
-    setStatus('Downloader opened — paste the URL there to download the video')
+    navigator.clipboard.writeText(url.trim()).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 3000)
+    })
+    window.open('https://snapinsta.app/', '_blank')
+    setStatus('1. Snapinsta is now open  2. Paste the copied URL into the search box  3. Click Download')
   }
 
   return (
@@ -220,7 +222,7 @@ function InstagramDownloader({ brand }) {
         />
         <button onClick={openDownloader}
           style={{padding:'7px 14px',fontSize:11,fontWeight:700,color:'#fff',background:url?'#E1306C':'#d0d7de',border:'none',borderRadius:7,cursor:url?'pointer':'not-allowed',whiteSpace:'nowrap'}}>
-          Download
+          {copied ? '✓ Copied! Now paste in Snapinsta' : 'Copy URL & Open Downloader'}
         </button>
       </div>
       {status && (

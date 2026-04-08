@@ -23,11 +23,11 @@ function buildCallScript(cart) {
     `4. If they say they had an issue:`,
     `   "I'm sorry to hear that. Can I help sort that out for you now? We can also take payment over the phone if that's easier."`,
     ``,
-    `5. Offer discount if hesitant:`,
-    `   "As a thank you for your patience, I can offer you 10% off today with code SAVE10."`,
+    `5. If they hesitate:`,
+    `   "We are happy to help you find exactly what you need. Shall I check if we have it in store?"`,
     ``,
     `6. Close:`,
-    `   "Is there anything else I can help you with? We also have 3 stores in Leeds if you'd prefer to come in — Chapeltown, Roundhay and City Centre."`,
+    `   "Is there anything else I can help you with? We also have 3 stores in Leeds if you'd prefer to come in — Chapeltown, Roundhay and Leeds City Centre."`,
   ].join('\n')
 }
 const CC_EMAIL = 'cchndorders@gmail.com'
@@ -77,11 +77,9 @@ function cartWhatsApp(cart) {
     ``,
     `This is CC Hair and Beauty Leeds. We noticed you left ${item} in your cart (${cart.total}).`,
     ``,
-    `Can we help you complete your order? We have 3 stores in Leeds - Chapeltown LS7, Roundhay LS8 and City Centre.`,
+    `Can we help you complete your order? We have 3 stores in Leeds - Chapeltown LS7, Roundhay LS8 and Leeds City Centre.`,
     ``,
     `Complete your order here: ${STORE_URL}/cart`,
-    ``,
-    `Use code SAVE10 for 10% off today only.`,
     ``,
     `CC Hair and Beauty Leeds`,
   ].join('\n')
@@ -101,12 +99,10 @@ function cartEmail(cart) {
     ``,
     `Complete your order here: ${STORE_URL}/cart`,
     ``,
-    `Use code SAVE10 for 10% off today only.`,
-    ``,
     `If you need any help, just reply to this email.`,
     ``,
     `CC Hair and Beauty Leeds`,
-    `Chapeltown LS7 | Roundhay LS8 | City Centre`,
+    `Chapeltown LS7 | Roundhay LS8 | Leeds City Centre`,
   ].join('\n')
   return gmailLink(cart.email, subj, body)
 }
@@ -165,7 +161,7 @@ function reorderEmail(order, inStockItems) {
     ``,
     `Warm regards,`,
     `CC Hair and Beauty Leeds`,
-    `Chapeltown LS7 | Roundhay LS8 | City Centre`,
+    `Chapeltown LS7 | Roundhay LS8 | Leeds City Centre`,
     `cchairandbeauty.com`,
   ].join('\n')
   return `mailto:${CC_EMAIL}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`
@@ -216,7 +212,7 @@ function reviewEmail(order) {
     ``,
     `Warm regards,`,
     `CC Hair and Beauty Leeds`,
-    `Chapeltown LS7 | Roundhay LS8 | City Centre`,
+    `Chapeltown LS7 | Roundhay LS8 | Leeds City Centre`,
     `cchairandbeauty.com`,
   ].filter(l => l !== null).join('\n')
   return gmailLink(order.email, subj, body)
@@ -231,7 +227,7 @@ export default function AbandonedCarts() {
     try { return JSON.parse(localStorage.getItem('cc_contacted') || '{}') } catch(e) { return {} }
   })
   const [filter, setFilter] = useState('all')
-  const [sort, setSort] = useState('value')
+  const [sort, setSort] = useState('time')
 
   const MONTH_OPTS = getMonthOptions()
   const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTS[0].value)

@@ -76,6 +76,21 @@ export default function SocialUpload() {
         setError(d.error || 'Generation failed')
       } else {
         setResult(d)
+        // Save to history
+        const entry = {
+          id: Date.now(),
+          date: new Date().toISOString(),
+          branch, postType, postTypeLabel: POST_TYPES.find(p=>p.id===postType)?.label,
+          mediaType, productText: productText||'Photo upload',
+          instagram: d.instagram,
+          facebook: d.facebook,
+          tiktok: d.tiktok,
+          gbp: d.gbp,
+          productName: d.productName,
+        }
+        const newHistory = [entry, ...history].slice(0, 50) // keep last 50
+        setHistory(newHistory)
+        try { localStorage.setItem('cc_social_history', JSON.stringify(newHistory)) } catch(e) {}
       }
     } catch(e) {
       setError('Connection error: ' + e.message)
@@ -103,6 +118,75 @@ export default function SocialUpload() {
       <Head><title>Social Media — CC Intelligence</title></Head>
       <Shell title="Social Media" subtitle="Upload a photo or type product details — get Instagram, Facebook, TikTok and GBP posts instantly">
         <div style={{maxWidth:560,margin:'0 auto'}}>
+
+          {/* Tab switcher */}
+          <div style={{display:'flex',gap:4,marginBottom:14,borderBottom:`1px solid ${T.border}`}}>
+            {[{id:'create',label:'Create Post'},{id:'history',label:`History (${history.length})`}].map(t => (
+              <button key={t.id} onClick={()=>setActiveTab(t.id)} style={{
+                padding:'7px 16px',fontSize:12,fontWeight:600,border:'none',background:'none',
+                borderBottom:activeTab===t.id?`2px solid ${T.blue}`:'2px solid transparent',
+                color:activeTab===t.id?T.blue:T.textMuted,cursor:'pointer',
+              }}>{t.label}</button>
+            ))}
+          </div>
+
+          {/* History tab */}
+          {activeTab==='history' && (
+            <div>
+              {history.length===0 && (
+                <div style={{padding:30,textAlign:'center',color:T.textMuted,fontSize:12,background:T.surface,borderRadius:8,border:`0.5px solid ${T.border}`}}>
+                  No history yet — generated posts will appear here
+                </div>
+              )}
+              {history.map((entry,i) => {
+                const [hCopied, setHCopied] = useState({})
+                return null // handled below
+              })}
+              {history.map((entry,i) => (
+                <div key={entry.id} style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:10,padding:14,marginBottom:10}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:700,color:T.text}}>{entry.productName || entry.productText}</div>
+                      <div style={{fontSize:10,color:T.textMuted}}>{entry.branch} · {entry.postTypeLabel} · {new Date(entry.date).toLocaleDateString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+                    </div>
+                    <button onClick={()=>{const h=[...history];h.splice(i,1);setHistory(h);try{localStorage.setItem('cc_social_history',JSON.stringify(h))}catch(e){}}}
+                      style={{padding:'3px 8px',fontSize:10,color:T.red,background:'none',border:`0.5px solid ${T.redBorder}`,borderRadius:4,cursor:'pointer'}}>
+                      Delete
+                    </button>
+                  </div>
+                  {[
+                    {key:'ig',label:'Instagram',text:`${entry.instagram?.caption||''}
+
+${entry.instagram?.hashtags||''}`},
+                    {key:'fb',label:'Facebook',text:entry.facebook?.caption||''},
+                    {key:'tt',label:'TikTok',text:`${entry.tiktok?.hook?'Hook: '+entry.tiktok.hook+'
+
+':''}${entry.tiktok?.caption||''}`},
+                    {key:'gbp',label:'GBP',text:entry.gbp?.post||''},
+                  ].filter(p=>p.text).map(p => {
+                    const hk = `${entry.id}_${p.key}`
+                    return (
+                      <div key={p.key} style={{marginBottom:6}}>
+                        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
+                          <span style={{fontSize:10,fontWeight:700,color:T.textMuted}}>{p.label}</span>
+                          <button onClick={()=>{navigator.clipboard.writeText(p.text)}}
+                            style={{padding:'2px 8px',fontSize:10,background:T.blue,color:'#fff',border:'none',borderRadius:4,cursor:'pointer'}}>
+                            Copy
+                          </button>
+                        </div>
+                        <div style={{fontSize:11,color:T.text,background:T.bg,borderRadius:5,padding:'6px 8px',lineHeight:1.5,whiteSpace:'pre-wrap',maxHeight:60,overflow:'hidden'}}>
+                          {p.text.slice(0,150)}{p.text.length>150?'...':''}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Create tab */}
+          {activeTab==='create' && (<>
 
           {/* Step 1 — Photo or Text */}
           <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:10,padding:16,marginBottom:10}}>
