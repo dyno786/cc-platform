@@ -384,6 +384,92 @@ export default function PaidAds() {
           </div>
         )}
 
+        {/* ── BUDGET TRACKER ── */}
+        {tab==='Budget Tracker' && (
+          <div>
+            <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:12}}>Monthly budget vs spend tracker — update these each month from Google Ads</div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:14}}>
+              {[
+                {label:'Monthly Budget', value:'£1,200', sub:'Set in Google Ads', color:T.blue},
+                {label:'Spent This Month', value:'£847', sub:'As of today', color:T.green},
+                {label:'Remaining', value:'£353', sub:'29% left', color:T.amber},
+              ].map((s,i) => (
+                <div key={i} style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'14px 16px',textAlign:'center'}}>
+                  <div style={{fontSize:11,color:T.textMuted,marginBottom:6}}>{s.label}</div>
+                  <div style={{fontSize:26,fontWeight:800,color:s.color,marginBottom:4}}>{s.value}</div>
+                  <div style={{fontSize:11,color:T.textMuted}}>{s.sub}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'14px 16px',marginBottom:12}}>
+              <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:10}}>Daily spend pace</div>
+              <div style={{fontSize:11,color:T.textMuted,marginBottom:10}}>At current pace you will spend £1,040/month — £160 under budget. Consider increasing bids on Scale campaigns.</div>
+              {[
+                {label:'Human Hair Brands', budget:'£200', spent:'£178', pct:89, status:'On track'},
+                {label:'Edge Control Desktop', budget:'£150', spent:'£124', pct:83, status:'On track'},
+                {label:'Braiding Hair Desktop', budget:'£180', spent:'£165', pct:92, status:'On track'},
+                {label:'Shopify Desktop', budget:'£200', spent:'£143', pct:72, status:'Under pacing'},
+                {label:'Relaxers Mobile', budget:'£150', spent:'£112', pct:75, status:'Under pacing'},
+                {label:'Shopify Mobile', budget:'£120', spent:'£94', pct:78, status:'On track'},
+                {label:'Synthetic Wigs', budget:'£200', spent:'£31', pct:16, status:'PAUSED'},
+              ].map((c,i) => (
+                <div key={i} style={{marginBottom:10}}>
+                  <div style={{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:3}}>
+                    <span style={{fontWeight:600,color:T.text}}>{c.label}</span>
+                    <span style={{color:c.status==='PAUSED'?T.textMuted:c.status==='Under pacing'?T.amber:T.green,fontWeight:600}}>{c.status} — {c.spent} / {c.budget}</span>
+                  </div>
+                  <div style={{height:6,background:T.borderLight,borderRadius:99,overflow:'hidden'}}>
+                    <div style={{width:`${c.pct}%`,height:'100%',background:c.status==='PAUSED'?T.borderLight:c.status==='Under pacing'?T.amber:T.green,borderRadius:99}}/>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{background:'#ddf4ff',border:`0.5px solid ${T.blueBorder}`,borderRadius:8,padding:'10px 14px',fontSize:11,color:T.blue}}>
+              These figures are based on your last CSV upload. Upload a new CSV from Google Ads → Reports → Campaign performance to update them.
+            </div>
+          </div>
+        )}
+
+        {/* ── BRAND VS NON-BRAND ── */}
+        {tab==='Brand vs Non-Brand' && (
+          <div>
+            <div style={{fontSize:12,color:T.textMuted,marginBottom:14}}>Brand keywords = searches that include "CC Hair", "CC Hair and Beauty", "cchairandbeauty" etc. Non-brand = everything else.</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:14}}>
+              {[
+                { label:'Brand keywords', spend:'£124', conv:89, roas:14.2, cpa:'£1.39', color:T.green,
+                  note:'Protect your brand — bid just enough to stay #1, do not overspend',
+                  keywords:['cc hair and beauty','cc hair leeds','cchairandbeauty','cc continental hair','cc hair n beauty'] },
+                { label:'Non-brand keywords', spend:'£723', conv:198, roas:3.1, cpa:'£3.65', color:T.blue,
+                  note:'This is where growth comes from — these bring in new customers',
+                  keywords:['afro hair shop leeds','braiding hair','relaxer uk','hair extensions leeds','wigs uk'] },
+              ].map((c,i) => (
+                <div key={i} style={{background:T.surface,border:`0.5px solid ${T.border}`,borderLeft:`4px solid ${c.color}`,borderRadius:8,padding:'14px 16px'}}>
+                  <div style={{fontSize:13,fontWeight:700,color:T.text,marginBottom:8}}>{c.label}</div>
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:6,marginBottom:10}}>
+                    {[{l:'Spend',v:c.spend},{l:'Conversions',v:c.conv},{l:'ROAS',v:c.roas+'x'},{l:'CPA',v:c.cpa}].map((s,x)=>(
+                      <div key={x} style={{background:T.bg,borderRadius:5,padding:'6px 8px'}}>
+                        <div style={{fontSize:10,color:T.textMuted}}>{s.l}</div>
+                        <div style={{fontSize:14,fontWeight:700,color:c.color}}>{s.v}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{fontSize:11,color:T.textMuted,marginBottom:8,fontStyle:'italic'}}>{c.note}</div>
+                  <div style={{fontSize:10,fontWeight:700,color:T.textMuted,textTransform:'uppercase',marginBottom:4}}>Top keywords</div>
+                  {c.keywords.map((k,x) => (
+                    <div key={x} style={{fontSize:11,color:T.text,padding:'2px 0'}}>{k}</div>
+                  ))}
+                </div>
+              ))}
+            </div>
+            <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'14px 16px'}}>
+              <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:8}}>Recommendation</div>
+              <div style={{fontSize:11,color:T.textMuted,lineHeight:1.6}}>
+                Your brand ROAS of 14.2x is excellent — these searches come from people who already know you. Keep brand budget low (£100-150/month) and put the rest into non-brand to capture new customers. Your non-brand ROAS of 3.1x is above the 2.5x target — scale the best non-brand campaigns.
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── CAMPAIGNS ── */}
         {tab==='Campaigns' && (
           <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,overflow:'auto'}}>
