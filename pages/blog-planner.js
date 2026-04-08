@@ -328,7 +328,7 @@ export default function BlogPlanner() {
 
         {/* MAIN TABS */}
         <div style={{display:'flex',gap:8,marginBottom:16}}>
-          {[{id:'blogs',label:'📝 90 Blog Posts'},{id:'gbp',label:'📍 24 GBP Posts'}].map(t=>(
+          {[{id:'blogs',label:'📝 90 Blog Posts'},{id:'gbp',label:'📍 24 GBP Posts'},{id:'calendar',label:'📅 Content Calendar'}].map(t=>(
             <button key={t.id} onClick={()=>setTab(t.id)} style={{
               padding:'9px 20px',borderRadius:9,border:`2px solid ${tab===t.id?C.accent:C.border}`,
               background:tab===t.id?`${C.accent}20`:C.surface2,
@@ -585,6 +585,73 @@ export default function BlogPlanner() {
           </div>
         )}
       </div>
+      {/* CONTENT CALENDAR */}
+        {tab === 'calendar' && (
+          <div>
+            <div style={{fontSize:12,color:'#9a6700',background:'#fff8e1',border:'1px solid #f0c040',borderRadius:7,padding:'8px 13px',marginBottom:14}}>
+              Content calendar — plan what to post each week. Driven by your Search Console data and seasonal trends.
+            </div>
+            {[
+              { week:'Week 1', theme:'Natural Hair Care', posts:[
+                {type:'Blog',title:'How to moisturise 4C natural hair in winter',platform:'Website',status:'Not started'},
+                {type:'GBP',title:'New natural hair range — Cantu & SheaMoisture in stock',platform:'Google',status:'Not started'},
+                {type:'Social',title:'Before & after — customer natural hair transformation',platform:'Instagram',status:'Not started'},
+              ]},
+              { week:'Week 2', theme:'Braiding & Extensions', posts:[
+                {type:'Blog',title:'Best braiding hair for box braids UK 2026',platform:'Website',status:'Not started'},
+                {type:'GBP',title:'Huge range of braiding hair — Chapeltown, Roundhay, City Centre',platform:'Google',status:'Not started'},
+                {type:'Social',title:'New braiding hair arrivals — all colours in stock',platform:'Instagram',status:'Not started'},
+              ]},
+              { week:'Week 3', theme:'Relaxers & Treatments', posts:[
+                {type:'Blog',title:'ORS Olive Oil vs Dark & Lovely relaxer — which is right for you?',platform:'Website',status:'Not started'},
+                {type:'GBP',title:'Full range of professional relaxers — in store now',platform:'Google',status:'Not started'},
+                {type:'Social',title:'Staff pick of the week — ORS Olive Oil Relaxer',platform:'Instagram',status:'Not started'},
+              ]},
+              { week:'Week 4', theme:'Leeds Community', posts:[
+                {type:'Blog',title:'Best hair shop in Leeds — CC Hair and Beauty since 1979',platform:'Website',status:'Not started'},
+                {type:'GBP',title:'Thank you for 45 years in Chapeltown — your support means everything',platform:'Google',status:'Not started'},
+                {type:'Social',title:'We love our Leeds community — tag a friend who shops with us',platform:'Instagram',status:'Not started'},
+              ]},
+            ].map((week, wi) => (
+              <div key={wi} style={{marginBottom:16}}>
+                <div style={{fontSize:12,fontWeight:700,color:'#9a6700',marginBottom:8,padding:'6px 12px',background:'#fff8e1',borderRadius:6,border:'1px solid #f0c04040',display:'inline-block'}}>
+                  {week.week} — {week.theme}
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
+                  {week.posts.map((post, pi) => {
+                    const typeColor = post.type==='Blog'?'#7c3aed':post.type==='GBP'?'#1a7f37':'#E1306C'
+                    return (
+                      <div key={pi} style={{background:'#fff',border:'0.5px solid #d0d7de',borderLeft:`4px solid ${typeColor}`,borderRadius:7,padding:'10px 12px'}}>
+                        <div style={{fontSize:10,fontWeight:700,color:typeColor,textTransform:'uppercase',marginBottom:4}}>
+                          {post.type} — {post.platform}
+                        </div>
+                        <div style={{fontSize:11,fontWeight:600,color:'#1f2328',marginBottom:6,lineHeight:1.4}}>{post.title}</div>
+                        <div style={{display:'flex',gap:6}}>
+                          {post.type==='Blog' && (
+                            <button onClick={()=>setTab('blogs')} style={{fontSize:10,padding:'3px 8px',background:'#7c3aed',color:'#fff',border:'none',borderRadius:4,cursor:'pointer'}}>
+                              Generate blog →
+                            </button>
+                          )}
+                          {post.type==='GBP' && (
+                            <button onClick={()=>setTab('gbp')} style={{fontSize:10,padding:'3px 8px',background:'#1a7f37',color:'#fff',border:'none',borderRadius:4,cursor:'pointer'}}>
+                              Generate GBP →
+                            </button>
+                          )}
+                          {post.type==='Social' && (
+                            <a href="/social-upload" style={{fontSize:10,padding:'3px 8px',background:'#E1306C',color:'#fff',borderRadius:4,textDecoration:'none'}}>
+                              Social upload →
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
       </Shell>
     </>
   )
