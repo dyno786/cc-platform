@@ -4,16 +4,16 @@ import Shell from '../components/Shell'
 import { T } from '../lib/theme'
 
 const STEPS = [
-  { id:1, label:'Upload files', icon:'📁' },
-  { id:2, label:'AI analyses', icon:'🧠' },
-  { id:3, label:'Platform updates', icon:'✅' },
+  { id:1, label:'Upload Google Ads CSV', icon:'📁' },
+  { id:2, label:'AI analyses spend', icon:'🧠' },
+  { id:3, label:'Paid Ads page updates', icon:'✅' },
 ]
 
 const SOURCES = [
-  { id:'ads', label:'Google Ads CSV', desc:'Download from Google Ads → Reports → Predefined → Campaign performance', required:true, color:T.blue, icon:'📊' },
-  { id:'sc',  label:'Search Console CSV', desc:'Download from Search Console → Performance → Export → CSV', required:true, color:T.green, icon:'🔍' },
-  { id:'gbp', label:'GBP Insights CSV', desc:'Download from Google Business Profile → Insights → Export', required:false, color:T.amber, icon:'📍' },
+  { id:'ads', label:'Google Ads CSV', desc:'Download from Google Ads → Reports → Predefined reports → Campaign performance → Download CSV', required:true, color:T.blue, icon:'📊' },
 ]
+
+// Note: Search Console and GBP Insights are pulled live via API — no upload needed
 
 export default function DataUpload() {
   const [files, setFiles] = useState({})
@@ -22,7 +22,7 @@ export default function DataUpload() {
   const [results, setResults] = useState(null)
   const [error, setError] = useState('')
   const [dragOver, setDragOver] = useState(null)
-  const refs = { ads: useRef(), sc: useRef(), gbp: useRef() }
+  const refs = { ads: useRef() }
 
   function handleFile(id, file) {
     if (!file || !file.name.endsWith('.csv')) { setError('Please upload a CSV file'); return }
@@ -37,15 +37,13 @@ export default function DataUpload() {
   }
 
   async function analyse() {
-    if (!files.ads || !files.sc) { setError('Please upload both required files (Google Ads and Search Console)'); return }
+    if (!files.ads) { setError('Please upload your Google Ads CSV file to continue'); return }
     setAnalysing(true); setStep(2); setError('')
     try {
-      // Read both CSV files
-      const [adsText, scText] = await Promise.all([
-        readFile(files.ads),
-        readFile(files.sc),
-      ])
-      const gbpText = files.gbp ? await readFile(files.gbp) : null
+      // Read Google Ads CSV
+      const adsText = await readFile(files.ads)
+      const scText = null  // Search Console data is pulled live via API
+      const gbpText = null  // GBP Insights data is pulled live via API
 
       const r = await fetch('/api/analyse-data', {
         method: 'POST',
