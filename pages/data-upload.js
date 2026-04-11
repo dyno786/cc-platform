@@ -10,7 +10,24 @@ const STEPS = [
 ]
 
 const SOURCES = [
-  { id:'ads', label:'Google Ads CSV', desc:'Download from Google Ads → Reports → Predefined reports → Campaign performance → Download CSV', required:true, color:T.blue, icon:'📊' },
+  {
+    id:'ads',
+    label:'Campaign Performance CSV',
+    desc:'Google Ads → Reports → Predefined reports → Campaign performance → Download CSV',
+    why:'Shows spend, clicks, conversions and ROAS per campaign — tells you what your money is doing',
+    required:true,
+    color:T.blue,
+    icon:'📊'
+  },
+  {
+    id:'terms',
+    label:'Search Terms CSV',
+    desc:'Google Ads → Reports → When and where ads showed → Search terms → Download CSV',
+    why:'Shows the actual search queries triggering your ads — finds wasted spend and new negative keywords',
+    required:false,
+    color:'#7c3aed',
+    icon:'🔍'
+  },
 ]
 
 // Note: Search Console and GBP Insights are pulled live via API — no upload needed
@@ -22,7 +39,7 @@ export default function DataUpload() {
   const [results, setResults] = useState(null)
   const [error, setError] = useState('')
   const [dragOver, setDragOver] = useState(null)
-  const refs = { ads: useRef() }
+  const refs = { ads: useRef(), terms: useRef() }
 
   function handleFile(id, file) {
     if (!file || !file.name.endsWith('.csv')) { setError('Please upload a CSV file'); return }
@@ -40,8 +57,9 @@ export default function DataUpload() {
     if (!files.ads) { setError('Please upload your Google Ads CSV file to continue'); return }
     setAnalysing(true); setStep(2); setError('')
     try {
-      // Read Google Ads CSV
+      // Read Google Ads CSVs
       const adsText = await readFile(files.ads)
+      const termsText = files.terms ? await readFile(files.terms) : null
       const scText = null  // Search Console data is pulled live via API
       const gbpText = null  // GBP Insights data is pulled live via API
 
@@ -118,10 +136,32 @@ export default function DataUpload() {
           </div>
         )}
 
+        {/* Live data info banner */}
+        <div style={{background:T.greenBg,border:'0.5px solid '+T.greenBorder,borderRadius:8,padding:'12px 16px',marginBottom:12}}>
+          <div style={{fontSize:12,fontWeight:700,color:T.green,marginBottom:8}}>Already connected via API — no upload needed</div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
+            {[
+              {icon:'🔍',label:'Search Console',detail:'Keywords, clicks, positions — live. Powers Organic SEO page.'},
+              {icon:'📍',label:'GBP Insights',detail:'Ratings, reviews for all 3 branches — live. Powers Local SEO page.'},
+              {icon:'🛍️',label:'Shopify',detail:'Orders, revenue, abandoned carts — live. Powers Overview page.'},
+            ].map((s,i) => (
+              <div key={i} style={{background:'#fff',borderRadius:6,padding:'8px 10px',border:'0.5px solid '+T.greenBorder}}>
+                <div style={{fontSize:14,marginBottom:4}}>{s.icon}</div>
+                <div style={{fontSize:11,fontWeight:700,color:T.text,marginBottom:2}}>{s.label}</div>
+                <div style={{fontSize:10,color:T.textMuted,lineHeight:1.4}}>{s.detail}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{background:T.amberBg,border:'1px solid '+T.amber+'40',borderRadius:8,padding:'8px 14px',marginBottom:14,fontSize:11,color:'#9a6700'}}>
+          Only Google Ads requires CSV upload — the Ads API is blocked by Vercel network routing, which is a confirmed Google limitation. Everything else updates automatically.
+        </div>
+
         {/* Step 1 — Upload */}
         {step === 1 && (
           <div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:12,marginBottom:16}}>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:12,marginBottom:16}}>
               {SOURCES.map(src => (
                 <div key={src.id}
                   onDragOver={e=>{e.preventDefault();setDragOver(src.id)}}
@@ -216,7 +256,7 @@ export default function DataUpload() {
             </div>
 
             {/* What updated */}
-            <div style={{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10,marginBottom:16}}>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10,marginBottom:16}}>
               {[
                 { icon:'📊', label:'Paid Ads', desc:'ROAS, wasted spend, top converters updated', color:T.blue },
                 { icon:'🔍', label:'Organic SEO', desc:'Rankings, quick wins, CTR opportunities updated', color:T.green },
