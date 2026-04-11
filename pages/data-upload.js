@@ -3,6 +3,15 @@ import { useState } from 'react'
 import Shell from '../components/Shell'
 import { T } from '../lib/theme'
 
+const REPORT_TYPES = [
+  { id:'ads',      label:'Campaign Performance', icon:'📊', color:T.blue,    desc:'Spend, clicks, conversions per campaign', required:true },
+  { id:'terms',    label:'Search Terms',          icon:'🔍', color:'#7c3aed', desc:'Actual queries triggering your ads', required:false },
+  { id:'keywords', label:'Keywords',              icon:'🔑', color:'#0969da', desc:'Keyword bids, quality scores, impression share', required:false },
+  { id:'devices',  label:'Devices',               icon:'📱', color:'#1a7f37', desc:'Mobile vs desktop vs tablet split', required:false },
+  { id:'schedule', label:'When Ads Showed',       icon:'🕐', color:'#9a6700', desc:'Best times and days your ads convert', required:false },
+  { id:'auction',  label:'Auction Insights',      icon:'🏆', color:'#cf222e', desc:'Competitors and how often they outrank you', required:false },
+]
+
 function extractId(url) {
   const patterns = [
     /\/folders\/([a-zA-Z0-9_-]+)/,
@@ -17,16 +26,30 @@ function extractId(url) {
   return null
 }
 
+function autoAssign(files) {
+  const assignments = {}
+  files.forEach(f => {
+    const n = f.name.toLowerCase()
+    if (n.includes('campaign') || n.includes('performance')) assignments.ads = f.id
+    else if (n.includes('search term') || n.includes('search_term')) assignments.terms = f.id
+    else if (n.includes('keyword') && !n.includes('term')) assignments.keywords = f.id
+    else if (n.includes('device')) assignments.devices = f.id
+    else if (n.includes('when') || n.includes('schedule') || n.includes('hour') || n.includes('day')) assignments.schedule = f.id
+    else if (n.includes('auction')) assignments.auction = f.id
+  })
+  return assignments
+}
+
 export default function DataUpload() {
   const [driveUrl, setDriveUrl] = useState('https://drive.google.com/drive/folders/1CYCY_VVh0Ac4Fkr6vu8kwbzp_QMPNUfd')
   const [folderFiles, setFolderFiles] = useState([])
   const [loadingFolder, setLoadingFolder] = useState(false)
-  const [adsFileId, setAdsFileId] = useState('')
-  const [termsFileId, setTermsFileId] = useState('')
+  const [assignments, setAssignments] = useState({})
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState('')
   const [results, setResults] = useState(null)
+  const [pushed, setPushed] = useState(false)
   const [error, setError] = useState('')
 
   async function loadFolder() {
@@ -45,19 +68,13 @@ export default function DataUpload() {
         const d = await r.json()
         if (d.ok) {
           setFolderFiles(d.files)
-          // Auto-detect which file is which based on name
-          d.files.forEach(f => {
-            const n = f.name.toLowerCase()
-            if (n.includes('campaign') || n.includes('performance')) setAdsFileId(f.id)
-            if (n.includes('search') || n.includes('term') || n.includes('keyword')) setTermsFileId(f.id)
-          })
+          setAssignments(autoAssign(d.files))
         } else {
           setError(d.error)
         }
       } else {
-        // Single file — set as ads file
-        setAdsFileId(id)
         setFolderFiles([{ id, name: 'Selected file', mimeType: 'text/csv' }])
+        setAssignments({ ads: id })
       }
     } catch(e) {
       setError(e.message)
@@ -66,59 +83,53 @@ export default function DataUpload() {
   }
 
   async function fetchFile(fileId) {
-    const url = fileId.includes('spreadsheet')
-      ? `https://docs.google.com/spreadsheets/d/${fileId}`
-      : `https://drive.google.com/file/d/${fileId}/view`
-    const r = await fetch('/api/fetch-drive-csv', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url })
-    })
-    const text = await r.text()
+    if (!fileId) return null
+    const url = `https://drive.google.com/file/d/${fileId}/view`
     try {
+      const r = await fetch('/api/fetch-drive-csv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      })
+      const text = await r.text()
       const d = JSON.parse(text)
       return d.ok ? d.content : null
-    } catch(e) {
-      return null
-    }
+    } catch(e) { return null }
   }
 
   async function analyse() {
-    if (!adsFileId) { setError('Please select the Campaign Performance file'); return }
+    if (!assignments.ads) { setError('Please assign the Campaign Performance report'); return }
     setLoading(true)
     setStep(2)
     setError('')
 
-    setStatus('Reading Campaign Performance from Google Drive...')
-    const adsText = await fetchFile(adsFileId)
-    if (!adsText) {
-      setError('Could not read Campaign Performance file')
-      setLoading(false)
-      setStep(1)
-      return
+    // Fetch all assigned files
+    const reportData = {}
+    for (const type of REPORT_TYPES) {
+      if (assignments[type.id]) {
+        setStatus(`Reading ${type.label}...`)
+        reportData[type.id] = await fetchFile(assignments[type.id])
+      }
     }
 
-    let termsText = null
-    if (termsFileId) {
-      setStatus('Reading Search Keywords from Google Drive...')
-      termsText = await fetchFile(termsFileId)
-    }
-
-    setStatus('Analysing with AI...')
+    setStatus('Running full AI audit across all reports...')
     try {
       const r = await fetch('/api/analyse-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          adsText: adsText.slice(0, 10000),
-          termsText: termsText ? termsText.slice(0, 5000) : null,
+          adsText: reportData.ads?.slice(0, 8000) || '',
+          termsText: reportData.terms?.slice(0, 4000) || null,
+          keywordsText: reportData.keywords?.slice(0, 4000) || null,
+          devicesText: reportData.devices?.slice(0, 2000) || null,
+          scheduleText: reportData.schedule?.slice(0, 2000) || null,
+          auctionText: reportData.auction?.slice(0, 2000) || null,
         })
       })
       const d = await r.json()
       if (d.ok) {
         setResults(d.results)
         setStep(3)
-        try { localStorage.setItem('cc_ads_analysis', JSON.stringify(d.results)) } catch(e) {}
       } else {
         setError(d.error || 'Analysis failed')
         setStep(1)
@@ -130,15 +141,40 @@ export default function DataUpload() {
     setLoading(false)
   }
 
+  function pushToPaidAds() {
+    try {
+      localStorage.setItem('cc_ads_analysis', JSON.stringify(results))
+      localStorage.setItem('cc_ads_analysis_date', new Date().toISOString())
+      setPushed(true)
+      setTimeout(() => window.location.href = '/paid-ads', 1000)
+    } catch(e) {
+      setError('Could not save: ' + e.message)
+    }
+  }
+
+  function assign(fileId, reportId) {
+    setAssignments(prev => {
+      const next = { ...prev }
+      // Remove this fileId from any other slot
+      Object.keys(next).forEach(k => { if (next[k] === fileId) delete next[k] })
+      // Toggle
+      if (prev[reportId] === fileId) delete next[reportId]
+      else next[reportId] = fileId
+      return next
+    })
+  }
+
+  const assignedCount = Object.keys(assignments).length
+  const canAnalyse = !!assignments.ads
+
   return (
     <>
       <Head><title>Data Upload — CC Intelligence</title></Head>
-      <Shell title="Google Ads Analysis" subtitle="Point to your Google Drive folder — platform reads files directly using your existing Google credentials">
+      <Shell title="Google Ads Full Audit" subtitle="Upload all your reports — AI analyses everything and pushes results across all Paid Ads tabs">
 
         {/* Live data banner */}
         <div style={{background:T.greenBg,border:'0.5px solid '+T.greenBorder,borderRadius:8,padding:'10px 14px',marginBottom:12,fontSize:11,color:T.green}}>
-          <strong>Already live via API:</strong> Search Console · GBP Insights · Shopify — no upload needed for those.
-          Only Google Ads requires this step.
+          <strong>Already live via API:</strong> Search Console · GBP Insights · Shopify — no upload needed for those. Only Google Ads reports need uploading.
         </div>
 
         {error && (
@@ -150,136 +186,184 @@ export default function DataUpload() {
         {/* STEP 1 */}
         {step === 1 && (
           <div>
-            {/* Drive URL input */}
-            <div style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,padding:'16px',marginBottom:12}}>
-              <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:6}}>
-                Your Google Drive folder or file URL
-              </div>
-              <div style={{fontSize:11,color:T.textMuted,marginBottom:10}}>
-                Paste your Drive folder URL — the platform will list all files inside so you can pick which is which.
-              </div>
+            {/* Drive URL */}
+            <div style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,padding:'14px 16px',marginBottom:12}}>
+              <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:6}}>Google Drive folder</div>
               <div style={{display:'flex',gap:8}}>
-                <input
-                  value={driveUrl}
-                  onChange={e=>setDriveUrl(e.target.value)}
-                  placeholder="https://drive.google.com/drive/folders/..."
-                  style={{flex:1,padding:'8px 10px',fontSize:12,border:'1px solid '+T.border,borderRadius:7,background:T.bg,color:T.text}}
-                />
+                <input value={driveUrl} onChange={e=>setDriveUrl(e.target.value)}
+                  style={{flex:1,padding:'8px 10px',fontSize:12,border:'1px solid '+T.border,borderRadius:7,background:T.bg,color:T.text}}/>
                 <button onClick={loadFolder} disabled={loadingFolder} style={{
-                  padding:'8px 16px',fontSize:12,fontWeight:700,
-                  background:T.blue,color:'#fff',border:'none',borderRadius:7,cursor:'pointer',whiteSpace:'nowrap'
-                }}>
-                  {loadingFolder ? 'Loading...' : 'Load Files'}
-                </button>
+                  padding:'8px 18px',fontSize:12,fontWeight:700,background:T.blue,
+                  color:'#fff',border:'none',borderRadius:7,cursor:'pointer',whiteSpace:'nowrap'
+                }}>{loadingFolder?'Loading...':'Load Files'}</button>
               </div>
             </div>
 
-            {/* File list */}
-            {folderFiles.length > 0 && (
-              <div style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,padding:'16px',marginBottom:12}}>
-                <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:10}}>
-                  Files found — assign each one:
+            {/* Report type guide */}
+            {folderFiles.length === 0 && (
+              <div style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,padding:'14px 16px',marginBottom:12}}>
+                <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:10}}>Reports to download from Google Ads</div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                  {REPORT_TYPES.map(r => (
+                    <div key={r.id} style={{display:'flex',gap:8,padding:'8px 10px',background:T.bg,borderRadius:6,border:'0.5px solid '+T.border}}>
+                      <span style={{fontSize:18,flexShrink:0}}>{r.icon}</span>
+                      <div>
+                        <div style={{fontSize:11,fontWeight:700,color:r.color}}>{r.label}{r.required?' *':' (optional)'}</div>
+                        <div style={{fontSize:10,color:T.textMuted}}>{r.desc}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                {folderFiles.map(f => (
-                  <div key={f.id} style={{
-                    display:'flex',alignItems:'center',gap:10,padding:'8px 10px',
-                    marginBottom:6,borderRadius:6,
-                    background:adsFileId===f.id?T.blueBg:termsFileId===f.id?'#f3f0ff':T.bg,
-                    border:'1px solid '+(adsFileId===f.id?T.blue:termsFileId===f.id?'#7c3aed':T.border),
-                  }}>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:600,color:T.text}}>{f.name}</div>
-                      <div style={{fontSize:10,color:T.textMuted}}>{f.mimeType?.includes('sheet')?'Google Sheet':'CSV file'}</div>
-                    </div>
-                    <div style={{display:'flex',gap:5}}>
-                      <button onClick={()=>setAdsFileId(adsFileId===f.id?'':f.id)} style={{
-                        padding:'4px 10px',fontSize:10,fontWeight:700,borderRadius:4,cursor:'pointer',
-                        background:adsFileId===f.id?T.blue:'#fff',
-                        color:adsFileId===f.id?'#fff':T.blue,
-                        border:'1px solid '+T.blue,
-                      }}>
-                        {adsFileId===f.id?'✓ Campaign Perf':'Campaign Perf'}
-                      </button>
-                      <button onClick={()=>setTermsFileId(termsFileId===f.id?'':f.id)} style={{
-                        padding:'4px 10px',fontSize:10,fontWeight:700,borderRadius:4,cursor:'pointer',
-                        background:termsFileId===f.id?'#7c3aed':'#fff',
-                        color:termsFileId===f.id?'#fff':'#7c3aed',
-                        border:'1px solid #7c3aed',
-                      }}>
-                        {termsFileId===f.id?'✓ Search Terms':'Search Terms'}
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                <div style={{fontSize:10,color:T.textMuted,marginTop:8}}>* Required. All others optional but improve analysis quality.</div>
+              </div>
+            )}
 
-                {/* Summary of assignment */}
-                <div style={{marginTop:10,padding:'8px 10px',background:T.bg,borderRadius:6,fontSize:11}}>
-                  <div style={{color:adsFileId?T.green:T.red,marginBottom:2}}>
-                    {adsFileId?'✓':'✗'} Campaign Performance: {adsFileId ? folderFiles.find(f=>f.id===adsFileId)?.name : 'not assigned'}
-                  </div>
-                  <div style={{color:termsFileId?T.green:T.textMuted}}>
-                    {termsFileId?'✓':'○'} Search Terms: {termsFileId ? folderFiles.find(f=>f.id===termsFileId)?.name : 'not assigned (optional)'}
+            {/* File list with assignment */}
+            {folderFiles.length > 0 && (
+              <div style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,overflow:'hidden',marginBottom:12}}>
+                <div style={{padding:'10px 14px',borderBottom:'0.5px solid '+T.border,background:T.bg,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <span style={{fontSize:12,fontWeight:700,color:T.text}}>{folderFiles.length} files found — assign each one</span>
+                  <span style={{fontSize:11,color:T.green,fontWeight:600}}>{assignedCount} assigned</span>
+                </div>
+
+                {folderFiles.map(f => {
+                  const assignedTo = Object.entries(assignments).find(([k,v]) => v === f.id)?.[0]
+                  const assignedReport = REPORT_TYPES.find(r => r.id === assignedTo)
+                  return (
+                    <div key={f.id} style={{padding:'10px 14px',borderBottom:'0.5px solid '+T.borderLight,background:assignedTo?T.greenBg:T.surface}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:assignedTo?0:8}}>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:12,fontWeight:600,color:T.text}}>{f.name}</div>
+                          {assignedTo && (
+                            <div style={{fontSize:10,color:T.green,fontWeight:600,marginTop:2}}>
+                              ✓ Assigned as {assignedReport?.label}
+                            </div>
+                          )}
+                        </div>
+                        {assignedTo && (
+                          <button onClick={()=>assign(f.id, assignedTo)} style={{
+                            padding:'3px 8px',fontSize:10,color:T.red,background:'none',
+                            border:'0.5px solid '+T.red,borderRadius:4,cursor:'pointer'
+                          }}>Remove</button>
+                        )}
+                      </div>
+                      {!assignedTo && (
+                        <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
+                          {REPORT_TYPES.map(rt => (
+                            <button key={rt.id} onClick={()=>assign(f.id, rt.id)}
+                              disabled={!!assignments[rt.id] && assignments[rt.id] !== f.id}
+                              style={{
+                                padding:'3px 9px',fontSize:10,fontWeight:600,borderRadius:4,cursor:'pointer',
+                                background:assignments[rt.id]?'#f0f0f0':'#fff',
+                                color:assignments[rt.id]?T.textMuted:rt.color,
+                                border:'1px solid '+(assignments[rt.id]?T.border:rt.color),
+                                opacity:assignments[rt.id] && assignments[rt.id]!==f.id?0.4:1,
+                              }}>
+                              {rt.icon} {rt.label}
+                              {assignments[rt.id] ? ' (taken)' : ''}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+
+                {/* Assignment summary */}
+                <div style={{padding:'10px 14px',background:T.bg,borderTop:'0.5px solid '+T.border}}>
+                  <div style={{fontSize:11,fontWeight:600,color:T.text,marginBottom:6}}>Assignment summary</div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:4}}>
+                    {REPORT_TYPES.map(r => {
+                      const fileId = assignments[r.id]
+                      const file = folderFiles.find(f => f.id === fileId)
+                      return (
+                        <div key={r.id} style={{fontSize:10,color:fileId?T.green:T.textMuted}}>
+                          {r.icon} {r.label}: {file ? file.name.slice(0,25) : r.required ? '⚠ Required' : 'Not assigned'}
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               </div>
             )}
 
-            <button onClick={analyse} disabled={!adsFileId} style={{
-              width:'100%',padding:'13px',fontSize:14,fontWeight:700,
-              background:adsFileId?T.green:'#d0d7de',
+            <button onClick={analyse} disabled={!canAnalyse} style={{
+              width:'100%',padding:'14px',fontSize:14,fontWeight:700,
+              background:canAnalyse?T.green:'#d0d7de',
               color:'#fff',border:'none',borderRadius:8,
-              cursor:adsFileId?'pointer':'not-allowed',
+              cursor:canAnalyse?'pointer':'not-allowed',
             }}>
-              {adsFileId ? 'Read & Analyse →' : 'Load files first then assign Campaign Performance'}
+              {canAnalyse
+                ? `Run Full Audit — ${assignedCount} report${assignedCount!==1?'s':''} →`
+                : 'Load files and assign Campaign Performance to continue'}
             </button>
           </div>
         )}
 
-        {/* STEP 2 — Loading */}
+        {/* STEP 2 */}
         {step === 2 && (
           <div style={{padding:60,textAlign:'center'}}>
-            <div style={{fontSize:36,marginBottom:16}}>⟳</div>
+            <div style={{fontSize:40,marginBottom:16,animation:'spin 1s linear infinite'}}>⟳</div>
             <div style={{fontSize:14,fontWeight:600,color:T.text,marginBottom:8}}>{status}</div>
-            <div style={{fontSize:11,color:T.textMuted}}>Reading directly from your Google Drive using your existing credentials</div>
+            <div style={{fontSize:11,color:T.textMuted}}>Running full audit across {assignedCount} reports — this takes 20-30 seconds</div>
           </div>
         )}
 
         {/* STEP 3 — Results */}
         {step === 3 && results && (
           <div>
-            <div style={{background:T.greenBg,border:'0.5px solid '+T.greenBorder,borderRadius:8,padding:'14px 16px',marginBottom:12}}>
-              <div style={{fontSize:12,fontWeight:700,color:T.green,marginBottom:6}}>This week's key findings</div>
-              <div style={{fontSize:13,color:T.text,lineHeight:1.6}}>{results.summary}</div>
+            {/* Push button — prominent at top */}
+            <div style={{background:T.blueBg,border:'0.5px solid '+T.blueBorder,borderRadius:8,padding:'14px 16px',marginBottom:16,display:'flex',alignItems:'center',gap:12}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:700,color:T.blue}}>Audit complete — push to Paid Ads page</div>
+                <div style={{fontSize:11,color:T.textMuted,marginTop:2}}>This will fill all tabs in Paid Ads with your real data — campaigns, devices, schedule, competitors, negative keywords and tasks</div>
+              </div>
+              <button onClick={pushToPaidAds} style={{
+                padding:'10px 20px',fontSize:13,fontWeight:700,
+                background:pushed?T.green:T.blue,color:'#fff',
+                border:'none',borderRadius:8,cursor:'pointer',whiteSpace:'nowrap',flexShrink:0
+              }}>
+                {pushed?'✓ Pushed! Going to Paid Ads...':'Push to Paid Ads →'}
+              </button>
             </div>
 
+            {/* Summary */}
+            <div style={{background:T.greenBg,border:'0.5px solid '+T.greenBorder,borderRadius:8,padding:'14px 16px',marginBottom:12}}>
+              <div style={{fontSize:12,fontWeight:700,color:T.green,marginBottom:6}}>Full audit findings</div>
+              <div style={{fontSize:13,color:T.text,lineHeight:1.7}}>{results.summary}</div>
+            </div>
+
+            {/* Key metrics */}
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:12}}>
               {[
                 {label:'Total Spend',value:results.totalSpend,color:T.blue},
                 {label:'Overall ROAS',value:results.overallRoas,color:T.green},
                 {label:'Conversions',value:results.totalConversions,color:'#7c3aed'},
                 {label:'Wasted Spend',value:results.wastedSpend,color:T.red},
-              ].map((m,i) => (
-                <div key={i} style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,padding:'12px 14px',textAlign:'center'}}>
+              ].map((m,i)=>(
+                <div key={i} style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,padding:'12px',textAlign:'center'}}>
                   <div style={{fontSize:10,color:T.textMuted,textTransform:'uppercase',fontWeight:600,marginBottom:4}}>{m.label}</div>
-                  <div style={{fontSize:20,fontWeight:700,color:m.color}}>{m.value||'—'}</div>
+                  <div style={{fontSize:18,fontWeight:700,color:m.color}}>{m.value||'—'}</div>
                 </div>
               ))}
             </div>
 
+            {/* Top actions */}
             <div style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,padding:'14px 16px',marginBottom:12}}>
-              <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:10}}>Top 5 actions this week</div>
-              {(results.topActions||[]).map((a,i) => (
-                <div key={i} style={{display:'flex',gap:10,padding:'7px 0',borderBottom:i<4?'0.5px solid '+T.borderLight:'none'}}>
-                  <div style={{width:22,height:22,borderRadius:'50%',background:T.blue,color:'#fff',fontSize:11,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{i+1}</div>
+              <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:10}}>Top actions this week</div>
+              {(results.topActions||[]).map((a,i)=>(
+                <div key={i} style={{display:'flex',gap:10,padding:'7px 0',borderBottom:i<(results.topActions.length-1)?'0.5px solid '+T.borderLight:'none'}}>
+                  <div style={{width:22,height:22,borderRadius:'50%',background:i===0?T.red:i===1?T.amber:T.blue,color:'#fff',fontSize:11,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{i+1}</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>{a}</div>
                 </div>
               ))}
             </div>
 
+            {/* Campaign breakdown */}
             {results.campaigns?.length > 0 && (
               <div style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,overflow:'auto',marginBottom:12}}>
                 <div style={{padding:'10px 14px',borderBottom:'0.5px solid '+T.border,background:T.bg,fontSize:12,fontWeight:600,color:T.text}}>Campaign breakdown</div>
-                <table style={{width:'100%',borderCollapse:'collapse',minWidth:600}}>
+                <table style={{width:'100%',borderCollapse:'collapse',minWidth:650}}>
                   <thead><tr style={{background:T.bg}}>
                     {['Campaign','Spend','Clicks','Conv.','ROAS','Action','Reason'].map(h=>(
                       <th key={h} style={{padding:'7px 12px',fontSize:10,fontWeight:600,color:T.textMuted,textTransform:'uppercase',textAlign:'left',borderBottom:'0.5px solid '+T.border,whiteSpace:'nowrap'}}>{h}</th>
@@ -294,11 +378,11 @@ export default function DataUpload() {
                           <td style={{padding:'8px 12px',fontSize:11,color:T.blue,borderBottom:'0.5px solid '+T.borderLight}}>{c.spend}</td>
                           <td style={{padding:'8px 12px',fontSize:11,color:T.textMuted,borderBottom:'0.5px solid '+T.borderLight}}>{c.clicks}</td>
                           <td style={{padding:'8px 12px',fontSize:11,color:T.green,borderBottom:'0.5px solid '+T.borderLight}}>{c.conversions}</td>
-                          <td style={{padding:'8px 12px',fontSize:11,fontWeight:700,color:T.text,borderBottom:'0.5px solid '+T.borderLight}}>{c.roas}</td>
+                          <td style={{padding:'8px 12px',fontSize:11,fontWeight:700,borderBottom:'0.5px solid '+T.borderLight}}>{c.roas}</td>
                           <td style={{padding:'8px 12px',borderBottom:'0.5px solid '+T.borderLight}}>
                             <span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:4,background:ac+'20',color:ac}}>{c.action}</span>
                           </td>
-                          <td style={{padding:'8px 12px',fontSize:10,color:T.textMuted,borderBottom:'0.5px solid '+T.borderLight,maxWidth:200}}>{c.reason}</td>
+                          <td style={{padding:'8px 12px',fontSize:10,color:T.textMuted,borderBottom:'0.5px solid '+T.borderLight,maxWidth:180}}>{c.reason}</td>
                         </tr>
                       )
                     })}
@@ -307,21 +391,47 @@ export default function DataUpload() {
               </div>
             )}
 
+            {/* Device insights */}
+            {results.deviceInsights && (
+              <div style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,padding:'14px 16px',marginBottom:12}}>
+                <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:8}}>📱 Device insights</div>
+                <div style={{fontSize:12,color:T.text,lineHeight:1.6}}>{results.deviceInsights}</div>
+              </div>
+            )}
+
+            {/* Schedule insights */}
+            {results.scheduleInsights && (
+              <div style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,padding:'14px 16px',marginBottom:12}}>
+                <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:8}}>🕐 Best times to run ads</div>
+                <div style={{fontSize:12,color:T.text,lineHeight:1.6}}>{results.scheduleInsights}</div>
+              </div>
+            )}
+
+            {/* Auction insights */}
+            {results.competitorInsights && (
+              <div style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,padding:'14px 16px',marginBottom:12}}>
+                <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:8}}>🏆 Competitor analysis</div>
+                <div style={{fontSize:12,color:T.text,lineHeight:1.6}}>{results.competitorInsights}</div>
+              </div>
+            )}
+
+            {/* Scale & Waste */}
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12}}>
               <div style={{background:T.greenBg,border:'0.5px solid '+T.greenBorder,borderRadius:8,padding:'12px 14px'}}>
-                <div style={{fontSize:11,fontWeight:700,color:T.green,marginBottom:5}}>Scale this now</div>
+                <div style={{fontSize:11,fontWeight:700,color:T.green,marginBottom:5}}>🚀 Scale this now</div>
                 <div style={{fontSize:12,color:T.text}}>{results.scaleOpportunity}</div>
               </div>
               <div style={{background:'#fff0f0',border:'0.5px solid #ffa0a040',borderRadius:8,padding:'12px 14px'}}>
-                <div style={{fontSize:11,fontWeight:700,color:T.red,marginBottom:5}}>Biggest waste</div>
+                <div style={{fontSize:11,fontWeight:700,color:T.red,marginBottom:5}}>🚨 Biggest waste</div>
                 <div style={{fontSize:12,color:T.text}}>{results.biggestWaste}</div>
               </div>
             </div>
 
+            {/* Negative keywords */}
             {results.negativeKeywords?.length > 0 && (
               <div style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,padding:'14px 16px',marginBottom:12}}>
-                <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:8}}>Negative keywords to add in Google Ads</div>
-                <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:8}}>Negative keywords to block in Google Ads</div>
+                <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
                   {results.negativeKeywords.map((k,i)=>(
                     <span key={i} style={{fontSize:11,padding:'3px 9px',borderRadius:4,background:'#fff0f0',color:T.red,border:'0.5px solid #ffa0a040',fontWeight:500}}>{k}</span>
                   ))}
@@ -329,27 +439,31 @@ export default function DataUpload() {
               </div>
             )}
 
-            {results.weeklyTasks?.length > 0 && (
-              <div style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,padding:'14px 16px',marginBottom:12}}>
-                <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:10}}>Tasks to do this week in Google Ads</div>
-                {results.weeklyTasks.map((t,i)=>(
-                  <div key={i} style={{display:'flex',gap:8,padding:'5px 0',borderBottom:i<results.weeklyTasks.length-1?'0.5px solid '+T.borderLight:'none'}}>
-                    <span style={{color:T.blue,fontWeight:700,fontSize:11,flexShrink:0}}>{i+1}.</span>
-                    <span style={{fontSize:12,color:T.text}}>{t}</span>
+            {/* Step by step guide */}
+            {results.stepByStepGuide?.length > 0 && (
+              <div style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,padding:'14px 16px',marginBottom:16}}>
+                <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:10}}>Step by step — reduce costs and get more sales</div>
+                {results.stepByStepGuide.map((step,i)=>(
+                  <div key={i} style={{display:'flex',gap:12,padding:'10px 0',borderBottom:i<results.stepByStepGuide.length-1?'0.5px solid '+T.borderLight:'none'}}>
+                    <div style={{width:28,height:28,borderRadius:'50%',background:i===0?T.red:i<3?T.amber:T.blue,color:'#fff',fontSize:12,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{i+1}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:2}}>{step.action}</div>
+                      <div style={{fontSize:11,color:T.textMuted,lineHeight:1.5}}>{step.detail}</div>
+                      {step.impact && <div style={{fontSize:11,color:T.green,fontWeight:600,marginTop:3}}>Impact: {step.impact}</div>}
+                    </div>
                   </div>
                 ))}
               </div>
             )}
 
-            <div style={{display:'flex',gap:8}}>
-              <button onClick={()=>{setStep(1);setResults(null);setError('');setStatus('')}}
-                style={{padding:'8px 16px',fontSize:12,fontWeight:600,background:T.bg,color:T.text,border:'1px solid '+T.border,borderRadius:7,cursor:'pointer'}}>
-                Analyse again
-              </button>
-              <a href="/paid-ads" style={{padding:'8px 16px',fontSize:12,fontWeight:700,background:T.blue,color:'#fff',borderRadius:7,textDecoration:'none'}}>
-                View Paid Ads page →
-              </a>
-            </div>
+            {/* Push button at bottom too */}
+            <button onClick={pushToPaidAds} style={{
+              width:'100%',padding:'14px',fontSize:14,fontWeight:700,
+              background:pushed?T.green:T.blue,color:'#fff',
+              border:'none',borderRadius:8,cursor:'pointer',
+            }}>
+              {pushed?'✓ Pushed! Going to Paid Ads...':'Push all data to Paid Ads page →'}
+            </button>
           </div>
         )}
 
