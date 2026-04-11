@@ -4,8 +4,16 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
   const { adsText, termsText } = req.body
+  console.log('[analyse-data] adsText length:', adsText?.length || 0)
+  console.log('[analyse-data] termsText length:', termsText?.length || 0)
+  console.log('[analyse-data] adsText preview:', (adsText||'').slice(0, 100))
 
-  if (!adsText || adsText.trim().length < 20) {
+  // Support both old field names (ads/sc) and new (adsText/termsText)
+  const finalAdsText = adsText || req.body.ads || ''
+  const finalTermsText = termsText || req.body.terms || req.body.sc || ''
+  console.log('[analyse-data] finalAdsText length:', finalAdsText.length)
+
+  if (!finalAdsText || finalAdsText.trim().length < 20) {
     return res.status(200).json({
       ok: false,
       error: 'Google Ads CSV appears empty. Please upload your Campaign Performance CSV from Google Ads → Reports → Predefined reports → Campaign performance → Download.'
@@ -17,10 +25,10 @@ export default async function handler(req, res) {
 Analyse the Google Ads data below and return a JSON report.
 
 CAMPAIGN PERFORMANCE CSV:
-${adsText.slice(0, 8000)}
+${finalAdsText.slice(0, 8000)}
 
-${termsText ? `SEARCH KEYWORDS/TERMS CSV:
-${termsText.slice(0, 4000)}` : 'Note: No search terms data provided.'}
+${finalTermsText ? `SEARCH KEYWORDS/TERMS CSV:
+${finalTermsText.slice(0, 4000)}` : 'Note: No search terms data provided.'}
 
 Return ONLY a valid JSON object — no markdown, no backticks, no explanation before or after:
 
