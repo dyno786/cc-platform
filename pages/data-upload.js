@@ -14,16 +14,23 @@ export default function DataUpload() {
 
   async function fetchCsv(url, key) {
     if (!url.trim()) return null
-    setFetchStatus(s => ({...s, [key]: 'Fetching...'}))
+    setFetchStatus(s => ({...s, [key]: 'Fetching from Google Drive...'}))
     try {
       const r = await fetch('/api/fetch-drive-csv', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ url: url.trim() })
       })
-      const d = await r.json()
+      // Handle non-JSON response (API not deployed yet or 404)
+      const text = await r.text()
+      let d
+      try { d = JSON.parse(text) }
+      catch(e) {
+        setFetchStatus(s => ({...s, [key]: '✗ API not found — please upload fetch-drive-csv.js to GitHub'}))
+        return null
+      }
       if (d.ok) {
-        setFetchStatus(s => ({...s, [key]: `✓ ${d.lines} rows loaded`}))
+        setFetchStatus(s => ({...s, [key]: '✓ ' + d.lines + ' rows loaded — ' + d.preview?.slice(0,60)}))
         return d.content
       } else {
         setFetchStatus(s => ({...s, [key]: '✗ ' + d.error}))
