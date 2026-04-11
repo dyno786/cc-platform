@@ -58,18 +58,19 @@ export default function DataUpload() {
     setAnalysing(true); setStep(2); setError('')
     try {
       // Read Google Ads CSVs
-      const adsText = await readFile(files.ads)
+      const adsText = files.ads ? await readFile(files.ads) : null
       const termsText = files.terms ? await readFile(files.terms) : null
-      const scText = null  // Search Console data is pulled live via API
-      const gbpText = null  // GBP Insights data is pulled live via API
+      const scText = null
+      const gbpText = null
 
       const r = await fetch('/api/analyse-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ads: adsText.slice(0, 8000),
-          sc: scText.slice(0, 8000),
-          gbp: gbpText ? gbpText.slice(0, 4000) : null,
+          adsText: adsText ? adsText.slice(0, 8000) : '',
+          termsText: termsText ? termsText.slice(0, 4000) : null,
+          scText: null,
+          gbpText: null,
         })
       })
       const d = await r.json()
