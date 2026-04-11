@@ -7,13 +7,12 @@ export default async function handler(req, res) {
   if (!url) return res.status(200).json({ ok: false, error: 'No URL provided' })
 
   try {
+    // Extract file ID from any Google Drive/Sheets URL format
     let fileId = null
-
-    // Extract file ID from any Google Drive URL format
     const patterns = [
       /\/file\/d\/([a-zA-Z0-9_-]+)/,
-      /id=([a-zA-Z0-9_-]+)/,
       /\/d\/([a-zA-Z0-9_-]+)/,
+      /id=([a-zA-Z0-9_-]+)/,
     ]
     for (const p of patterns) {
       const m = url.match(p)
@@ -21,65 +20,66 @@ export default async function handler(req, res) {
     }
 
     if (!fileId) {
-      return res.status(200).json({ ok: false, error: 'Could not extract file ID from URL. Make sure you paste a Google Drive file link.' })
+      return res.status(200).json({ ok: false, error: 'Could not extract file ID from URL' })
     }
 
-    // Use the export/download endpoint that bypasses virus check
-    const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}&confirm=t`
+    const isSheet = url.includes('spreadsheets')
 
-    const r = await fetch(downloadUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'text/csv,text/plain,*/*',
-      },
-      redirect: 'follow',
+    // Get OAuth access token using existing credentials
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+        grant_type: 'refresh_token',
+      })
+    })
+    const tokenData = await tokenRes.json()
+    const accessToken = tokenData.access_token
+
+    if (!accessToken) {
+      return res.status(200).json({ ok: false, error: 'Could not get Google access token. Check GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN in Vercel env vars.' })
+    }
+
+    // Download the file
+    let downloadUrl
+    if (isSheet) {
+      // Export Google Sheet as CSV
+      downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=text/csv`
+    } else {
+      // Download regular file (CSV)
+      downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`
+    }
+
+    const fileRes = await fetch(downloadUrl, {
+      headers: { Authorization: `Bearer ${accessToken}` }
     })
 
-    const contentType = r.headers.get('content-type') || ''
-    const text = await r.text()
-
-    // Check if we got HTML (Google warning page or login page)
-    if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-      // Try alternate direct download approach
-      const altUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`
-      const r2 = await fetch(altUrl, {
-        headers: { 'User-Agent': 'Mozilla/5.0' },
-        redirect: 'follow',
-      })
-      const text2 = await r2.text()
-
-      if (text2.trim().startsWith('<!DOCTYPE') || text2.trim().startsWith('<html')) {
-        return res.status(200).json({
-          ok: false,
-          error: 'Google Drive returned a login page. Please make sure: 1) The file is shared with "Anyone with the link", 2) You copied the correct share link.'
-        })
-      }
-
-      if (!text2 || text2.trim().length < 20) {
-        return res.status(200).json({ ok: false, error: 'File appears empty' })
-      }
-
-      const lines = text2.trim().split('\n')
-      return res.status(200).json({
-        ok: true,
-        content: text2.slice(0, 100000),
-        lines: lines.length,
-        preview: lines.slice(0, 2).join(' | '),
-      })
+    if (!fileRes.ok) {
+      const errText = await fileRes.text()
+      return res.status(200).json({ ok: false, error: `Drive API error ${fileRes.status}: ${errText.slice(0, 200)}` })
     }
 
-    if (!text || text.trim().length < 20) {
-      return res.status(200).json({ ok: false, error: 'File appears empty or could not be read' })
+    const text = await fileRes.text()
+
+    if (!text || text.trim().length < 10) {
+      return res.status(200).json({ ok: false, error: 'File appears empty' })
     }
 
     const lines = text.trim().split('\n')
+    console.log('[fetch-drive-csv] Successfully read', lines.length, 'rows from', fileId)
+
     res.status(200).json({
       ok: true,
       content: text.slice(0, 100000),
       lines: lines.length,
       preview: lines.slice(0, 2).join(' | '),
+      fileId,
     })
   } catch(e) {
+    console.error('[fetch-drive-csv] Error:', e.message)
     res.status(200).json({ ok: false, error: e.message })
   }
 }
