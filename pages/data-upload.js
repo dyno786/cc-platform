@@ -1,153 +1,107 @@
 import Head from 'next/head'
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import Shell from '../components/Shell'
 import { T } from '../lib/theme'
 
-const STEPS = [
-  { id:1, label:'Upload Google Ads CSV', icon:'📁' },
-  { id:2, label:'AI analyses spend', icon:'🧠' },
-  { id:3, label:'Paid Ads page updates', icon:'✅' },
-]
-
-const SOURCES = [
-  {
-    id:'ads',
-    label:'Campaign Performance CSV',
-    desc:'Google Ads → Reports → Predefined reports → Campaign performance → Download CSV',
-    why:'Shows spend, clicks, conversions and ROAS per campaign — tells you what your money is doing',
-    required:true,
-    color:T.blue,
-    icon:'📊'
-  },
-  {
-    id:'terms',
-    label:'Search Terms CSV',
-    desc:'Google Ads → Reports → When and where ads showed → Search terms → Download CSV',
-    why:'Shows the actual search queries triggering your ads — finds wasted spend and new negative keywords',
-    required:false,
-    color:'#7c3aed',
-    icon:'🔍'
-  },
-]
-
-// Note: Search Console and GBP Insights are pulled live via API — no upload needed
-
 export default function DataUpload() {
-  const [files, setFiles] = useState({})
+  const [adsUrl, setAdsUrl] = useState('')
+  const [termsUrl, setTermsUrl] = useState('')
   const [step, setStep] = useState(1)
-  const [analysing, setAnalysing] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [fetchStatus, setFetchStatus] = useState({})
   const [results, setResults] = useState(null)
   const [error, setError] = useState('')
-  const [dragOver, setDragOver] = useState(null)
-  const refs = { ads: useRef(), terms: useRef() }
 
-  function handleFile(id, file) {
-    if (!file || !file.name.endsWith('.csv')) { setError('Please upload a CSV file'); return }
-    setFiles(f => ({ ...f, [id]: file }))
-    setError('')
-  }
-
-  function handleDrop(id, e) {
-    e.preventDefault(); setDragOver(null)
-    const file = e.dataTransfer.files[0]
-    handleFile(id, file)
+  async function fetchCsv(url, key) {
+    if (!url.trim()) return null
+    setFetchStatus(s => ({...s, [key]: 'Fetching...'}))
+    try {
+      const r = await fetch('/api/fetch-drive-csv', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ url: url.trim() })
+      })
+      const d = await r.json()
+      if (d.ok) {
+        setFetchStatus(s => ({...s, [key]: `✓ ${d.lines} rows loaded`}))
+        return d.content
+      } else {
+        setFetchStatus(s => ({...s, [key]: '✗ ' + d.error}))
+        return null
+      }
+    } catch(e) {
+      setFetchStatus(s => ({...s, [key]: '✗ ' + e.message}))
+      return null
+    }
   }
 
   async function analyse() {
-    if (!files.ads) { setError('Please upload your Google Ads CSV file to continue'); return }
-    setAnalysing(true); setStep(2); setError('')
-    try {
-      // Read Google Ads CSVs
-      const adsText = files.ads ? await readFile(files.ads) : null
-      const termsText = files.terms ? await readFile(files.terms) : null
-      const scText = null
-      const gbpText = null
+    if (!adsUrl.trim()) { setError('Please enter your Campaign Performance Google Drive URL'); return }
+    setLoading(true)
+    setStep(2)
+    setError('')
 
+    const [adsText, termsText] = await Promise.all([
+      fetchCsv(adsUrl, 'ads'),
+      termsUrl ? fetchCsv(termsUrl, 'terms') : Promise.resolve(null),
+    ])
+
+    if (!adsText) {
+      setError('Could not load Campaign Performance file. Make sure it is shared with "Anyone with the link".')
+      setLoading(false)
+      setStep(1)
+      return
+    }
+
+    setFetchStatus(s => ({...s, analyse: 'Analysing with AI...'}))
+
+    try {
       const r = await fetch('/api/analyse-data', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
-          adsText: adsText ? adsText.slice(0, 8000) : '',
-          termsText: termsText ? termsText.slice(0, 4000) : null,
-          scText: null,
-          gbpText: null,
+          adsText: adsText.slice(0, 10000),
+          termsText: termsText ? termsText.slice(0, 5000) : null,
         })
       })
       const d = await r.json()
-      if (!d.ok) throw new Error(d.error || 'Analysis failed')
-
-      // Save results to localStorage for all tabs to read
-      localStorage.setItem('cc_data_upload', JSON.stringify({
-        timestamp: Date.now(),
-        adsFile: files.ads.name,
-        termsFile: files.terms?.name || null,
-        results: d.results,
-      }))
-
-      setResults(d.results)
-      setStep(3)
+      if (d.ok) {
+        setResults(d.results)
+        setStep(3)
+        // Save to localStorage so other pages can use it
+        try { localStorage.setItem('cc_ads_analysis', JSON.stringify(d.results)) } catch(e) {}
+      } else {
+        setError(d.error || 'Analysis failed')
+        setStep(1)
+      }
     } catch(e) {
       setError(e.message)
       setStep(1)
     }
-    setAnalysing(false)
-  }
-
-  function readFile(file) {
-    return new Promise((res, rej) => {
-      const r = new FileReader()
-      r.onload = e => res(e.target.result)
-      r.onerror = () => rej(new Error('Could not read file'))
-      r.readAsText(file)
-    })
+    setLoading(false)
   }
 
   function reset() {
-    setFiles({}); setStep(1); setResults(null); setError('')
+    setStep(1); setResults(null); setError(''); setFetchStatus({})
+    setAdsUrl(''); setTermsUrl('')
   }
 
   return (
     <>
       <Head><title>Data Upload — CC Intelligence</title></Head>
-      <Shell title="Data Upload" subtitle="Upload Monday reports — entire platform updates automatically">
+      <Shell title="Google Ads Analysis" subtitle="Paste your Google Drive CSV links — AI analyses your spend and fills the Paid Ads page">
 
-        {/* Step indicator */}
-        <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'14px 20px',marginBottom:16,display:'flex',alignItems:'center',gap:0}}>
-          {STEPS.map((s,i) => (
-            <div key={s.id} style={{display:'flex',alignItems:'center',flex:i<STEPS.length-1?1:'auto'}}>
-              <div style={{display:'flex',alignItems:'center',gap:8}}>
-                <div style={{width:28,height:28,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,
-                  background:step>s.id?T.green:step===s.id?T.blue:T.bg,
-                  color:step>=s.id?'#fff':T.textMuted,
-                  border:`2px solid ${step>s.id?T.green:step===s.id?T.blue:T.border}`,
-                  fontWeight:600,
-                }}>
-                  {step>s.id ? '✓' : s.id}
-                </div>
-                <span style={{fontSize:12,fontWeight:step===s.id?600:400,color:step===s.id?T.text:T.textMuted,whiteSpace:'nowrap'}}>{s.label}</span>
-              </div>
-              {i < STEPS.length-1 && <div style={{flex:1,height:2,background:step>s.id?T.green:T.border,margin:'0 12px'}}/>}
-            </div>
-          ))}
-        </div>
-
-        {error && (
-          <div style={{background:T.redBg,border:`0.5px solid ${T.redBorder}`,borderRadius:8,padding:'10px 14px',marginBottom:14,fontSize:12,color:T.red}}>
-            ⚠️ {error}
-          </div>
-        )}
-
-        {/* Live data info banner */}
+        {/* Live data banner */}
         <div style={{background:T.greenBg,border:'0.5px solid '+T.greenBorder,borderRadius:8,padding:'12px 16px',marginBottom:12}}>
-          <div style={{fontSize:12,fontWeight:700,color:T.green,marginBottom:8}}>Already connected via API — no upload needed</div>
+          <div style={{fontSize:12,fontWeight:700,color:T.green,marginBottom:8}}>Already live via API — no upload needed</div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
             {[
-              {icon:'🔍',label:'Search Console',detail:'Keywords, clicks, positions — live. Powers Organic SEO page.'},
-              {icon:'📍',label:'GBP Insights',detail:'Ratings, reviews for all 3 branches — live. Powers Local SEO page.'},
-              {icon:'🛍️',label:'Shopify',detail:'Orders, revenue, abandoned carts — live. Powers Overview page.'},
+              {icon:'🔍',label:'Search Console',detail:'Keywords, clicks, positions — live. Organic SEO page.'},
+              {icon:'📍',label:'GBP Insights',detail:'Ratings, reviews for all 3 branches — live. Local SEO page.'},
+              {icon:'🛍️',label:'Shopify',detail:'Orders, revenue, abandoned carts — live. Overview page.'},
             ].map((s,i) => (
               <div key={i} style={{background:'#fff',borderRadius:6,padding:'8px 10px',border:'0.5px solid '+T.greenBorder}}>
-                <div style={{fontSize:14,marginBottom:4}}>{s.icon}</div>
+                <div style={{fontSize:14,marginBottom:3}}>{s.icon}</div>
                 <div style={{fontSize:11,fontWeight:700,color:T.text,marginBottom:2}}>{s.label}</div>
                 <div style={{fontSize:10,color:T.textMuted,lineHeight:1.4}}>{s.detail}</div>
               </div>
@@ -155,151 +109,257 @@ export default function DataUpload() {
           </div>
         </div>
 
-        <div style={{background:T.amberBg,border:'1px solid '+T.amber+'40',borderRadius:8,padding:'8px 14px',marginBottom:14,fontSize:11,color:'#9a6700'}}>
-          Only Google Ads requires CSV upload — the Ads API is blocked by Vercel network routing, which is a confirmed Google limitation. Everything else updates automatically.
+        {/* Step indicators */}
+        <div style={{display:'flex',gap:0,marginBottom:20}}>
+          {[
+            {n:1,label:'Paste Drive links'},
+            {n:2,label:'AI fetches & analyses'},
+            {n:3,label:'Results ready'},
+          ].map((s,i) => (
+            <div key={s.n} style={{display:'flex',alignItems:'center',flex:1}}>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <div style={{width:28,height:28,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,
+                  background:step>=s.n?T.green:'#d0d7de',color:'#fff'}}>
+                  {step>s.n?'✓':s.n}
+                </div>
+                <span style={{fontSize:11,color:step>=s.n?T.text:T.textMuted,fontWeight:step===s.n?600:400}}>{s.label}</span>
+              </div>
+              {i<2 && <div style={{flex:1,height:2,background:step>s.n?T.green:'#d0d7de',margin:'0 8px'}}/>}
+            </div>
+          ))}
         </div>
 
-        {/* Step 1 — Upload */}
+        {error && (
+          <div style={{background:'#fff0f0',border:'0.5px solid #ffa0a0',borderRadius:8,padding:'10px 14px',marginBottom:14,fontSize:12,color:T.red}}>
+            ⚠ {error}
+          </div>
+        )}
+
+        {/* STEP 1 — Paste URLs */}
         {step === 1 && (
           <div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:12,marginBottom:16}}>
-              {SOURCES.map(src => (
-                <div key={src.id}
-                  onDragOver={e=>{e.preventDefault();setDragOver(src.id)}}
-                  onDragLeave={()=>setDragOver(null)}
-                  onDrop={e=>handleDrop(src.id,e)}
-                  onClick={()=>refs[src.id].current.click()}
-                  style={{
-                    background:files[src.id]?T.greenBg:T.surface,
-                    border:`1.5px dashed ${files[src.id]?T.green:dragOver===src.id?src.color:T.border}`,
-                    borderRadius:8,padding:20,cursor:'pointer',textAlign:'center',transition:'all 0.15s',
-                  }}>
-                  <input ref={refs[src.id]} type="file" accept=".csv" style={{display:'none'}} onChange={e=>handleFile(src.id,e.target.files[0])}/>
-                  <div style={{fontSize:24,marginBottom:8}}>{files[src.id]?'✅':src.icon}</div>
-                  <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:4}}>
-                    {src.label}
-                    {src.required && <span style={{color:T.red,marginLeft:3}}>*</span>}
-                  </div>
-                  {files[src.id] ? (
-                    <div style={{fontSize:11,color:T.green,fontWeight:500}}>{files[src.id].name}</div>
-                  ) : (
-                    <div style={{fontSize:11,color:T.textMuted,lineHeight:1.4}}>{src.desc}</div>
-                  )}
-                  {files[src.id] && (
-                    <button onClick={e=>{e.stopPropagation();setFiles(f=>{const u={...f};delete u[src.id];return u})}}
-                      style={{marginTop:8,fontSize:10,color:T.textMuted,background:'none',border:`0.5px solid ${T.border}`,borderRadius:4,padding:'2px 8px'}}>
-                      Remove
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* How to download guide */}
-            <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'14px 16px',marginBottom:16}}>
-              <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:10}}>How to download the reports</div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+            {/* How to get the link */}
+            <div style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,padding:'14px 16px',marginBottom:16}}>
+              <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:10}}>How to get your Google Drive link</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
                 <div>
-                  <div style={{fontSize:11,fontWeight:600,color:T.blue,marginBottom:6}}>Google Ads CSV</div>
-                  {['Go to ads.google.com','Click Reports → Predefined reports','Select "Campaign" report','Set date range to last 12 months','Click Download → CSV'].map((s,i)=>(
-                    <div key={i} style={{display:'flex',gap:7,marginBottom:4,alignItems:'flex-start'}}>
-                      <div style={{width:16,height:16,borderRadius:'50%',background:T.blueBg,color:T.blue,fontSize:9,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:1}}>{i+1}</div>
-                      <span style={{fontSize:11,color:T.textMuted}}>{s}</span>
+                  <div style={{fontSize:11,fontWeight:700,color:T.blue,marginBottom:6}}>📊 Campaign Performance</div>
+                  {[
+                    'Google Ads → Reports → Predefined reports',
+                    'Click "Campaign performance"',
+                    'Set date range → Download → CSV',
+                    'Upload CSV to Google Drive',
+                    'Right-click → Share → Anyone with link',
+                    'Copy link and paste below',
+                  ].map((s,i) => (
+                    <div key={i} style={{display:'flex',gap:6,marginBottom:4,fontSize:11,color:T.textMuted}}>
+                      <span style={{color:T.blue,fontWeight:700,flexShrink:0}}>{i+1}.</span>
+                      <span>{s}</span>
                     </div>
                   ))}
                 </div>
                 <div>
-                  <div style={{fontSize:11,fontWeight:600,color:T.green,marginBottom:6}}>Search Console CSV</div>
-                  {['Go to search.google.com/search-console','Select cchairandbeauty.com','Click Performance → Search results','Set date range to last 3 months','Click Export → Download CSV'].map((s,i)=>(
-                    <div key={i} style={{display:'flex',gap:7,marginBottom:4,alignItems:'flex-start'}}>
-                      <div style={{width:16,height:16,borderRadius:'50%',background:T.greenBg,color:T.green,fontSize:9,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:1}}>{i+1}</div>
-                      <span style={{fontSize:11,color:T.textMuted}}>{s}</span>
+                  <div style={{fontSize:11,fontWeight:700,color:'#7c3aed',marginBottom:6}}>🔍 Search Keywords (optional)</div>
+                  {[
+                    'Google Ads → Reports → When and where ads showed',
+                    'Click "Search terms"',
+                    'Download → CSV',
+                    'Upload to Google Drive',
+                    'Share → Anyone with link',
+                    'Copy link and paste below',
+                  ].map((s,i) => (
+                    <div key={i} style={{display:'flex',gap:6,marginBottom:4,fontSize:11,color:T.textMuted}}>
+                      <span style={{color:'#7c3aed',fontWeight:700,flexShrink:0}}>{i+1}.</span>
+                      <span>{s}</span>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
 
-            <button onClick={analyse} disabled={!files.ads}
-              style={{padding:'10px 28px',fontSize:13,fontWeight:600,color:'#fff',background:!files.ads?T.border:T.green,border:'none',borderRadius:8,cursor:!files.ads?'not-allowed':'pointer'}}>
-              Analyse reports →
+            {/* URL inputs */}
+            <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:16}}>
+              <div style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,padding:'14px 16px'}}>
+                <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:6}}>
+                  📊 Campaign Performance CSV — Google Drive link
+                  <span style={{color:T.red,marginLeft:4}}>*</span>
+                </div>
+                <div style={{fontSize:10,color:T.textMuted,marginBottom:8}}>Required. Paste the Google Drive share link for your Campaign Performance CSV.</div>
+                <input
+                  value={adsUrl}
+                  onChange={e=>setAdsUrl(e.target.value)}
+                  placeholder="https://drive.google.com/file/d/..."
+                  style={{width:'100%',padding:'8px 10px',fontSize:12,border:'1px solid '+(adsUrl?T.blue:T.border),borderRadius:7,background:T.bg,color:T.text,boxSizing:'border-box'}}
+                />
+                {fetchStatus.ads && (
+                  <div style={{fontSize:11,marginTop:5,color:fetchStatus.ads.startsWith('✓')?T.green:T.red,fontWeight:600}}>
+                    {fetchStatus.ads}
+                  </div>
+                )}
+              </div>
+
+              <div style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,padding:'14px 16px'}}>
+                <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:6}}>
+                  🔍 Search Keywords/Terms CSV — Google Drive link
+                  <span style={{color:T.textMuted,marginLeft:4,fontWeight:400}}>(optional but recommended)</span>
+                </div>
+                <div style={{fontSize:10,color:T.textMuted,marginBottom:8}}>Optional. Enables negative keyword recommendations based on your actual wasted spend.</div>
+                <input
+                  value={termsUrl}
+                  onChange={e=>setTermsUrl(e.target.value)}
+                  placeholder="https://drive.google.com/file/d/..."
+                  style={{width:'100%',padding:'8px 10px',fontSize:12,border:'1px solid '+(termsUrl?'#7c3aed':T.border),borderRadius:7,background:T.bg,color:T.text,boxSizing:'border-box'}}
+                />
+                {fetchStatus.terms && (
+                  <div style={{fontSize:11,marginTop:5,color:fetchStatus.terms.startsWith('✓')?T.green:T.red,fontWeight:600}}>
+                    {fetchStatus.terms}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <button onClick={analyse} disabled={!adsUrl.trim()}
+              style={{width:'100%',padding:'13px',fontSize:14,fontWeight:700,
+                background:adsUrl.trim()?T.green:'#d0d7de',
+                color:'#fff',border:'none',borderRadius:8,
+                cursor:adsUrl.trim()?'pointer':'not-allowed'}}>
+              Fetch & Analyse →
             </button>
           </div>
         )}
 
-        {/* Step 2 — Analysing */}
-        {step === 2 && analysing && (
-          <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:48,textAlign:'center'}}>
-            <div style={{fontSize:36,marginBottom:16}}>🧠</div>
-            <div style={{fontSize:15,fontWeight:600,color:T.text,marginBottom:8}}>AI is analysing your reports</div>
-            <div style={{fontSize:12,color:T.textMuted,marginBottom:24}}>Reading Google Ads and Search Console data — takes about 30 seconds</div>
-            <div style={{display:'flex',flexDirection:'column',gap:8,maxWidth:400,margin:'0 auto',textAlign:'left'}}>
-              {['Reading Google Ads campaign data...','Identifying wasted spend and quick wins...','Analysing Search Console rankings...','Finding keyword opportunities...','Generating weekly task list...','Writing platform updates...'].map((msg,i)=>(
-                <div key={i} style={{display:'flex',alignItems:'center',gap:8,fontSize:12,color:T.textMuted}}>
-                  <div style={{width:6,height:6,borderRadius:'50%',background:T.blue,flexShrink:0,animation:'pulse 1s ease-in-out infinite',animationDelay:`${i*0.2}s`}}/>
-                  {msg}
-                </div>
-              ))}
+        {/* STEP 2 — Loading */}
+        {step === 2 && (
+          <div style={{padding:40,textAlign:'center'}}>
+            <div style={{fontSize:40,marginBottom:16}}>⟳</div>
+            <div style={{fontSize:14,fontWeight:600,color:T.text,marginBottom:8}}>
+              {fetchStatus.analyse || 'Fetching your files from Google Drive...'}
             </div>
-            <style>{`@keyframes pulse{0%,100%{opacity:0.3}50%{opacity:1}}`}</style>
+            <div style={{fontSize:12,color:T.textMuted}}>This takes about 15-20 seconds</div>
+            {Object.entries(fetchStatus).filter(([k])=>k!=='analyse').map(([k,v]) => (
+              <div key={k} style={{marginTop:8,fontSize:11,color:v.startsWith('✓')?T.green:T.red,fontWeight:600}}>
+                {k==='ads'?'Campaign Performance':k==='terms'?'Search Keywords':k}: {v}
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Step 3 — Results */}
+        {/* STEP 3 — Results */}
         {step === 3 && results && (
           <div>
-            <div style={{background:T.greenBg,border:`0.5px solid ${T.greenBorder}`,borderRadius:8,padding:'12px 16px',marginBottom:16,display:'flex',alignItems:'center',gap:10}}>
-              <span style={{fontSize:20}}>✅</span>
-              <div>
-                <div style={{fontSize:13,fontWeight:600,color:T.green}}>Platform updated successfully</div>
-                <div style={{fontSize:11,color:T.textMuted}}>All tabs have been updated with the latest data</div>
-              </div>
+            {/* Summary */}
+            <div style={{background:T.greenBg,border:'0.5px solid '+T.greenBorder,borderRadius:8,padding:'14px 16px',marginBottom:12}}>
+              <div style={{fontSize:12,fontWeight:700,color:T.green,marginBottom:6}}>This week's key findings</div>
+              <div style={{fontSize:13,color:T.text,lineHeight:1.6}}>{results.summary}</div>
             </div>
 
-            {/* What updated */}
-            <div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10,marginBottom:16}}>
+            {/* Key metrics */}
+            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:12}}>
               {[
-                { icon:'📊', label:'Paid Ads', desc:'ROAS, wasted spend, top converters updated', color:T.blue },
-                { icon:'🔍', label:'Organic SEO', desc:'Rankings, quick wins, CTR opportunities updated', color:T.green },
-                { icon:'📝', label:'Blog Planner', desc:'This week\'s 21 posts reprioritised by data', color:T.purple },
-                { icon:'✅', label:'Tasks', desc:'Fresh Monday task list generated', color:T.amber },
-                { icon:'📋', label:'Weekly Report', desc:'Full management summary auto-written', color:T.textMuted },
-                { icon:'📍', label:'Local SEO', desc:'Branch visibility and actions updated', color:T.red },
-              ].map((u,i)=>(
-                <div key={i} style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'12px 14px'}}>
-                  <div style={{fontSize:18,marginBottom:6}}>{u.icon}</div>
-                  <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:3}}>{u.label} ✓</div>
-                  <div style={{fontSize:11,color:T.textMuted}}>{u.desc}</div>
+                {label:'Total Spend', value:results.totalSpend, color:T.blue},
+                {label:'Overall ROAS', value:results.overallRoas, color:T.green},
+                {label:'Conversions', value:results.totalConversions, color:'#7c3aed'},
+                {label:'Wasted Spend', value:results.wastedSpend, color:T.red},
+              ].map((m,i) => (
+                <div key={i} style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,padding:'12px 14px',textAlign:'center'}}>
+                  <div style={{fontSize:10,color:T.textMuted,textTransform:'uppercase',fontWeight:600,marginBottom:4}}>{m.label}</div>
+                  <div style={{fontSize:20,fontWeight:700,color:m.color}}>{m.value||'—'}</div>
                 </div>
               ))}
             </div>
 
-            {/* AI Summary */}
-            {results.summary && (
-              <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'14px 16px',marginBottom:16}}>
-                <div style={{fontSize:13,fontWeight:600,color:T.text,marginBottom:10}}>This week's key findings</div>
-                <div style={{fontSize:12,color:T.textMuted,lineHeight:1.7,whiteSpace:'pre-line'}}>{results.summary}</div>
+            {/* Top actions */}
+            <div style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,padding:'14px 16px',marginBottom:12}}>
+              <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:10}}>Top 5 actions this week</div>
+              {(results.topActions||[]).map((a,i) => (
+                <div key={i} style={{display:'flex',gap:10,padding:'6px 0',borderBottom:i<4?'0.5px solid '+T.borderLight:'none'}}>
+                  <div style={{width:22,height:22,borderRadius:'50%',background:T.blue,color:'#fff',fontSize:11,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{i+1}</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>{a}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Campaigns table */}
+            {results.campaigns?.length > 0 && (
+              <div style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,overflow:'auto',marginBottom:12}}>
+                <div style={{padding:'10px 14px',borderBottom:'0.5px solid '+T.border,background:T.bg,fontSize:12,fontWeight:600,color:T.text}}>Campaign breakdown</div>
+                <table style={{width:'100%',borderCollapse:'collapse',minWidth:600}}>
+                  <thead>
+                    <tr style={{background:T.bg}}>
+                      {['Campaign','Spend','Clicks','Conversions','ROAS','Action'].map(h => (
+                        <th key={h} style={{padding:'7px 12px',fontSize:10,fontWeight:600,color:T.textMuted,textTransform:'uppercase',textAlign:'left',borderBottom:'0.5px solid '+T.border}}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {results.campaigns.map((c,i) => {
+                      const actionColor = c.action==='Scale'?T.green:c.action==='Pause'?T.red:c.action==='Reduce'?T.amber:T.blue
+                      return (
+                        <tr key={i} style={{background:i%2===0?T.surface:T.bg}}>
+                          <td style={{padding:'8px 12px',fontSize:12,fontWeight:600,color:T.text,borderBottom:'0.5px solid '+T.borderLight}}>{c.name}</td>
+                          <td style={{padding:'8px 12px',fontSize:12,color:T.blue,borderBottom:'0.5px solid '+T.borderLight}}>{c.spend}</td>
+                          <td style={{padding:'8px 12px',fontSize:12,color:T.textMuted,borderBottom:'0.5px solid '+T.borderLight}}>{c.clicks}</td>
+                          <td style={{padding:'8px 12px',fontSize:12,color:T.green,borderBottom:'0.5px solid '+T.borderLight}}>{c.conversions}</td>
+                          <td style={{padding:'8px 12px',fontSize:12,fontWeight:700,color:T.text,borderBottom:'0.5px solid '+T.borderLight}}>{c.roas}</td>
+                          <td style={{padding:'8px 12px',borderBottom:'0.5px solid '+T.borderLight}}>
+                            <span style={{fontSize:11,fontWeight:700,padding:'2px 8px',borderRadius:4,background:actionColor+'20',color:actionColor}}>{c.action}</span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
 
-            {/* Top actions */}
-            {results.topActions && results.topActions.length > 0 && (
-              <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'14px 16px',marginBottom:16}}>
-                <div style={{fontSize:13,fontWeight:600,color:T.text,marginBottom:10}}>Top 5 actions this week</div>
-                {results.topActions.map((action,i)=>(
-                  <div key={i} style={{display:'flex',gap:10,padding:'7px 0',borderBottom:i<results.topActions.length-1?`0.5px solid ${T.borderLight}`:'none'}}>
-                    <div style={{width:20,height:20,borderRadius:'50%',background:i<2?T.redBg:T.amberBg,color:i<2?T.red:T.amber,fontSize:10,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{i+1}</div>
-                    <span style={{fontSize:12,color:T.text,lineHeight:1.4}}>{action}</span>
+            {/* Scale & Waste */}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12}}>
+              <div style={{background:T.greenBg,border:'0.5px solid '+T.greenBorder,borderRadius:8,padding:'12px 14px'}}>
+                <div style={{fontSize:11,fontWeight:700,color:T.green,marginBottom:5}}>🚀 Scale this now</div>
+                <div style={{fontSize:12,color:T.text}}>{results.scaleOpportunity}</div>
+              </div>
+              <div style={{background:'#fff0f0',border:'0.5px solid #ffa0a040',borderRadius:8,padding:'12px 14px'}}>
+                <div style={{fontSize:11,fontWeight:700,color:T.red,marginBottom:5}}>🚨 Biggest waste</div>
+                <div style={{fontSize:12,color:T.text}}>{results.biggestWaste}</div>
+              </div>
+            </div>
+
+            {/* Negative keywords */}
+            {results.negativeKeywords?.length > 0 && (
+              <div style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,padding:'14px 16px',marginBottom:12}}>
+                <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:8}}>Negative keywords to add</div>
+                <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                  {results.negativeKeywords.map((k,i) => (
+                    <span key={i} style={{fontSize:11,padding:'3px 9px',borderRadius:4,background:T.redBg,color:T.red,border:'0.5px solid #ffa0a040',fontWeight:500}}>{k}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Weekly tasks */}
+            {results.weeklyTasks?.length > 0 && (
+              <div style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,padding:'14px 16px',marginBottom:12}}>
+                <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:10}}>Tasks to do this week in Google Ads</div>
+                {results.weeklyTasks.map((t,i) => (
+                  <div key={i} style={{display:'flex',gap:8,padding:'5px 0',borderBottom:i<results.weeklyTasks.length-1?'0.5px solid '+T.borderLight:'none'}}>
+                    <span style={{color:T.blue,fontWeight:700,fontSize:11,flexShrink:0}}>{i+1}.</span>
+                    <span style={{fontSize:12,color:T.text}}>{t}</span>
                   </div>
                 ))}
               </div>
             )}
 
-            <button onClick={reset} style={{fontSize:12,color:T.textMuted,background:'none',border:`0.5px solid ${T.border}`,borderRadius:6,padding:'7px 16px'}}>
-              Upload new reports
-            </button>
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={reset} style={{padding:'8px 16px',fontSize:12,fontWeight:600,background:T.bg,color:T.text,border:'1px solid '+T.border,borderRadius:7,cursor:'pointer'}}>
+                Analyse new files
+              </button>
+              <a href="/paid-ads" style={{padding:'8px 16px',fontSize:12,fontWeight:700,background:T.blue,color:'#fff',borderRadius:7,textDecoration:'none'}}>
+                View Paid Ads page →
+              </a>
+            </div>
           </div>
         )}
+
       </Shell>
     </>
   )
