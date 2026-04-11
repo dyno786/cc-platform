@@ -2,18 +2,20 @@ export const config = { maxDuration: 60 }
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
-  const { ads, sc, gbp } = req.body
+  const { adsText, termsText, scText, gbpText } = req.body
+  // Support old field names too
+  const ads = adsText || ''
+  const sc = scText || ''
+  const gbp = gbpText || null
+  const terms = termsText || null
 
   const prompt = `You are a business intelligence analyst for CC Hair and Beauty, Leeds UK.
 A hair and beauty retailer established 1979 with 3 branches (Chapeltown LS7, Roundhay LS8, City Centre LS2) and Shopify store cchairandbeauty.com.
 
 You have been given two CSV data exports:
 
-GOOGLE ADS DATA:
-${ads}
-
-SEARCH CONSOLE DATA:
-${sc}
+GOOGLE ADS CAMPAIGN PERFORMANCE:
+${ads.slice(0,3000)}${terms ? '\n\nGOOGLE ADS SEARCH TERMS (actual queries triggering ads):\n'+terms.slice(0,2000) : ''}\n\nNOTE: Search Console and GBP data are available live via API — focus analysis on the Google Ads data provided.
 
 ${gbp ? `GBP INSIGHTS DATA:\n${gbp}` : ''}
 
@@ -64,6 +66,10 @@ Analyse both datasets and return a JSON object with exactly this structure:
 
 Return ONLY the JSON object. No markdown, no backticks, no explanation.`
 
+  if (!ads || ads.trim().length < 10) {
+    return res.status(200).json({ ok: false, error: 'Google Ads CSV data is empty or too short. Please upload a valid Campaign Performance CSV.' })
+  }
+
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -73,7 +79,7 @@ Return ONLY the JSON object. No markdown, no backticks, no explanation.`
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'claude-haiku-4-5',
         max_tokens: 2000,
         messages: [{ role: 'user', content: prompt }]
       })
