@@ -25,22 +25,22 @@ Target: 3x ROAS minimum. Hair City Visitors is a LOCAL SEARCH/TEXT ad targeting 
 IMPORTANT: Base ALL analysis on the REAL data below. Use actual campaign names and real numbers throughout.
 
 === CAMPAIGN PERFORMANCE ===
-${adsText.slice(0, 8000)}
+${adsText.slice(0, 6000)}
 
 ${termsText ? `=== SEARCH TERMS (actual queries triggering ads) ===
-${termsText.slice(0, 3000)}` : ''}
+${termsText.slice(0, 2000)}` : ''}
 
 ${keywordsText ? `=== KEYWORDS (bids, quality scores) ===
-${keywordsText.slice(0, 2000)}` : ''}
+${keywordsText.slice(0, 1500)}` : ''}
 
 ${devicesText ? `=== DEVICE PERFORMANCE (mobile/desktop/tablet) ===
-${devicesText.slice(0, 1500)}` : ''}
+${devicesText.slice(0, 1000)}` : ''}
 
 ${scheduleText ? `=== WHEN ADS SHOWED (day/hour performance) ===
-${scheduleText.slice(0, 1500)}` : ''}
+${scheduleText.slice(0, 1000)}` : ''}
 
 ${auctionText ? `=== AUCTION INSIGHTS (competitors) ===
-${auctionText.slice(0, 1500)}` : ''}
+${auctionText.slice(0, 1000)}` : ''}
 
 Return ONLY valid JSON — no markdown, no backticks:
 
@@ -131,7 +131,7 @@ Return ONLY valid JSON — no markdown, no backticks:
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5',
-        max_tokens: 4000,
+        max_tokens: 8000,
         messages: [{ role: 'user', content: prompt }]
       })
     })
@@ -148,9 +148,34 @@ Return ONLY valid JSON — no markdown, no backticks:
     try {
       results = JSON.parse(clean)
     } catch(e) {
+      // Try to extract just the JSON object
       const match = clean.match(/\{[\s\S]*\}/)
-      if (match) results = JSON.parse(match[0])
-      else return res.status(200).json({ ok: false, error: 'Could not parse AI response: ' + clean.slice(0, 300) })
+      if (match) {
+        try {
+          results = JSON.parse(match[0])
+        } catch(e2) {
+          // JSON was truncated — try to repair by closing open structures
+          let partial = match[0]
+          // Count open brackets and close them
+          const openBraces = (partial.match(/\{/g) || []).length
+          const closeBraces = (partial.match(/\}/g) || []).length
+          const openBrackets = (partial.match(/\[/g) || []).length
+          const closeBrackets = (partial.match(/\]/g) || []).length
+          // Remove trailing incomplete line
+          partial = partial.replace(/,\s*"[^"]*"?\s*$/, '')
+          partial = partial.replace(/,\s*\{[^}]*$/, '')
+          // Close open arrays and objects
+          for (let i = closeBrackets; i < openBrackets; i++) partial += ']'
+          for (let i = closeBraces; i < openBraces; i++) partial += '}'
+          try {
+            results = JSON.parse(partial)
+          } catch(e3) {
+            return res.status(200).json({ ok: false, error: 'AI response was too long and could not be parsed. Try with fewer reports or contact support.' })
+          }
+        }
+      } else {
+        return res.status(200).json({ ok: false, error: 'Could not parse AI response: ' + clean.slice(0, 300) })
+      }
     }
 
     res.status(200).json({ ok: true, results })
