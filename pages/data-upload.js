@@ -79,7 +79,7 @@ export default function DataUpload() {
       localStorage.setItem('cc_data_upload', JSON.stringify({
         timestamp: Date.now(),
         adsFile: files.ads.name,
-        scFile: files.sc.name,
+        termsFile: files.terms?.name || null,
         results: d.results,
       }))
 
@@ -219,8 +219,8 @@ export default function DataUpload() {
               </div>
             </div>
 
-            <button onClick={analyse} disabled={!files.ads||!files.sc}
-              style={{padding:'10px 28px',fontSize:13,fontWeight:600,color:'#fff',background:(!files.ads||!files.sc)?T.border:T.green,border:'none',borderRadius:8,cursor:(!files.ads||!files.sc)?'not-allowed':'pointer'}}>
+            <button onClick={analyse} disabled={!files.ads}
+              style={{padding:'10px 28px',fontSize:13,fontWeight:600,color:'#fff',background:!files.ads?T.border:T.green,border:'none',borderRadius:8,cursor:!files.ads?'not-allowed':'pointer'}}>
               Analyse reports →
             </button>
           </div>
