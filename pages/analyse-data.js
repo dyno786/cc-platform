@@ -2,73 +2,63 @@ export const config = { maxDuration: 60 }
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
-  const { adsText, termsText, scText, gbpText } = req.body
-  // Support old field names too
-  const ads = adsText || ''
-  const sc = scText || ''
-  const gbp = gbpText || null
-  const terms = termsText || null
 
-  const prompt = `You are a business intelligence analyst for CC Hair and Beauty, Leeds UK.
-A hair and beauty retailer established 1979 with 3 branches (Chapeltown LS7, Roundhay LS8, City Centre LS2) and Shopify store cchairandbeauty.com.
+  const { adsText, termsText } = req.body
 
-You have been given two CSV data exports:
-
-GOOGLE ADS CAMPAIGN PERFORMANCE:
-${ads.slice(0,3000)}${terms ? '\n\nGOOGLE ADS SEARCH TERMS (actual queries triggering ads):\n'+terms.slice(0,2000) : ''}\n\nNOTE: Search Console and GBP data are available live via API — focus analysis on the Google Ads data provided.
-
-${gbp ? `GBP INSIGHTS DATA:\n${gbp}` : ''}
-
-Analyse both datasets and return a JSON object with exactly this structure:
-{
-  "summary": "3-4 sentence plain English summary of the most important findings this week. What is working, what is wasting money, what opportunities exist.",
-  "topActions": [
-    "Action 1 — specific, data-driven, e.g. Pause energy drink keywords — £1,284 wasted at 0.26x ROAS",
-    "Action 2",
-    "Action 3",
-    "Action 4",
-    "Action 5"
-  ],
-  "adsInsights": {
-    "totalSpend": "£X,XXX",
-    "totalRevenue": "£X,XXX",
-    "roas": "X.XXx",
-    "wastedSpend": "£X,XXX",
-    "topConverter": "product name — £X CPA",
-    "worstWaste": "product/campaign — £X wasted",
-    "scaleNow": "campaign/keyword with high ROAS but low spend",
-    "negativeKeywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"]
-  },
-  "seoInsights": {
-    "totalClicks": "X,XXX",
-    "totalImpressions": "X,XXX",
-    "avgPosition": "X.X",
-    "quickWins": ["keyword at pos 5-15 with high impressions 1", "keyword 2", "keyword 3"],
-    "topKeywords": ["keyword with most clicks 1", "keyword 2", "keyword 3"],
-    "ctrOpportunities": ["page/keyword with low CTR 1", "page 2"],
-    "newContent": ["blog topic suggested by data 1", "topic 2", "topic 3"]
-  },
-  "weeklyBlogPriority": [
-    {"title": "suggested blog post title 1", "reason": "why this week based on data", "type": "local/ads/organic"},
-    {"title": "suggested blog post title 2", "reason": "why this week based on data", "type": "local/ads/organic"},
-    {"title": "suggested blog post title 3", "reason": "why this week based on data", "type": "local/ads/organic"}
-  ],
-  "tasksThisWeek": [
-    "Specific task 1 derived from data",
-    "Specific task 2",
-    "Specific task 3",
-    "Specific task 4",
-    "Specific task 5",
-    "Specific task 6",
-    "Specific task 7"
-  ]
-}
-
-Return ONLY the JSON object. No markdown, no backticks, no explanation.`
-
-  if (!ads || ads.trim().length < 10) {
-    return res.status(200).json({ ok: false, error: 'Google Ads CSV data is empty or too short. Please upload a valid Campaign Performance CSV.' })
+  if (!adsText || adsText.trim().length < 20) {
+    return res.status(200).json({
+      ok: false,
+      error: 'Google Ads CSV appears empty. Please upload your Campaign Performance CSV from Google Ads → Reports → Predefined reports → Campaign performance → Download.'
+    })
   }
+
+  const prompt = `You are a Google Ads analyst for CC Hair and Beauty Leeds — an afro hair and beauty retailer established 1979. They have 3 branches: Chapeltown LS7, Roundhay LS8, Leeds City Centre LS2, and online store cchairandbeauty.com.
+
+Analyse the Google Ads data below and return a JSON report.
+
+CAMPAIGN PERFORMANCE CSV:
+${adsText.slice(0, 8000)}
+
+${termsText ? `SEARCH KEYWORDS/TERMS CSV:
+${termsText.slice(0, 4000)}` : 'Note: No search terms data provided.'}
+
+Return ONLY a valid JSON object — no markdown, no backticks, no explanation before or after:
+
+{
+  "summary": "3-4 sentence plain English summary based on the actual data. What is working well, what is wasting money, and the single biggest opportunity right now.",
+  "totalSpend": "Total spend extracted from data e.g. £1,240",
+  "totalConversions": "Total conversions from data",
+  "overallRoas": "Overall ROAS calculated from data e.g. 3.2x",
+  "wastedSpend": "Estimated spend on campaigns/keywords with poor ROAS e.g. £340",
+  "topActions": [
+    "Action 1 — specific, name the actual campaign from the data with exact figures",
+    "Action 2 — specific",
+    "Action 3 — specific",
+    "Action 4 — specific",
+    "Action 5 — specific"
+  ],
+  "campaigns": [
+    {
+      "name": "Exact campaign name from CSV",
+      "spend": "£XXX",
+      "clicks": "XXX",
+      "conversions": "X",
+      "roas": "X.Xx",
+      "action": "Scale",
+      "reason": "High ROAS — increase budget by 20%"
+    }
+  ],
+  "negativeKeywords": ${termsText ? '["wasteful search term 1 from terms data", "term 2", "term 3", "term 4", "term 5"]' : '["Upload Search Terms CSV to get negative keyword recommendations"]'},
+  "scaleOpportunity": "Name the specific campaign with best ROAS that deserves more budget — be specific",
+  "biggestWaste": "Name the specific campaign or keyword wasting the most money — be specific",
+  "weeklyTasks": [
+    "Task 1 — exact action to do in Google Ads today",
+    "Task 2",
+    "Task 3",
+    "Task 4",
+    "Task 5"
+  ]
+}`
 
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
@@ -85,19 +75,29 @@ Return ONLY the JSON object. No markdown, no backticks, no explanation.`
       })
     })
 
+    if (!r.ok) {
+      const errText = await r.text()
+      return res.status(200).json({ ok: false, error: 'Anthropic API error: ' + r.status + ' — ' + errText.slice(0, 100) })
+    }
+
     const d = await r.json()
     const text = d.content?.[0]?.text || ''
 
-    // Parse JSON safely
+    if (!text) {
+      return res.status(200).json({ ok: false, error: 'AI returned empty response' })
+    }
+
     const clean = text.replace(/```json|```/g, '').trim()
     let results
     try {
       results = JSON.parse(clean)
     } catch(e) {
-      // Try to extract JSON from the response
       const match = clean.match(/\{[\s\S]*\}/)
-      if (match) results = JSON.parse(match[0])
-      else throw new Error('Could not parse AI response')
+      if (match) {
+        results = JSON.parse(match[0])
+      } else {
+        return res.status(200).json({ ok: false, error: 'Could not parse AI response. Raw: ' + clean.slice(0, 300) })
+      }
     }
 
     res.status(200).json({ ok: true, results })
