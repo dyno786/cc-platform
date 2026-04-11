@@ -37,10 +37,14 @@ export default async function handler(req, res) {
       })
     })
     const tokenData = await tokenRes.json()
+    console.log('[fetch-drive-csv] token response:', JSON.stringify(tokenData).slice(0,200))
     const accessToken = tokenData.access_token
 
     if (!accessToken) {
-      return res.status(200).json({ ok: false, error: 'Could not get Google access token. Check GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN in Vercel env vars.' })
+      return res.status(200).json({ 
+        ok: false, 
+        error: 'No access token. Google said: ' + (tokenData.error_description || tokenData.error || 'unknown') + '. Check GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and GOOGLE_DRIVE_REFRESH_TOKEN in Vercel.'
+      })
     }
 
     // Download the file
