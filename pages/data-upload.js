@@ -143,14 +143,31 @@ export default function DataUpload() {
 
   function pushToPaidAds() {
     try {
-      localStorage.setItem('cc_ads_analysis', JSON.stringify(results))
-      localStorage.setItem('cc_ads_analysis_date', new Date().toISOString())
+      const timestamp = new Date().toISOString()
+      const payload = JSON.stringify(results)
+      localStorage.setItem('cc_ads_analysis', payload)
+      localStorage.setItem('cc_ads_analysis_date', timestamp)
+      localStorage.setItem('cc_ads_analysis_size', payload.length)
+      // Verify it saved correctly
+      const check = localStorage.getItem('cc_ads_analysis')
+      if (!check) throw new Error('localStorage write failed — verify browser is not in private mode')
+      const parsed = JSON.parse(check)
+      if (!parsed.summary) throw new Error('Data saved but looks corrupt')
       setPushed(true)
-      setTimeout(() => window.location.href = '/paid-ads', 1000)
+      setTimeout(() => window.location.href = '/paid-ads', 1500)
     } catch(e) {
-      setError('Could not save: ' + e.message)
+      setError('Push failed: ' + e.message)
     }
   }
+
+  // Check if data was previously pushed
+  const [prevPushDate, setPrevPushDate] = useState(null)
+  useState(() => {
+    try {
+      const d = localStorage.getItem('cc_ads_analysis_date')
+      if (d) setPrevPushDate(new Date(d).toLocaleString('en-GB'))
+    } catch(e) {}
+  })
 
   function assign(fileId, reportId) {
     setAssignments(prev => {
@@ -176,6 +193,29 @@ export default function DataUpload() {
         <div style={{background:T.greenBg,border:'0.5px solid '+T.greenBorder,borderRadius:8,padding:'10px 14px',marginBottom:12,fontSize:11,color:T.green}}>
           <strong>Already live via API:</strong> Search Console · GBP Insights · Shopify — no upload needed for those. Only Google Ads reports need uploading.
         </div>
+
+        {/* Last push status */}
+        {(() => {
+          try {
+            const date = localStorage.getItem('cc_ads_analysis_date')
+            const size = localStorage.getItem('cc_ads_analysis_size')
+            if (date) return (
+              <div style={{background:T.surface,border:'0.5px solid '+T.border,borderRadius:8,padding:'10px 14px',marginBottom:12,display:'flex',alignItems:'center',gap:10}}>
+                <div style={{width:8,height:8,borderRadius:'50%',background:T.green,flexShrink:0}}/>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:11,fontWeight:700,color:T.text}}>Data last pushed to Paid Ads</div>
+                  <div style={{fontSize:10,color:T.textMuted}}>{new Date(date).toLocaleString('en-GB')} · {Math.round(parseInt(size||0)/1024)}KB saved</div>
+                </div>
+                <a href="/paid-ads" style={{fontSize:11,fontWeight:700,color:T.blue,textDecoration:'none'}}>View Paid Ads →</a>
+              </div>
+            )
+          } catch(e) {}
+          return (
+            <div style={{background:T.amberBg,border:'0.5px solid '+T.amber+'40',borderRadius:8,padding:'10px 14px',marginBottom:12,fontSize:11,color:'#9a6700'}}>
+              ⚠ No data pushed yet — run an audit and click Push to Paid Ads
+            </div>
+          )
+        })()}
 
         {error && (
           <div style={{background:'#fff0f0',border:'0.5px solid #ffa0a0',borderRadius:8,padding:'10px 14px',marginBottom:12,fontSize:12,color:T.red}}>
