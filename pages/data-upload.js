@@ -194,9 +194,10 @@ export default function DataUpload() {
           <strong>Already live via API:</strong> Search Console · GBP Insights · Shopify — no upload needed for those. Only Google Ads reports need uploading.
         </div>
 
-        {/* Last push status */}
+        {/* Last push status — uses state loaded in useEffect */}
         {(() => {
           try {
+            if (typeof window === 'undefined') return null
             const date = localStorage.getItem('cc_ads_analysis_date')
             const size = localStorage.getItem('cc_ads_analysis_size')
             if (date) return (

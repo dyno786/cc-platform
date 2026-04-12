@@ -333,58 +333,110 @@ export default function PaidAds() {
 
         {/* ── OVERVIEW ── */}
         {tab==='Overview' && (
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
-            <div style={{display:'flex',flexDirection:'column',gap:10}}>
-              <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,overflow:'hidden'}}>
-                <div style={{padding:'9px 13px',borderBottom:`0.5px solid ${T.border}`,background:T.bg,fontSize:12,fontWeight:600,color:T.text}}>Campaign ROAS — hover status badges for plain English explanation</div>
-                <div style={{padding:'12px 14px'}}>
-                  {[{l:'Human Hair Brands',r:11.29,s:'urgent'},{l:'Edge Control Desktop',r:7.00,s:'scale'},{l:'Braiding Hair Desktop',r:3.50,s:'scale'},{l:'Shopify Desktop',r:3.97,s:'scale'},{l:'Relaxers Mobile',r:2.40,s:'monitor'},{l:'Shopify Mobile',r:1.67,s:'reduce'},{l:'Synthetic Wigs',r:0.48,s:'pause'}].map((i,x)=>(
-                    <div key={x} style={{marginBottom:9}}>
-                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:3}}>
-                        <span style={{fontSize:11,color:T.text}}>{i.l}</span>
-                        <StatusBadge s={i.s}/>
-                      </div>
-                      <RBar v={i.r}/>
-                    </div>
-                  ))}
+          <div>
+            {/* Key metrics from real data */}
+            {analysisData && (
+              <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:12}}>
+                {[
+                  {label:'Total Spend', value:analysisData.totalSpend, color:T.blue},
+                  {label:'ROAS', value:analysisData.overallRoas, color:T.green},
+                  {label:'Conversions', value:analysisData.totalConversions, color:'#7c3aed'},
+                  {label:'Wasted Spend', value:analysisData.wastedSpend, color:T.red},
+                ].map((m,i)=>(
+                  <div key={i} style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'12px',textAlign:'center'}}>
+                    <div style={{fontSize:10,color:T.textMuted,textTransform:'uppercase',fontWeight:600,marginBottom:4}}>{m.label}</div>
+                    <div style={{fontSize:18,fontWeight:700,color:m.color}}>{m.value||'—'}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+              <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,overflow:'hidden'}}>
+                  <div style={{padding:'9px 13px',borderBottom:`0.5px solid ${T.border}`,background:T.bg,fontSize:12,fontWeight:600,color:T.text}}>
+                    {analysisData ? 'Your campaigns — from latest audit' : 'Campaign ROAS — example data'}
+                  </div>
+                  <div style={{padding:'12px 14px'}}>
+                    {analysisData?.campaigns ? (
+                      analysisData.campaigns.map((c,x)=>{
+                        const roasNum = parseFloat(c.roas)
+                        const s = isNaN(roasNum)?'monitor':roasNum>=4?'urgent':roasNum>=2.5?'scale':roasNum>=1.5?'monitor':roasNum>=1?'reduce':'pause'
+                        return (
+                          <div key={x} style={{marginBottom:9}}>
+                            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:3}}>
+                              <span style={{fontSize:11,color:T.text}}>{c.name}</span>
+                              <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                                <span style={{fontSize:11,color:T.textMuted}}>{c.spend}</span>
+                                <StatusBadge s={c.action==='Scale'?'scale':c.action==='Pause'?'pause':c.action==='Reduce'?'reduce':'monitor'}/>
+                              </div>
+                            </div>
+                            <RBar v={roasNum||0}/>
+                          </div>
+                        )
+                      })
+                    ) : (
+                      [{l:'Human Hair Brands',r:11.29,s:'urgent'},{l:'Edge Control Desktop',r:7.00,s:'scale'},{l:'Braiding Hair Desktop',r:3.50,s:'scale'},{l:'Shopify Desktop',r:3.97,s:'scale'},{l:'Relaxers Mobile',r:2.40,s:'monitor'},{l:'Shopify Mobile',r:1.67,s:'reduce'},{l:'Synthetic Wigs',r:0.48,s:'pause'}].map((i,x)=>(
+                        <div key={x} style={{marginBottom:9}}>
+                          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:3}}>
+                            <span style={{fontSize:11,color:T.text}}>{i.l}</span>
+                            <StatusBadge s={i.s}/>
+                          </div>
+                          <RBar v={i.r}/>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-            <div style={{display:'flex',flexDirection:'column',gap:10}}>
-              <div style={{background:T.redBg,border:`0.5px solid ${T.redBorder}`,borderRadius:8,padding:'12px 14px'}}>
-                <div style={{fontSize:11,fontWeight:600,color:T.red,marginBottom:7}}>🚨 Biggest waste — fix today</div>
-                {[
-                  {l:'Energy drinks (Monster, Red Bull, Sour Patch)',v:'£1,284 at 0.26x',tid:'t_neg_energy'},
-                  {l:'Service intent (hair salon searches)',v:'£2,560 at 0.82x',tid:'t_neg_salon'},
-                  {l:'Synthetic Wigs 2026 campaign',v:'£1,240 at 0.48x',tid:'t_pause_wigs'},
-                  {l:'Night spend 12am–6am',v:'£2,137 at 1.24x',tid:'t_excl_night'},
-                  {l:'Glasgow targeting',v:'£890 at 0.71x',tid:'t_pause_glasgow'},
-                ].map((i,x)=>(
-                  <div key={x} style={{display:'flex',alignItems:'center',gap:8,padding:'5px 0',borderBottom:x<4?`0.5px solid ${T.redBorder}`:'none'}}>
-                    <TickBox done={!!tasks[i.tid]} onToggle={tick} tid={i.tid} small/>
-                    <span style={{flex:1,fontSize:11,color:tasks[i.tid]?T.textMuted:T.red,textDecoration:tasks[i.tid]?'line-through':'none'}}>{i.l}</span>
-                    <span style={{fontSize:11,fontWeight:600,color:tasks[i.tid]?T.textMuted:T.red}}>{i.v}</span>
+              <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                <div style={{background:T.redBg,border:`0.5px solid ${T.redBorder}`,borderRadius:8,padding:'12px 14px'}}>
+                  <div style={{fontSize:11,fontWeight:600,color:T.red,marginBottom:7}}>🚨 Biggest waste — fix today</div>
+                  {analysisData ? (
+                    <div style={{fontSize:12,color:T.red,lineHeight:1.6}}>{analysisData.biggestWaste}</div>
+                  ) : (
+                    [{l:'Energy drinks (Monster, Red Bull, Sour Patch)',v:'£1,284 at 0.26x',tid:'t_neg_energy'},
+                     {l:'Service intent (hair salon searches)',v:'£2,560 at 0.82x',tid:'t_neg_salon'},
+                     {l:'Synthetic Wigs 2026 campaign',v:'£1,240 at 0.48x',tid:'t_pause_wigs'},
+                     {l:'Night spend 12am–6am',v:'£2,137 at 1.24x',tid:'t_excl_night'},
+                     {l:'Glasgow targeting',v:'£890 at 0.71x',tid:'t_pause_glasgow'},
+                    ].map((i,x)=>(
+                      <div key={x} style={{display:'flex',alignItems:'center',gap:8,padding:'5px 0',borderBottom:x<4?`0.5px solid ${T.redBorder}`:'none'}}>
+                        <TickBox done={!!tasks[i.tid]} onToggle={tick} tid={i.tid} small/>
+                        <span style={{flex:1,fontSize:11,color:tasks[i.tid]?T.textMuted:T.red,textDecoration:tasks[i.tid]?'line-through':'none'}}>{i.l}</span>
+                        <span style={{fontSize:11,fontWeight:600,color:tasks[i.tid]?T.textMuted:T.red}}>{i.v}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div style={{background:T.greenBg,border:`0.5px solid ${T.greenBorder}`,borderRadius:8,padding:'12px 14px'}}>
+                  <div style={{fontSize:11,fontWeight:600,color:T.green,marginBottom:7}}>🚀 Scale this now</div>
+                  {analysisData ? (
+                    <div style={{fontSize:12,color:T.green,lineHeight:1.6}}>{analysisData.scaleOpportunity}</div>
+                  ) : (
+                    [{l:'Human Hair Brands — only £62 spend in 2 years!',v:'11.29x ROAS',tid:'t_scale_hh'},
+                     {l:'Matrix Matte Definer — £0.03 CPA',v:'1000x ROAS',tid:'t_kw_matrix'},
+                     {l:'Desktop vs Mobile — fix device split',v:'3.94x vs 1.66x',tid:'t_mobile_reduce'},
+                    ].map((i,x)=>(
+                      <div key={x} style={{display:'flex',alignItems:'center',gap:8,padding:'5px 0',borderBottom:x<2?`0.5px solid ${T.greenBorder}`:'none'}}>
+                        <TickBox done={!!tasks[i.tid]} onToggle={tick} tid={i.tid} small/>
+                        <span style={{flex:1,fontSize:11,color:tasks[i.tid]?T.textMuted:T.green,textDecoration:tasks[i.tid]?'line-through':'none'}}>{i.l}</span>
+                        <span style={{fontSize:11,fontWeight:600,color:tasks[i.tid]?T.textMuted:T.green}}>{i.v}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+                {/* Top actions from real data */}
+                {analysisData?.topActions && (
+                  <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'12px 14px'}}>
+                    <div style={{fontSize:11,fontWeight:600,color:T.text,marginBottom:8}}>Top actions this week</div>
+                    {analysisData.topActions.slice(0,5).map((a,i)=>(
+                      <div key={i} style={{display:'flex',gap:8,padding:'5px 0',borderBottom:i<4?`0.5px solid ${T.borderLight}`:'none'}}>
+                        <div style={{width:18,height:18,borderRadius:'50%',background:i===0?T.red:T.blue,color:'#fff',fontSize:10,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{i+1}</div>
+                        <span style={{fontSize:11,color:T.text,lineHeight:1.4}}>{a}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <div style={{background:T.greenBg,border:`0.5px solid ${T.greenBorder}`,borderRadius:8,padding:'12px 14px'}}>
-                <div style={{fontSize:11,fontWeight:600,color:T.green,marginBottom:7}}>🚀 Scale these — money left on table</div>
-                {[
-                  {l:'Human Hair Brands — only £62 spend in 2 years!',v:'11.29x ROAS',tid:'t_scale_hh'},
-                  {l:'Matrix Matte Definer — £0.03 CPA',v:'1000x ROAS',tid:'t_kw_matrix'},
-                  {l:'Naturally Straight Textures',v:'735x ROAS',tid:'t_kw_nst'},
-                  {l:'Desktop vs Mobile — fix device split',v:'3.94x vs 1.66x',tid:'t_mobile_reduce'},
-                ].map((i,x)=>(
-                  <div key={x} style={{display:'flex',alignItems:'center',gap:8,padding:'5px 0',borderBottom:x<3?`0.5px solid ${T.greenBorder}`:'none'}}>
-                    <TickBox done={!!tasks[i.tid]} onToggle={tick} tid={i.tid} small/>
-                    <span style={{flex:1,fontSize:11,color:tasks[i.tid]?T.textMuted:T.green,textDecoration:tasks[i.tid]?'line-through':'none'}}>{i.l}</span>
-                    <span style={{fontSize:11,fontWeight:600,color:tasks[i.tid]?T.textMuted:T.green}}>{i.v}</span>
-                  </div>
-                ))}
-              </div>
-              <div style={{background:T.amberBg,border:`0.5px solid ${T.amberBorder}`,borderRadius:8,padding:'12px 14px'}}>
-                <div style={{fontSize:11,fontWeight:600,color:T.amber,marginBottom:6}}>⚠️ Device imbalance — most important fix</div>
-                <div style={{fontSize:11,color:T.amber,lineHeight:1.6}}>86% of budget on mobile at 1.66x ROAS. Desktop gets 13% at 3.94x ROAS. In plain English: you are spending most of your money on the device that makes the least money. Fixing this alone could save £8,000–£12,000 per year.</div>
+                )}
               </div>
             </div>
           </div>
@@ -396,9 +448,9 @@ export default function PaidAds() {
             <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:12}}>Monthly budget vs spend tracker — update these each month from Google Ads</div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:14}}>
               {[
-                {label:'Monthly Budget', value:'£1,200', sub:'Set in Google Ads', color:T.blue},
-                {label:'Spent This Month', value:'£847', sub:'As of today', color:T.green},
-                {label:'Remaining', value:'£353', sub:'29% left', color:T.amber},
+                {label:'Monthly Budget', value: analysisData ? 'See Google Ads' : '£1,200', sub:'Set in Google Ads', color:T.blue},
+                {label:'Spent This Month', value: analysisData?.totalSpend || '£847', sub: analysisData ? 'From your latest audit' : 'As of today', color:T.green},
+                {label:'Wasted Spend', value: analysisData?.wastedSpend || '£353', sub: analysisData ? 'Low ROAS campaigns' : 'Estimated', color:T.amber},
               ].map((s,i) => (
                 <div key={i} style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'14px 16px',textAlign:'center'}}>
                   <div style={{fontSize:11,color:T.textMuted,marginBottom:6}}>{s.label}</div>

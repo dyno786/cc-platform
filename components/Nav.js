@@ -9,15 +9,18 @@ const NAV_ITEMS = [
     { id:'/',                label:'Overview',             icon:'⬡' },
     { id:'/tasks',           label:'Task List',            icon:'✅' },
     { id:'/performance',     label:'Performance',          icon:'📊' },
+    { id:'/yearly',          label:'Year on Year',         icon:'📅' },
   ]},
   { section:'Sales', items:[
     { id:'/paid-ads',        label:'Paid Ads',             icon:'💰' },
+    { id:'/roas',            label:'ROAS Calculator',      icon:'📈' },
     { id:'/abandoned-carts', label:'Abandoned Carts',      icon:'🛒' },
   ]},
   { section:'SEO', items:[
     { id:'/organic-seo',     label:'Organic SEO',          icon:'🔍' },
     { id:'/local-seo',       label:'Local SEO',            icon:'📍' },
     { id:'/website-seo',     label:'Website SEO',          icon:'🌐' },
+    { id:'/competitors',     label:'Competitors',          icon:'🏆' },
   ]},
   { section:'Content', items:[
     { id:'/blog-planner',    label:'Blog Planner',         icon:'📝' },
@@ -27,8 +30,12 @@ const NAV_ITEMS = [
   ]},
   { section:'Store', items:[
     { id:'/shopify-content', label:'Shopify Content',      icon:'🛍️' },
+    { id:'/customers',       label:'Customers',            icon:'👥' },
+    { id:'/stock',           label:'Stock Alerts',         icon:'📦' },
+    { id:'/trade',           label:'B2B Trade Portal',     icon:'🤝' },
   ]},
   { section:'System', items:[
+    { id:'/monday-report',   label:'Monday Report',        icon:'📋' },
     { id:'/data-upload',     label:'Data Upload',          icon:'📥' },
     { id:'/debug',           label:'Debug & API Status',   icon:'🔧' },
   ]},

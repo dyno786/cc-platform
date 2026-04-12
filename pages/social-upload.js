@@ -39,9 +39,14 @@ export default function SocialUpload() {
   const [error, setError] = useState(null)
   const [copied, setCopied] = useState({})
   const [activeTab, setActiveTab] = useState('create')
-  const [history, setHistory] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('cc_social_history') || '[]') } catch(e) { return [] }
-  })
+  const [history, setHistory] = useState([])
+
+  useEffect(() => {
+    try {
+      const h = localStorage.getItem('cc_social_history')
+      if (h) setHistory(JSON.parse(h))
+    } catch(e) {}
+  }, [])
   const fileRef = useRef()
 
   function handleImage(e) {
