@@ -207,10 +207,16 @@ export default function PaidAds() {
   const [sort, setSort] = useState({key:null,dir:'desc'})
   const [glossaryWord, setGlossaryWord] = useState(null)
 
+  const [analysisDate, setAnalysisDate] = useState(null)
+  const [analysisData, setAnalysisData] = useState(null)
+
   useEffect(()=>{
     try {
       const t=localStorage.getItem('cc_ads_v3'); if(t) setTasks(JSON.parse(t))
       const u=localStorage.getItem('cc_data_upload'); if(u) setUploadData(JSON.parse(u))
+      // Load analysis data pushed from data-upload page
+      const a=localStorage.getItem('cc_ads_analysis'); if(a) setAnalysisData(JSON.parse(a))
+      const d=localStorage.getItem('cc_ads_analysis_date'); if(d) setAnalysisDate(new Date(d))
     } catch(e){}
   },[])
 
