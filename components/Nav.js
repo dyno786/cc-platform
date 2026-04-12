@@ -7,7 +7,8 @@ import { useAuth } from './Auth'
 const NAV_ITEMS = [
   { section:'Main', items:[
     { id:'/',                label:'Overview',             icon:'⬡' },
-    { id:'/tasks',           label:'Tasks',                icon:'✅' },
+    { id:'/tasks',           label:'Task List',            icon:'✅' },
+    { id:'/performance',     label:'Performance',          icon:'📊' },
   ]},
   { section:'Sales', items:[
     { id:'/paid-ads',        label:'Paid Ads',             icon:'💰' },
@@ -22,14 +23,14 @@ const NAV_ITEMS = [
     { id:'/blog-planner',    label:'Blog Planner',         icon:'📝' },
     { id:'/social-upload',   label:'Social Media',         icon:'📱' },
     { id:'/brand-videos',    label:'Brand Videos',         icon:'🎬' },
+    { id:'/events',          label:'Events Calendar',      icon:'📅' },
   ]},
   { section:'Store', items:[
     { id:'/shopify-content', label:'Shopify Content',      icon:'🛍️' },
-    { id:'/performance',     label:'Performance',          icon:'📊' },
   ]},
   { section:'System', items:[
-    { id:'/debug',           label:'Debug & API Status',   icon:'🔧' },
     { id:'/data-upload',     label:'Data Upload',          icon:'📥' },
+    { id:'/debug',           label:'Debug & API Status',   icon:'🔧' },
   ]},
 ]
 
@@ -39,7 +40,6 @@ export default function Nav() {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  // Auto-collapse on mobile
   useEffect(() => {
     const check = () => {
       if (window.innerWidth < 768) setCollapsed(true)
@@ -49,14 +49,12 @@ export default function Nav() {
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  // Close mobile nav on route change
   useEffect(() => { setMobileOpen(false) }, [router.pathname])
 
   const navWidth = collapsed ? 52 : 196
 
   return (
     <>
-      {/* Mobile hamburger button */}
       <button
         onClick={() => setMobileOpen(o => !o)}
         style={{
@@ -64,14 +62,12 @@ export default function Nav() {
           position: 'fixed', top: 12, left: 12, zIndex: 1000,
           background: T.surface, border: `1px solid ${T.border}`,
           borderRadius: 8, padding: '6px 10px', fontSize: 18, cursor: 'pointer',
-          '@media (max-width: 768px)': { display: 'block' }
         }}
         className="mobile-menu-btn"
       >
         {mobileOpen ? '✕' : '☰'}
       </button>
 
-      {/* Mobile overlay */}
       {mobileOpen && (
         <div onClick={() => setMobileOpen(false)} style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 90,
@@ -174,10 +170,9 @@ export default function Nav() {
                     borderRight: isActive ? `2px solid ${T.blue}` : '2px solid transparent',
                     color: isActive ? T.blue : T.textMuted,
                     fontSize: 12, fontWeight: isActive ? 600 : 400,
-                    borderRadius: collapsed ? 0 : '0',
                     transition: 'background 0.1s',
-                    title: collapsed ? item.label : '',
-                  }}>
+                  }}
+                  title={collapsed ? item.label : ''}>
                     <span style={{fontSize:14,flexShrink:0}}>{item.icon}</span>
                     {!collapsed && <span style={{overflow:'hidden',whiteSpace:'nowrap',textOverflow:'ellipsis'}}>{item.label}</span>}
                   </Link>
