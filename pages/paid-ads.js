@@ -132,7 +132,7 @@ const CAMPAIGNS = [
   { name:'Wigs General',         device:'Tablet',  spend:312,   rev:530,   roas:1.70, conv:21,   cpa:14.86, impr:22000,  ctr:1.8, qs:5, status:'monitor', action:'Monitor ROAS this week',        tid:null,              how:'Check again next Monday before changing' },
 ]
 
-const TABS = ['Overview','Campaigns','Devices & Times','Locations','Weekly Budget','Monthly Budget','Scale Keywords','Block Keywords','Competitors','How-To Guide','Tasks']
+const TABS = ['Overview','Campaigns','Brand Analysis','Product Exclusions','Budget Moves','Devices & Times','Locations','Weekly Budget','Monthly Budget','Scale Keywords','Block Keywords','Competitors','How-To Guide','Tasks']
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function TH({ children, onSort, sorted }) {
@@ -831,6 +831,140 @@ export default function PaidAds() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* ── BRAND ANALYSIS ── */}
+        {tab==='Brand Analysis' && (
+          <div>
+            {!analysisData?.brandAnalysis ? (
+              <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:48,textAlign:'center'}}>
+                <div style={{fontSize:32,marginBottom:12}}>📊</div>
+                <div style={{fontSize:14,fontWeight:600,color:T.text,marginBottom:6}}>No brand analysis yet</div>
+                <div style={{fontSize:12,color:T.textMuted,marginBottom:14}}>Upload your Campaign Performance CSV and Search Terms CSV together on the Data Upload page. The Search Terms report shows exactly which brands are getting clicks — and which ones are wasting your money.</div>
+                <a href="/data-upload" style={{display:'inline-block',padding:'9px 20px',background:T.blue,color:'#fff',borderRadius:7,fontSize:12,fontWeight:700,textDecoration:'none'}}>Go to Data Upload →</a>
+              </div>
+            ) : (
+              <div>
+                <div style={{background:T.amberBg,border:`0.5px solid ${T.amberBorder}`,borderRadius:7,padding:'9px 13px',marginBottom:12,fontSize:11,color:T.amber}}>
+                  Brand analysis is based on your search terms report. Brands with many clicks but zero conversions should be excluded from your Shopping campaigns.
+                </div>
+                <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,overflow:'auto'}}>
+                  <table style={{width:'100%',borderCollapse:'collapse'}}>
+                    <thead><tr style={{background:T.bg}}>
+                      {['Brand','Clicks/Searches','Conversions','Verdict','Why','Action'].map(h=>(
+                        <th key={h} style={{padding:'8px 12px',fontSize:10,fontWeight:600,color:T.textMuted,textTransform:'uppercase',textAlign:'left',borderBottom:`0.5px solid ${T.border}`,whiteSpace:'nowrap'}}>{h}</th>
+                      ))}
+                    </thead>
+                    <tbody>
+                      {analysisData.brandAnalysis.map((b,i)=>{
+                        const vc = b.verdict==='Scale'?T.green:b.verdict==='Pause'||b.verdict==='Exclude'?T.red:b.verdict==='Reduce'?T.amber:T.blue
+                        return (
+                          <tr key={i} style={{background:i%2===0?T.surface:T.bg}}>
+                            <td style={{padding:'9px 12px',fontSize:12,fontWeight:700,color:T.text,borderBottom:`0.5px solid ${T.borderLight}`}}>{b.brand}</td>
+                            <td style={{padding:'9px 12px',fontSize:11,color:T.blue,borderBottom:`0.5px solid ${T.borderLight}`}}>{b.searchVolume}</td>
+                            <td style={{padding:'9px 12px',fontSize:11,color:b.conversions==='0'||b.conversions===0?T.red:T.green,fontWeight:600,borderBottom:`0.5px solid ${T.borderLight}`}}>{b.conversions}</td>
+                            <td style={{padding:'9px 12px',borderBottom:`0.5px solid ${T.borderLight}`}}>
+                              <span style={{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:3,background:vc+'20',color:vc}}>{b.verdict}</span>
+                            </td>
+                            <td style={{padding:'9px 12px',fontSize:10,color:T.textMuted,borderBottom:`0.5px solid ${T.borderLight}`,maxWidth:180,lineHeight:1.4}}>{b.reason}</td>
+                            <td style={{padding:'9px 12px',fontSize:10,color:T.green,borderBottom:`0.5px solid ${T.borderLight}`,maxWidth:200,lineHeight:1.4}}>{b.budgetAction}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── PRODUCT EXCLUSIONS ── */}
+        {tab==='Product Exclusions' && (
+          <div>
+            {!analysisData?.productExclusions ? (
+              <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:48,textAlign:'center'}}>
+                <div style={{fontSize:32,marginBottom:12}}>🚫</div>
+                <div style={{fontSize:14,fontWeight:600,color:T.text,marginBottom:6}}>No product exclusion data yet</div>
+                <div style={{fontSize:12,color:T.textMuted,marginBottom:14}}>Upload your Search Terms CSV — it shows which products are getting clicks but no sales. These should be excluded from your Shopping campaigns.</div>
+                <a href="/data-upload" style={{display:'inline-block',padding:'9px 20px',background:T.blue,color:'#fff',borderRadius:7,fontSize:12,fontWeight:700,textDecoration:'none'}}>Go to Data Upload →</a>
+              </div>
+            ) : (
+              <div>
+                <div style={{background:'#fff0f0',border:`0.5px solid ${T.red}40`,borderRadius:7,padding:'9px 13px',marginBottom:12,fontSize:11,color:T.red}}>
+                  These products are appearing in your Shopping ads, getting clicks, but generating no sales. Each one is pure wasted spend. Exclude them immediately.
+                </div>
+                {analysisData.productExclusions.map((p,i)=>(
+                  <div key={i} style={{background:T.surface,border:`0.5px solid ${T.border}`,borderLeft:`4px solid ${T.red}`,borderRadius:8,padding:'12px 14px',marginBottom:8}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:6}}>
+                      <div style={{fontSize:12,fontWeight:700,color:T.text}}>{p.product}</div>
+                      <span style={{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:3,background:'#fff0f0',color:T.red,whiteSpace:'nowrap',marginLeft:8}}>Exclude</span>
+                    </div>
+                    <div style={{fontSize:11,color:T.textMuted,marginBottom:4}}>{p.reason}</div>
+                    <div style={{fontSize:11,color:T.green,fontWeight:500}}>→ {p.action}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── BUDGET MOVES ── */}
+        {tab==='Budget Moves' && (
+          <div>
+            {!analysisData?.budgetReallocation ? (
+              <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:48,textAlign:'center'}}>
+                <div style={{fontSize:32,marginBottom:12}}>💸</div>
+                <div style={{fontSize:14,fontWeight:600,color:T.text,marginBottom:6}}>No budget analysis yet</div>
+                <div style={{fontSize:12,color:T.textMuted,marginBottom:14}}>Upload your Campaign Performance CSV to see exactly how to reallocate your budget to reach 6x ROAS.</div>
+                <a href="/data-upload" style={{display:'inline-block',padding:'9px 20px',background:T.blue,color:'#fff',borderRadius:7,fontSize:12,fontWeight:700,textDecoration:'none'}}>Go to Data Upload →</a>
+              </div>
+            ) : (
+              <div>
+                {/* Summary */}
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:14}}>
+                  {[
+                    {label:'Current daily budget',value:analysisData.budgetReallocation.currentTotalBudget,color:T.blue},
+                    {label:'ROAS target',value:analysisData.budgetReallocation.targetRoas,color:T.green},
+                    {label:'Projected outcome',value:'See below',color:'#7c3aed'},
+                  ].map((m,i)=>(
+                    <div key={i} style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'12px',textAlign:'center'}}>
+                      <div style={{fontSize:10,color:T.textMuted,textTransform:'uppercase',fontWeight:600,marginBottom:4}}>{m.label}</div>
+                      <div style={{fontSize:16,fontWeight:700,color:m.color}}>{m.value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Budget moves */}
+                <div style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'14px 16px',marginBottom:12}}>
+                  <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:10}}>Exact budget moves to make</div>
+                  {(analysisData.budgetReallocation.moves||[]).map((move,i)=>(
+                    <div key={i} style={{display:'grid',gridTemplateColumns:'1fr auto 1fr 1fr',gap:10,alignItems:'center',padding:'10px 0',borderBottom:i<analysisData.budgetReallocation.moves.length-1?`0.5px solid ${T.borderLight}`:'none'}}>
+                      <div>
+                        <div style={{fontSize:10,color:T.red,fontWeight:700,textTransform:'uppercase',marginBottom:2}}>Take from</div>
+                        <div style={{fontSize:12,color:T.text,fontWeight:600}}>{move.from}</div>
+                      </div>
+                      <div style={{fontSize:16,color:T.textMuted}}>→</div>
+                      <div>
+                        <div style={{fontSize:10,color:T.green,fontWeight:700,textTransform:'uppercase',marginBottom:2}}>Move to</div>
+                        <div style={{fontSize:12,color:T.text,fontWeight:600}}>{move.to}</div>
+                      </div>
+                      <div style={{textAlign:'right'}}>
+                        <div style={{fontSize:16,fontWeight:800,color:T.green}}>{move.amount}</div>
+                        <div style={{fontSize:10,color:T.textMuted,lineHeight:1.4}}>{move.expectedImpact}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Projected outcome */}
+                <div style={{background:T.greenBg,border:`0.5px solid ${T.greenBorder}`,borderRadius:8,padding:'12px 14px'}}>
+                  <div style={{fontSize:11,fontWeight:700,color:T.green,marginBottom:4}}>Projected outcome after making these moves</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.6}}>{analysisData.budgetReallocation.projectedOutcome}</div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

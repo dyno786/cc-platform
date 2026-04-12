@@ -692,38 +692,69 @@ export default function LocalSEO() {
         {tab === 'Rating History' && (
           <div>
             <div style={{fontSize:11,color:T.textMuted,marginBottom:14}}>
-              Weekly rating snapshots saved automatically each time you load the Local SEO page. Builds up over time.
+              Daily snapshots saved when you load this page. Rating change is vs 7 days ago — not yesterday. Review count change shows new reviews added.
             </div>
             {Object.keys(ratingHistory).length === 0 && (
               <div style={{padding:30,textAlign:'center',color:T.textMuted,background:T.surface,borderRadius:8,border:`0.5px solid ${T.border}`}}>
-                No history yet — ratings are saved each time you visit this page. Come back next week to see the change.
+                No history yet — ratings are saved each time you visit this page. Check back tomorrow to see your first comparison.
               </div>
             )}
             {Object.keys(ratingHistory).sort().reverse().map(dateKey => {
               const snap = ratingHistory[dateKey]
+              const allKeys = Object.keys(ratingHistory).sort()
+              const dateIdx = allKeys.indexOf(dateKey)
+
+              // Find a snapshot from ~7 days ago (look for key 6-8 days before)
+              const targetDate = new Date(dateKey)
+              targetDate.setDate(targetDate.getDate() - 7)
+              const sevenDaysAgo = targetDate.toISOString().slice(0,10)
+              // Find closest key on or before 7 days ago
+              const prevKey = allKeys.filter(k => k <= sevenDaysAgo).sort().reverse()[0] || null
+
               return (
                 <div key={dateKey} style={{background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:8,padding:'12px 14px',marginBottom:8}}>
-                  <div style={{fontSize:11,fontWeight:700,color:T.textMuted,marginBottom:8}}>
-                    {new Date(dateKey).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                    <div style={{fontSize:11,fontWeight:700,color:T.textMuted}}>
+                      {new Date(dateKey+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
+                    </div>
+                    {prevKey && (
+                      <div style={{fontSize:10,color:T.textMuted}}>vs {new Date(prevKey+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</div>
+                    )}
                   </div>
                   <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
                     {Object.entries(snap).map(([branch, data]) => {
-                      // Find previous week's rating for this branch
-                      const prevKey = Object.keys(ratingHistory).sort().reverse().find(k => k < dateKey)
-                      const prevRating = prevKey ? ratingHistory[prevKey][branch]?.rating : null
-                      const diff = prevRating ? (data.rating - prevRating).toFixed(1) : null
+                      const prev = prevKey ? ratingHistory[prevKey]?.[branch] : null
+                      // Rating change vs 7 days ago
+                      const ratingDiff = prev ? parseFloat((data.rating - prev.rating).toFixed(1)) : null
+                      // Review count change vs 7 days ago
+                      const reviewDiff = prev ? (data.reviews - prev.reviews) : null
+                      const ratingColor = data.rating >= 4.5 ? T.green : data.rating >= 4.0 ? T.green : data.rating >= 3.5 ? T.amber : T.red
+
                       return (
-                        <div key={branch} style={{background:T.bg,borderRadius:6,padding:'8px 10px',border:`0.5px solid ${T.border}`}}>
-                          <div style={{fontSize:11,fontWeight:700,color:T.text,marginBottom:2}}>{branch}</div>
-                          <div style={{fontSize:18,fontWeight:700,color:data.rating>=4?T.green:T.amber}}>{data.rating}★</div>
-                          <div style={{fontSize:10,color:T.textMuted,marginBottom:2}}>{data.reviews} reviews</div>
-                          {diff !== null && parseFloat(diff) !== 0 && (
-                            <div style={{fontSize:11,fontWeight:700,color:parseFloat(diff)>0?T.green:T.red}}>
-                              {parseFloat(diff)>0?'+':''}{diff} vs prev week
+                        <div key={branch} style={{background:T.bg,borderRadius:6,padding:'10px 12px',border:`0.5px solid ${T.border}`}}>
+                          <div style={{fontSize:11,fontWeight:700,color:T.text,marginBottom:4}}>{branch}</div>
+                          <div style={{fontSize:22,fontWeight:800,color:ratingColor,lineHeight:1,marginBottom:2}}>{data.rating}★</div>
+                          <div style={{fontSize:10,color:T.textMuted,marginBottom:6}}>{data.reviews} reviews</div>
+
+                          {/* Rating change — only show if actually changed vs 7 days ago */}
+                          {ratingDiff !== null && ratingDiff !== 0 && (
+                            <div style={{fontSize:11,fontWeight:700,color:ratingDiff>0?T.green:T.red,marginBottom:2}}>
+                              {ratingDiff>0?'▲ +':'▼ '}{Math.abs(ratingDiff)} rating vs 7d ago
                             </div>
                           )}
-                          {diff !== null && parseFloat(diff) === 0 && (
-                            <div style={{fontSize:10,color:T.textMuted}}>No change</div>
+                          {ratingDiff === 0 && prev && (
+                            <div style={{fontSize:10,color:T.textMuted,marginBottom:2}}>Rating unchanged vs 7d ago</div>
+                          )}
+                          {!prev && (
+                            <div style={{fontSize:10,color:T.textMuted,marginBottom:2}}>First snapshot</div>
+                          )}
+
+                          {/* Review count change */}
+                          {reviewDiff !== null && reviewDiff > 0 && (
+                            <div style={{fontSize:10,color:T.green,fontWeight:600}}>+{reviewDiff} new reviews</div>
+                          )}
+                          {reviewDiff === 0 && (
+                            <div style={{fontSize:10,color:T.textMuted}}>No new reviews</div>
                           )}
                         </div>
                       )
