@@ -5,6 +5,9 @@
 //   /api/seo-live?report=pages              pages, now vs before
 //   /api/seo-live?report=page&path=/collections/edge-control    one page: totals, searches, devices
 //   /api/seo-live?report=gbp                rating, review count and reviews for the three branches
+//   /api/seo-live?report=inspect&path=/collections/edge-control   what Google's index holds for one page
+//   /api/seo-live?report=sitemaps           the sitemaps Google has for the site
+//   /api/seo-live?report=speed&path=/       PageSpeed Insights for one page on a phone
 //
 // Optional on the Search Console reports: days=28 (7 to 90), country=gbr (or "all"), limit=500
 
@@ -90,6 +93,61 @@ function joined(now, prev, limit) {
   return out.slice(0, limit)
 }
 
+// The same page can be reported under www and non-www addresses. Add them together.
+function mergeByPath(rows) {
+  const m = new Map()
+  rows.forEach(r => {
+    const key = (r.key.replace(/^https?:\/\/(www\.)?cchairandbeauty\.com/, '').split('?')[0].split('#')[0]) || '/'
+    const x = m.get(key) || { key, clicks: 0, impressions: 0, pw: 0, prevClicks: 0, prevImpressions: 0, ppw: 0 }
+    x.clicks += r.clicks; x.impressions += r.impressions; x.pw += (r.position || 0) * r.impressions
+    x.prevClicks += r.prevClicks; x.prevImpressions += r.prevImpressions; x.ppw += (r.prevPosition || 0) * r.prevImpressions
+    m.set(key, x)
+  })
+  return [...m.values()].map(x => ({ key: x.key, clicks: x.clicks, impressions: x.impressions, position: x.impressions ? Math.round(x.pw / x.impressions * 10) / 10 : null,
+    prevClicks: x.prevClicks, prevImpressions: x.prevImpressions, prevPosition: x.prevImpressions ? Math.round(x.ppw / x.prevImpressions * 10) / 10 : null }))
+}
+
+const okPath = p => /^\/[A-Za-z0-9\-_/.%]*$/.test(p)
+
+async function inspect(token, path) {
+  const r = await fetch('https://searchconsole.googleapis.com/v1/urlInspection/index:inspect', {
+    method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ inspectionUrl: ORIGIN + path, siteUrl: SITE, languageCode: 'en-GB' }),
+  })
+  const d = await r.json()
+  if (d.error) { const e = new Error('URL inspection: ' + (d.error.message || 'request failed')); e.code = 'sc'; throw e }
+  const x = (d.inspectionResult || {}), i = x.indexStatusResult || {}, rr = x.richResultsResult || null
+  return { ok: true, report: 'inspect', path, url: ORIGIN + path, fetchedAt: new Date().toISOString(),
+    verdict: i.verdict || null, coverage: i.coverageState || null, robots: i.robotsTxtState || null, indexing: i.indexingState || null,
+    pageFetch: i.pageFetchState || null, lastCrawl: i.lastCrawlTime || null, crawledAs: i.crawledAs || null,
+    googleCanonical: i.googleCanonical || null, declaredCanonical: i.userCanonical || null, inSitemaps: i.sitemap || [], referringUrls: (i.referringUrls || []).slice(0, 5),
+    richResults: rr ? { verdict: rr.verdict || null, types: (rr.detectedItems || []).map(t => ({ type: t.richResultType, issues: (t.items || []).flatMap(it => (it.issues || []).map(s => s.issueMessage)).slice(0, 6) })) } : null }
+}
+
+async function sitemaps(token) {
+  const r = await fetch('https://www.googleapis.com/webmasters/v3/sites/' + encodeURIComponent(SITE) + '/sitemaps', { headers: { Authorization: 'Bearer ' + token } })
+  const d = await r.json()
+  if (d.error) { const e = new Error('Sitemaps: ' + (d.error.message || 'request failed')); e.code = 'sc'; throw e }
+  return { ok: true, report: 'sitemaps', fetchedAt: new Date().toISOString(), sitemaps: (d.sitemap || []).map(s => ({ path: s.path, lastSubmitted: s.lastSubmitted || null, lastDownloaded: s.lastDownloaded || null,
+    pending: !!s.isPending, isIndex: !!s.isSitemapsIndex, warnings: Number(s.warnings || 0), errors: Number(s.errors || 0), contents: (s.contents || []).map(c => ({ type: c.type, submitted: Number(c.submitted || 0) })) })) }
+}
+
+async function speed(path) {
+  const r = await fetch('https://www.googleapis.com/pagespeedonline/v5/runPagespeed?strategy=mobile&category=performance&url=' + encodeURIComponent(ORIGIN + path))
+  const d = await r.json()
+  if (d.error) { const e = new Error('PageSpeed: ' + (d.error.message || 'request failed')); e.code = 'psi'; throw e }
+  const lh = d.lighthouseResult || {}, a = lh.audits || {}, field = (d.loadingExperience && d.loadingExperience.metrics) || null
+  const val = k => a[k] ? { text: a[k].displayValue || null, score: a[k].score } : null
+  const f = k => field && field[k] ? { value: field[k].percentile, rating: field[k].category } : null
+  const fixes = Object.values(a).filter(x => x.details && x.details.type === 'opportunity' && x.details.overallSavingsMs > 150)
+    .sort((x, y) => y.details.overallSavingsMs - x.details.overallSavingsMs).slice(0, 5).map(x => ({ title: x.title, savingMs: Math.round(x.details.overallSavingsMs) }))
+  return { ok: true, report: 'speed', path, url: ORIGIN + path, device: 'phone', fetchedAt: new Date().toISOString(),
+    score: lh.categories && lh.categories.performance ? Math.round(lh.categories.performance.score * 100) : null,
+    lab: { lcp: val('largest-contentful-paint'), cls: val('cumulative-layout-shift'), tbt: val('total-blocking-time'), fcp: val('first-contentful-paint'), speedIndex: val('speed-index') },
+    realUsers: field ? { overall: d.loadingExperience.overall_category || null, lcp: f('LARGEST_CONTENTFUL_PAINT_MS'), inp: f('INTERACTION_TO_NEXT_PAINT'), cls: f('CUMULATIVE_LAYOUT_SHIFT_SCORE') } : null,
+    fixes }
+}
+
 async function gbp() {
   const key = process.env.GOOGLE_PLACES_KEY
   const fields = 'name,rating,user_ratings_total,formatted_address,opening_hours,reviews'
@@ -114,10 +172,17 @@ export default async function handler(req, res) {
   const report = String(req.query.report || 'summary')
   try {
     if (report === 'gbp') return res.status(200).json(await gbp())
+    if (report === 'speed' || report === 'inspect') {
+      const path = String(req.query.path || '')
+      if (!okPath(path)) return res.status(400).json({ ok: false, error: 'Give a path that starts with /, for example /collections/edge-control' })
+      if (report === 'speed') return res.status(200).json(await speed(path))
+      return res.status(200).json(await inspect(await accessToken(), path))
+    }
+    if (report === 'sitemaps') return res.status(200).json(await sitemaps(await accessToken()))
 
     const days = Math.min(90, Math.max(7, parseInt(req.query.days, 10) || 28))
     const country = String(req.query.country || 'gbr').toLowerCase()
-    const limit = Math.min(2000, Math.max(10, parseInt(req.query.limit, 10) || 500))
+    const limit = Math.min(8000, Math.max(10, parseInt(req.query.limit, 10) || 500))
     const filters = country === 'all' ? [] : [{ dimension: 'country', operator: 'equals', expression: country }]
     const per = periods(days)
     const token = await accessToken()
@@ -136,7 +201,7 @@ export default async function handler(req, res) {
       const dim = report === 'queries' ? 'query' : 'page'
       const [a, b] = await Promise.all([sc(token, per.now, [dim], filters, 5000), sc(token, per.prev, [dim], filters, 5000)])
       let rows = joined(a, b, 6000)
-      if (dim === 'page') rows = rows.map(r => ({ ...r, key: r.key.replace(/^https?:\/\/(www\.)?cchairandbeauty\.com/, '') || '/' }))
+      if (dim === 'page') rows = mergeByPath(rows)
       rows.sort((x, y) => (y.clicks + y.prevClicks) - (x.clicks + x.prevClicks) || y.impressions - x.impressions)
       return res.status(200).json({ ...base, rowCount: rows.length, rows: rows.slice(0, limit) })
     }
@@ -161,7 +226,7 @@ export default async function handler(req, res) {
         countries: ctry.map(r => ({ country: r.keys[0], clicks: r.clicks, impressions: r.impressions })) })
     }
 
-    return res.status(400).json({ ok: false, error: 'Unknown report. Use summary, queries, pages, page or gbp.' })
+    return res.status(400).json({ ok: false, error: 'Unknown report. Use summary, queries, pages, page, gbp, inspect, sitemaps or speed.' })
   } catch (e) {
     return res.status(200).json({ ok: false, report, code: e.code || 'error', error: e.message })
   }
