@@ -8,6 +8,8 @@
 //   /api/seo-live?report=inspect&path=/collections/edge-control   what Google's index holds for one page
 //   /api/seo-live?report=sitemaps           the sitemaps Google has for the site
 //   /api/seo-live?report=speed&path=/       PageSpeed Insights for one page on a phone
+//   /api/seo-live?report=merchant           Merchant Center: free-listing clicks, and products Google will not show
+//   /api/seo-live?report=merchant-register&email=you@example.com   one-time link between this Google Cloud project and Merchant Center
 //
 // Optional on the Search Console reports: days=28 (7 to 90), country=gbr (or "all"), limit=500
 
@@ -20,6 +22,8 @@ const PLACE_IDS = {
   Roundhay: 'ChIJSwvcAYlbeUgRT7wTEeJy25A',
   'City Centre': 'ChIJqTbKkhlceUgRcbg1e3Z7Ezo',
 }
+
+const MERCHANT_ID = process.env.MERCHANT_ID || '4675347'
 
 const iso = d => d.toISOString().slice(0, 10)
 const addDays = (d, n) => new Date(d.getTime() + n * 86400000)
@@ -151,6 +155,65 @@ async function speed(path) {
     fixes }
 }
 
+// ---- Merchant Center (Merchant API v1). Read only, apart from the one-time registration call. ----
+function merchantError(d, status) {
+  const msg = (d && d.error && d.error.message) || 'request failed'
+  const e = new Error('Merchant Center: ' + msg)
+  e.code = /insufficient authentication scopes|ACCESS_TOKEN_SCOPE_INSUFFICIENT/i.test(JSON.stringify(d)) ? 'scope'
+    : /not registered|developer registration|registerGcp/i.test(msg) ? 'register'
+    : /has not been used|is disabled|SERVICE_DISABLED/i.test(JSON.stringify(d)) ? 'disabled'
+    : (status === 403 || /permission|not have access/i.test(msg)) ? 'access' : 'merchant'
+  return e
+}
+async function mcSearch(token, query, maxPages) {
+  const rows = []; let pageToken; let pages = 0; let more = false
+  do {
+    const r = await fetch('https://merchantapi.googleapis.com/reports/v1/accounts/' + MERCHANT_ID + '/reports:search', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify(pageToken ? { query, pageSize: 1000, pageToken } : { query, pageSize: 1000 }),
+    })
+    const d = await r.json()
+    if (d.error) throw merchantError(d, r.status)
+    ;(d.results || []).forEach(x => rows.push(x))
+    pageToken = d.nextPageToken; pages++
+    more = !!pageToken
+  } while (pageToken && pages < (maxPages || 1))
+  return { rows, more }
+}
+const n = v => Number(v || 0)
+async function merchant(token) {
+  const per = periods(28)
+  const perf = range => "FROM product_performance_view WHERE date BETWEEN '" + range[0] + "' AND '" + range[1] + "' AND marketing_method = 'ORGANIC'"
+  const [now, prev, top, bad] = await Promise.all([
+    mcSearch(token, 'SELECT clicks, impressions ' + perf(per.now), 1),
+    mcSearch(token, 'SELECT clicks, impressions ' + perf(per.prev), 1),
+    mcSearch(token, 'SELECT offer_id, title, clicks, impressions ' + perf(per.now) + ' ORDER BY clicks DESC LIMIT 100', 1),
+    mcSearch(token, "SELECT id, offer_id, title, brand, availability, aggregated_reporting_context_status, item_issues FROM product_view WHERE aggregated_reporting_context_status = 'NOT_ELIGIBLE_OR_DISAPPROVED'", 4),
+  ])
+  const t = r => { const v = (r.rows[0] && r.rows[0].productPerformanceView) || {}; return { clicks: n(v.clicks), impressions: n(v.impressions) } }
+  const issues = {}
+  const blocked = bad.rows.map(x => {
+    const v = x.productView || {}
+    const codes = (v.itemIssues || []).filter(i => !i.severity || i.severity.aggregatedSeverity !== 'NOT_IMPACTED').map(i => (i.type && i.type.code) || 'unknown')
+    ;[...new Set(codes)].forEach(c => { issues[c] = (issues[c] || 0) + 1 })
+    return { offerId: v.offerId, title: v.title, brand: v.brand || '', availability: v.availability || '', issues: [...new Set(codes)].slice(0, 5) }
+  })
+  return { ok: true, report: 'merchant', merchantId: MERCHANT_ID, fetchedAt: new Date().toISOString(), period: per.now, previousPeriod: per.prev,
+    freeListings: { now: t(now), previous: t(prev) },
+    topFree: top.rows.map(x => x.productPerformanceView || {}).map(v => ({ offerId: v.offerId, title: v.title, clicks: n(v.clicks), impressions: n(v.impressions) })),
+    blockedCount: blocked.length, blockedTruncated: bad.more,
+    issueCounts: Object.entries(issues).sort((a, b) => b[1] - a[1]).map(([code, count]) => ({ code, count })),
+    blocked: blocked.filter(b => /in.?stock/i.test(b.availability)).concat(blocked.filter(b => !/in.?stock/i.test(b.availability))).slice(0, 300) }
+}
+async function merchantRegister(token, email) {
+  const r = await fetch('https://merchantapi.googleapis.com/accounts/v1/accounts/' + MERCHANT_ID + '/developerRegistration:registerGcp', {
+    method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ developerEmail: email }),
+  })
+  const d = await r.json()
+  if (d.error) throw merchantError(d, r.status)
+  return { ok: true, report: 'merchant-register', merchantId: MERCHANT_ID, registered: true, gcpIds: d.gcpIds || [] }
+}
+
 async function gbp() {
   const key = process.env.GOOGLE_PLACES_KEY
   const fields = 'name,rating,user_ratings_total,formatted_address,opening_hours,reviews'
@@ -182,6 +245,12 @@ export default async function handler(req, res) {
       return res.status(200).json(await inspect(await accessToken(), path))
     }
     if (report === 'sitemaps') return res.status(200).json(await sitemaps(await accessToken()))
+    if (report === 'merchant') return res.status(200).json(await merchant(await accessToken()))
+    if (report === 'merchant-register') {
+      const email = String(req.query.email || '')
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ ok: false, error: 'Give the Google account email that manages Merchant Center, as email=...' })
+      return res.status(200).json(await merchantRegister(await accessToken(), email))
+    }
 
     const days = Math.min(90, Math.max(7, parseInt(req.query.days, 10) || 28))
     const country = String(req.query.country || 'gbr').toLowerCase()
@@ -229,7 +298,7 @@ export default async function handler(req, res) {
         countries: ctry.map(r => ({ country: r.keys[0], clicks: r.clicks, impressions: r.impressions })) })
     }
 
-    return res.status(400).json({ ok: false, error: 'Unknown report. Use summary, queries, pages, page, gbp, inspect, sitemaps or speed.' })
+    return res.status(400).json({ ok: false, error: 'Unknown report. Use summary, queries, pages, page, gbp, inspect, sitemaps, speed or merchant.' })
   } catch (e) {
     return res.status(200).json({ ok: false, report, code: e.code || 'error', error: e.message })
   }

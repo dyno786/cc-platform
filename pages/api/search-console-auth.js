@@ -2,10 +2,11 @@ export default function handler(req, res) {
   const clientId = process.env.GOOGLE_CLIENT_ID
   const redirectUri = 'https://cc-platform-two.vercel.app/api/search-console-callback'
   
-  // Request both Search Console AND Sheets scopes
+  // Request Search Console, Sheets and Merchant Center scopes
   const scopes = [
     'https://www.googleapis.com/auth/webmasters.readonly',
     'https://www.googleapis.com/auth/spreadsheets.readonly',
+    'https://www.googleapis.com/auth/content',   // Merchant Center (read by /api/seo-live, which never writes)
   ].join(' ')
 
   const url = `https://accounts.google.com/o/oauth2/v2/auth?` +
