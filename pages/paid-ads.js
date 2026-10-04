@@ -855,7 +855,7 @@ export default function PaidAds() {
                       {['Brand','Clicks/Searches','Conversions','Verdict','Why','Action'].map(h=>(
                         <th key={h} style={{padding:'8px 12px',fontSize:10,fontWeight:600,color:T.textMuted,textTransform:'uppercase',textAlign:'left',borderBottom:`0.5px solid ${T.border}`,whiteSpace:'nowrap'}}>{h}</th>
                       ))}
-                    </thead>
+                    </tr></thead>
                     <tbody>
                       {analysisData.brandAnalysis.map((b,i)=>{
                         const vc = b.verdict==='Scale'?T.green:b.verdict==='Pause'||b.verdict==='Exclude'?T.red:b.verdict==='Reduce'?T.amber:T.blue
