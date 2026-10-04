@@ -6,6 +6,7 @@ import { useAuth } from './Auth'
 
 const NAV_ITEMS = [
   { section:'Main', items:[
+    { id:'/daily-brief',     label:'Daily Brief',          icon:'🧠' },
     { id:'/',                label:'Overview',             icon:'⬡' },
     { id:'/tasks',           label:'Task List',            icon:'✅' },
     { id:'/performance',     label:'Performance',          icon:'📊' },
