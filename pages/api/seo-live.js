@@ -4,6 +4,7 @@
 //   /api/seo-live?report=queries            searches, now vs before (for rising and falling)
 //   /api/seo-live?report=pages              pages, now vs before
 //   /api/seo-live?report=page&path=/collections/edge-control    one page: totals, searches, devices
+//   /api/seo-live?report=pagehistory&path=/collections/edge-control&days=120   one page, day by day (for the ranking log)
 //   /api/seo-live?report=gbp                rating, review count and reviews for the three branches
 //   /api/seo-live?report=inspect&path=/collections/edge-control   what Google's index holds for one page
 //   /api/seo-live?report=sitemaps           the sitemaps Google has for the site
@@ -280,6 +281,17 @@ export default async function handler(req, res) {
       return res.status(200).json({ ...base, rowCount: rows.length, rows: rows.slice(0, limit) })
     }
 
+    if (report === 'pagehistory') {
+      const path = String(req.query.path || '')
+      if (!okPath(path)) return res.status(400).json({ ok: false, error: 'Give a path that starts with /, for example /collections/edge-control' })
+      const span = Math.min(480, Math.max(14, parseInt(req.query.days, 10) || 120))
+      const end = addDays(new Date(), -2), start = addDays(end, -(span - 1))
+      const rx = '^https://(www\\.)?cchairandbeauty\\.com' + path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$'
+      const rows = await sc(token, [iso(start), iso(end)], ['date'], filters.concat([{ dimension: 'page', operator: 'includingRegex', expression: rx }]), 500)
+      return res.status(200).json({ ok: true, report, path, url: ORIGIN + path, country, searchType: 'web', from: iso(start), to: iso(end), fetchedAt: new Date().toISOString(),
+        daily: rows.map(r => [r.keys[0], r.clicks, r.impressions, Math.round(r.position * 10) / 10]).sort((a, b) => a[0] < b[0] ? -1 : 1) })
+    }
+
     if (report === 'page') {
       const path = String(req.query.path || '')
       if (!/^\/[A-Za-z0-9\-_/.%]*$/.test(path)) return res.status(400).json({ ok: false, error: 'Give a path that starts with /, for example /collections/edge-control' })
@@ -300,7 +312,7 @@ export default async function handler(req, res) {
         countries: ctry.map(r => ({ country: r.keys[0], clicks: r.clicks, impressions: r.impressions })) })
     }
 
-    return res.status(400).json({ ok: false, error: 'Unknown report. Use summary, queries, pages, page, gbp, inspect, sitemaps, speed or merchant.' })
+    return res.status(400).json({ ok: false, error: 'Unknown report. Use summary, queries, pages, page, pagehistory, gbp, inspect, sitemaps, speed or merchant.' })
   } catch (e) {
     return res.status(200).json({ ok: false, report, code: e.code || 'error', error: e.message })
   }
