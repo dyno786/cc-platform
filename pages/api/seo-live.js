@@ -181,7 +181,7 @@ async function mcSearch(token, query, maxPages) {
   return { rows, more }
 }
 const n = v => Number(v || 0)
-async function merchant(token) {
+async function merchant(token, full) {
   const per = periods(28)
   const perf = range => "FROM product_performance_view WHERE date BETWEEN '" + range[0] + "' AND '" + range[1] + "' AND marketing_method = 'ORGANIC'"
   const [now, prev, top, bad] = await Promise.all([
@@ -203,7 +203,9 @@ async function merchant(token) {
     topFree: top.rows.map(x => x.productPerformanceView || {}).map(v => ({ offerId: v.offerId, title: v.title, clicks: n(v.clicks), impressions: n(v.impressions) })),
     blockedCount: blocked.length, blockedTruncated: bad.more,
     issueCounts: Object.entries(issues).sort((a, b) => b[1] - a[1]).map(([code, count]) => ({ code, count })),
-    blocked: blocked.filter(b => /in.?stock/i.test(b.availability)).concat(blocked.filter(b => !/in.?stock/i.test(b.availability))).slice(0, 300) }
+    blocked: blocked.filter(b => /in.?stock/i.test(b.availability)).concat(blocked.filter(b => !/in.?stock/i.test(b.availability))).slice(0, 300),
+    // full=1: every blocked product in a compact form [offerId, title, brand, inStock, reasons], for the by-brand view
+    blockedAll: full ? blocked.map(b => [b.offerId, b.title, b.brand, /in.?stock/i.test(b.availability) ? 1 : 0, b.issues]) : undefined }
 }
 async function merchantRegister(token, email) {
   const r = await fetch('https://merchantapi.googleapis.com/accounts/v1/accounts/' + MERCHANT_ID + '/developerRegistration:registerGcp', {
@@ -245,7 +247,7 @@ export default async function handler(req, res) {
       return res.status(200).json(await inspect(await accessToken(), path))
     }
     if (report === 'sitemaps') return res.status(200).json(await sitemaps(await accessToken()))
-    if (report === 'merchant') return res.status(200).json(await merchant(await accessToken()))
+    if (report === 'merchant') return res.status(200).json(await merchant(await accessToken(), req.query.full === '1'))
     if (report === 'merchant-register') {
       const email = String(req.query.email || '')
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ ok: false, error: 'Give the Google account email that manages Merchant Center, as email=...' })
