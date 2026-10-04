@@ -133,9 +133,12 @@ async function sitemaps(token) {
 }
 
 async function speed(path) {
-  const r = await fetch('https://www.googleapis.com/pagespeedonline/v5/runPagespeed?strategy=mobile&category=performance&url=' + encodeURIComponent(ORIGIN + path))
+  // Without a key Google shares one small daily allowance between everyone, so use a key.
+  // PAGESPEED_KEY if set, otherwise the Maps key. The "PageSpeed Insights API" must be enabled for that key's project.
+  const key = process.env.PAGESPEED_KEY || process.env.GOOGLE_PLACES_KEY || ''
+  const r = await fetch('https://www.googleapis.com/pagespeedonline/v5/runPagespeed?strategy=mobile&category=performance&url=' + encodeURIComponent(ORIGIN + path) + (key ? '&key=' + key : ''))
   const d = await r.json()
-  if (d.error) { const e = new Error('PageSpeed: ' + (d.error.message || 'request failed')); e.code = 'psi'; throw e }
+  if (d.error) { const e = new Error('PageSpeed: ' + String(d.error.message || 'request failed').replace(key || '~', '[key]')); e.code = 'psi'; throw e }
   const lh = d.lighthouseResult || {}, a = lh.audits || {}, field = (d.loadingExperience && d.loadingExperience.metrics) || null
   const val = k => a[k] ? { text: a[k].displayValue || null, score: a[k].score } : null
   const f = k => field && field[k] ? { value: field[k].percentile, rating: field[k].category } : null
