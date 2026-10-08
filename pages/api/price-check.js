@@ -9,13 +9,15 @@
 export const config = { maxDuration: 60 }
 
 const UA = 'Mozilla/5.0 (compatible; CC-price-check/1.0; +https://cchairandbeauty.com)'
+// Ask every shop for its UK prices. This app runs on a server in the USA, and shops that sell abroad show dollars to American visitors.
+const UK = { 'accept-language': 'en-GB,en;q=0.9', cookie: 'localization=GB; cart_currency=GBP' }
 const okDomain = d => /^(?!-)[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(d) && d.length < 80 && !/^(localhost|127\.|10\.|192\.168\.|169\.254\.)/.test(d) && !/\.(local|internal)$/.test(d)
 const words = s => String(s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(' ').filter(w => w.length > 1 && !['the', 'and', 'for', 'with', 'hair', 'ml', 'oz'].includes(w))
 
 async function getJson(url, ms) {
   const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), ms)
   try {
-    const r = await fetch(url, { headers: { 'user-agent': UA, accept: 'application/json' }, signal: ctl.signal, redirect: 'follow' })
+    const r = await fetch(url, { headers: { 'user-agent': UA, accept: 'application/json', ...UK }, signal: ctl.signal, redirect: 'follow' })
     if (!r.ok) return { status: r.status }
     const text = await r.text()
     try { return { status: 200, json: JSON.parse(text) } } catch (e) { return { status: 200, notJson: true } }
@@ -32,18 +34,20 @@ async function suggest(domain, term, fields) {
 
 // the price of the exact shade, when the shop publishes barcodes on its product data
 async function exactVariant(domain, handle, barcode) {
-  if (!barcode || !handle) return null
+  if (!handle) return null
   const r = await getJson('https://' + domain + '/products/' + encodeURIComponent(handle) + '.json', 6000)
   const vs = r.json && r.json.product && r.json.product.variants
-  if (!Array.isArray(vs)) return null
-  const v = vs.find(x => String(x.barcode || '') === barcode || String(x.sku || '') === barcode)
-  return v ? { price: Number(v.price), shade: v.title } : null
+  if (!Array.isArray(vs) || !vs.length) return null
+  const v = barcode ? vs.find(x => String(x.barcode || '') === barcode || String(x.sku || '') === barcode) : null
+  const currency = String((v || vs[0]).price_currency || '').toUpperCase()   // the currency the shop answered in
+  return v ? { price: Number(v.price), shade: v.title, currency } : { currency }
 }
 
 async function getText(url, ms) {
   const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), ms)
-  try { const r = await fetch(url, { headers: { 'user-agent': UA, accept: 'text/html,*/*' }, signal: ctl.signal, redirect: 'follow' }); if (!r.ok) return null; return (await r.text()).slice(0, 600000) } catch (e) { return null } finally { clearTimeout(t) }
+  try { const r = await fetch(url, { headers: { 'user-agent': UA, accept: 'text/html,*/*', ...UK }, signal: ctl.signal, redirect: 'follow' }); if (!r.ok) return null; return (await r.text()).slice(0, 600000) } catch (e) { return null } finally { clearTimeout(t) }
 }
+const plain = t => String(t || '').replace(/&#0?38;|&amp;/g, '&').replace(/&#8211;|&ndash;/g, '-').replace(/&#8217;|&#039;|&apos;/g, "'").replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim()
 const nameScore = (want, title) => { const w = words(want); const have = new Set(words(title)); return w.length ? w.filter(x => have.has(x)).length / w.length : 0 }
 
 // WooCommerce shops publish a product list that can be searched by SKU (often the barcode) or by name
@@ -58,7 +62,9 @@ async function woo(domain, barcode, name) {
   const p = list[0]; if (!p) return { state: 'not stocked', note: 'No matching product was found on this shop.' }
   const minor = Number((p.prices && p.prices.currency_minor_unit) ?? 2), price = p.prices ? Number(p.prices.price) / Math.pow(10, minor) : 0
   if (!(price > 0)) return { state: 'not stocked', note: 'A product was found but it shows no price.' }
-  return { state: 'found', matched, title: String(p.name || '').replace(/&amp;/g, '&').replace(/&#8211;/g, '-'), price, priceMax: price, available: p.is_in_stock !== false, url: p.permalink }
+  const cur = String((p.prices && p.prices.currency_code) || '').toUpperCase()
+  if (cur && cur !== 'GBP') return { state: 'not readable', note: 'This shop answered in ' + cur + ' instead of pounds, so its price was left out.' }
+  return { state: 'found', matched, title: plain(p.name), price, priceMax: price, available: p.is_in_stock !== false, url: p.permalink }
 }
 
 // any other shop: use its search page, open the first product it returns, and read the price it declares for search engines
@@ -76,13 +82,17 @@ async function generic(domain, barcode, name) {
   const term = barcode || name; if (!term) return null
   for (const path of ['/search.php?search_query=', '/search?q=', '/?s=', '/catalogsearch/result/?q=']) {
     const html = await getText('https://' + domain + path + encodeURIComponent(term), 7000); if (!html) continue
-    const direct = declaredPrice(html)                  // some shops jump straight to the product when one item matches
-    if (direct && (!barcode || html.includes(barcode))) return { state: 'found', matched: barcode && html.includes(barcode) ? 'barcode' : 'name', title: direct.title, price: direct.price, priceMax: direct.price, available: direct.available, url: 'https://' + domain + path + encodeURIComponent(term) }
-    const links = [...new Set([...html.matchAll(/href=["'](https?:\/\/[^"']+|\/[^"'#?]+)["']/gi)].map(m => m[1].startsWith('/') ? 'https://' + domain + m[1] : m[1]).filter(u => u.includes(domain) && !/\/(cart|account|login|search|category|categories|brands?|blog|pages?|wp-|checkout|contact)/i.test(u) && !/\.(css|js|png|jpg|jpeg|svg|webp|ico|xml)(\?|$)/i.test(u)))]
-    const want = words(name || ''); const ranked = links.map(u => ({ u, s: want.length ? want.filter(w => u.toLowerCase().includes(w)).length / want.length : 0 })).filter(x => x.s >= 0.5).sort((a, b) => b.s - a.s).slice(0, 2)
-    for (const cand of ranked) { const page = await getText(cand.u, 7000); if (!page) continue; const d = declaredPrice(page); if (!d) continue
-      const byCode = !!barcode && page.includes(barcode); if (!byCode && name && nameScore(name, d.title) < 0.6) continue
-      return { state: 'found', matched: byCode ? 'barcode' : 'name', title: d.title, price: d.price, priceMax: d.price, available: d.available, url: cand.u } }
+    const gbp = x => x && (!x.currency || x.currency.toUpperCase() === 'GBP') ? x : null   // ignore prices not in pounds
+    const direct = gbp(declaredPrice(html))                  // some shops jump straight to the product when one item matches
+    if (direct) { const own = !!barcode && direct.gtin.replace(/\D/g, '').includes(barcode); if (own || (name && nameScore(name, direct.title) >= 0.6)) return { state: 'found', matched: own ? 'barcode' : 'name', title: plain(direct.title), price: direct.price, priceMax: direct.price, available: direct.available, url: 'https://' + domain + path + encodeURIComponent(term) } }
+    const links = [...new Set([...html.matchAll(/href=["'](https?:\/\/[^"']+|\/[^"'#?]+)["']/gi)].map(m => (m[1].startsWith('/') ? 'https://' + domain + m[1] : m[1]).replace(/&amp;/g, '&').split('#')[0].split('?')[0]).filter(u => u.includes(domain) && !/\/(cart|account|login|search|category|categories|brands?|blog|pages?|wp-|checkout|contact)/i.test(u) && !/\.(css|js|png|jpg|jpeg|svg|webp|ico|xml)(\?|$)/i.test(u)))]
+    const want = words(name || ''); const ranked = links.map(u => ({ u, s: want.length ? want.filter(w => u.toLowerCase().includes(w)).length / want.length : 0 })).filter(x => x.s >= 0.4).sort((a, b) => b.s - a.s).slice(0, 4)
+    let byName = null
+    for (const cand of ranked) { const page = await getText(cand.u, 6000); if (!page) continue; const d = gbp(declaredPrice(page)); if (!d) continue
+      const hit = { state: 'found', title: plain(d.title), price: d.price, priceMax: d.price, available: d.available, url: cand.u }
+      if (barcode && page.includes(barcode)) return { ...hit, matched: 'barcode' }          // the clean product page itself carries the barcode
+      const sc = nameScore(name || '', d.title); if (sc >= 0.75 && (!byName || sc > byName.sc)) byName = { sc, hit: { ...hit, matched: 'name' } } }
+    if (byName) return byName.hit
   }
   return null
 }
@@ -108,14 +118,30 @@ async function checkShop(domain, barcode, name) {
   if (!p) return { ...out, platform: 'Shopify', state: 'not stocked', note: 'No matching product was found on this shop.' }
   const handle = p.handle || String(p.url || '').split('/products/')[1]?.split('?')[0]
   const exact = await exactVariant(domain, handle, barcode)
-  const price = exact ? exact.price : Number(p.price_min || p.price)
+  if (exact && exact.currency && exact.currency !== 'GBP') return { ...out, platform: 'Shopify', state: 'not readable', note: 'This shop answered in ' + exact.currency + ' instead of pounds, so its price was left out.' }
+  const price = exact && exact.price ? exact.price : Number(p.price_min || p.price)
   if (!(price > 0)) return { ...out, state: 'not stocked', note: 'A product was found but it shows no price.' }
-  return { ...out, platform: 'Shopify', state: 'found', matched: exact ? 'barcode' : matched, title: p.title, shade: exact ? exact.shade : '', price, priceMax: Number(p.price_max || p.price) || price, available: p.available !== false, url: 'https://' + domain + String(p.url || '/products/' + handle).split('?')[0] }
+  return { ...out, platform: 'Shopify', state: 'found', matched: exact && exact.price ? 'barcode' : matched, title: p.title, shade: exact && exact.shade ? exact.shade : '', currency: (exact && exact.currency) || '', price, priceMax: Number(p.price_max || p.price) || price, available: p.available !== false, url: 'https://' + domain + String(p.url || '/products/' + handle).split('?')[0] }
+}
+
+// "What kind of shop is this?" Used when a new shop is added to the list.
+async function probe(domain) {
+  const s = await getJson('https://' + domain + '/search/suggest.json?q=a&resources[type]=product&resources[limit]=1', 7000)
+  if (s.status === 200 && s.json && s.json.resources) return 'Shopify'
+  const w = await getJson('https://' + domain + '/wp-json/wc/store/v1/products?per_page=1', 7000)
+  if (Array.isArray(w.json)) return 'WooCommerce'
+  const home = await getText('https://' + domain + '/', 7000)
+  return home ? 'other' : 'no answer'
 }
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
   try {
+    if (req.query.probe) {
+      const d = String(req.query.probe).toLowerCase().trim().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '')
+      if (!okDomain(d)) return res.status(200).json({ ok: false, error: 'That does not look like a website address.' })
+      return res.status(200).json({ ok: true, shop: d, platform: await probe(d) })
+    }
     const barcode = String(req.query.barcode || '').replace(/[^0-9]/g, '').slice(0, 14)
     const name = String(req.query.q || '').slice(0, 140)
     const shops = [...new Set(String(req.query.shops || '').toLowerCase().split(',').map(s => s.trim().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '')).filter(okDomain))].slice(0, 8)
