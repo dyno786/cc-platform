@@ -32,6 +32,7 @@ const NAV_ITEMS = [
   { section:'Store', items:[
     { id:'/shopify-content', label:'Shopify Content',      icon:'🛍️' },
     { id:'/customers',       label:'Customers',            icon:'👥' },
+    { id:'/intake',          label:'Add Products (Scan)',  icon:'🔎' },
     { id:'/stock',           label:'Stock Alerts',         icon:'📦' },
     { id:'/trade',           label:'B2B Trade Portal',     icon:'🤝' },
   ]},
