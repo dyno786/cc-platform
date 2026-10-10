@@ -1,7 +1,7 @@
 // Add products, step 2: save the scanned product in Shopify as a DRAFT.
 // Nothing made here is visible to customers until someone publishes it in Shopify.
 // No price and no stock are set: the daily data file fills those in by barcode.
-import { cleanBarcode, gql, ourTypes, vendorsLike, writeListing, policyFlag, sameSite, stripHtml } from '../../lib/intake'
+import { cleanBarcode, codeKey, codeForms, gql, ourTypes, vendorsLike, writeListing, policyFlag, sameSite, stripHtml } from '../../lib/intake'
 
 export const config = { maxDuration: 60 }
 
@@ -36,15 +36,16 @@ export default async function handler(req, res) {
       variants = [{ values: [], barcode }]
     }
     const codes = variants.map(v => v.barcode)
-    const dupe = codes.find((c, i) => codes.indexOf(c) !== i)
+    const keys = codes.map(codeKey)
+    const dupe = codes.find((c, i) => keys.indexOf(codeKey(c)) !== i)
     if (dupe) return res.status(200).json({ ok: false, error: 'Barcode ' + dupe + ' is on two options. Each option needs its own barcode.' })
     if (!sources.length && !staff.name) return res.status(200).json({ ok: false, error: 'Type the product name, because no other shop had this barcode.' })
 
     // none of these barcodes may already be in our shop
-    for (let i = 0; i < codes.length; i += 20) {
-      const chunk = codes.slice(i, i + 20)
-      const d = await gql('query($q: String!) { productVariants(first: 50, query: $q) { nodes { barcode product { title } } } }', { q: chunk.map(c => 'barcode:' + c).join(' OR ') })
-      const hit = (d.productVariants.nodes || []).find(n => chunk.includes(cleanBarcode(n.barcode)))
+    for (let i = 0; i < codes.length; i += 10) {
+      const chunk = codes.slice(i, i + 10)
+      const d = await gql('query($q: String!) { productVariants(first: 100, query: $q) { nodes { barcode product { title } } } }', { q: chunk.flatMap(codeForms).map(c => 'barcode:' + c).join(' OR ') })
+      const hit = (d.productVariants.nodes || []).find(n => chunk.some(c => codeKey(c) === codeKey(n.barcode)))
       if (hit) return res.status(200).json({ ok: false, error: 'Barcode ' + cleanBarcode(hit.barcode) + ' is already in the shop on "' + hit.product.title + '". Take it off the list and try again.' })
     }
 

@@ -341,7 +341,8 @@ function PhotosTab() {
     setBusy(p.id)
     for (const f of [...files]) {
       const code = digits(f.name.replace(/\.[a-z0-9]+$/i, ''))
-      const v = p.variants.find(x => x.barcode && (x.barcode === code || (code.length >= 8 && code.includes(x.barcode))))
+      const key = c => String(c).replace(/^0+/, '')
+      const v = p.variants.find(x => x.barcode && (key(x.barcode) === key(code) || (code.length >= 8 && code.includes(x.barcode))))
       if (!v) { say(f.name + ': no option has this barcode. Rename the file to the barcode and try again.', 'bad'); continue }
       if (v.hasPhoto) { say(f.name + ': ' + v.title + ' already has a photo, so this one was skipped.', 'warn'); continue }
       let data
