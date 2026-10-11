@@ -132,8 +132,8 @@ export default async function handler(req, res) {
 
     if (job === 'size') {
       let seen = 0, done = false
-      while (Date.now() - started < 30000) {
-        const d = await gql('query($c: String) { products(first: 40, after: $c, query: "status:active") { pageInfo { hasNextPage endCursor } nodes { id title productType vendor vol: metafield(namespace: "custom", key: "volume") { value } old: metafield(namespace: "custom", key: "old_title") { value } variants(first: 3) { nodes { barcode } } } } }', { c: cursor })
+      while (Date.now() - started < 36000) {
+        const d = await gql('query($c: String) { products(first: 40, after: $c, reverse: ' + (req.query.rev === '1') + ', query: "status:active") { pageInfo { hasNextPage endCursor } nodes { id title productType vendor vol: metafield(namespace: "custom", key: "volume") { value } old: metafield(namespace: "custom", key: "old_title") { value } variants(first: 3) { nodes { barcode } } } } }', { c: cursor })
         const cands = []
         for (const p of d.products.nodes || []) {
           seen++
@@ -226,8 +226,8 @@ export default async function handler(req, res) {
 
     if (job === 'desc') {
       let seen = 0, done = false
-      while (Date.now() - started < 36000) {
-        const d = await gql('query($c: String) { collections(first: 40, after: $c) { pageInfo { hasNextPage endCursor } nodes { id handle title descriptionHtml seo { title description } productsCount { count } products(first: 10, sortKey: BEST_SELLING) { nodes { title status } } } } }', { c: cursor })
+      while (Date.now() - started < 44000) {
+        const d = await gql('query($c: String) { collections(first: 40, after: $c, reverse: ' + (req.query.rev === '1') + ') { pageInfo { hasNextPage endCursor } nodes { id handle title descriptionHtml seo { title description } productsCount { count } products(first: 10, sortKey: BEST_SELLING) { nodes { title status } } } } }', { c: cursor })
         const todo = []
         for (const n of d.collections.nodes) {
           seen++
