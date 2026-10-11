@@ -8,7 +8,8 @@ import { gql, stripHtml } from '../../lib/intake'
 
 export const config = { maxDuration: 60 }
 
-const clip = (s, n) => { s = String(s || '').replace(/\s+/g, ' ').trim(); if (s.length <= n) return s; const c = s.slice(0, n); const dot = c.lastIndexOf('. '); return dot > 80 ? c.slice(0, dot + 1) : c.slice(0, c.lastIndexOf(' ')).replace(/[,;:&-]$/, '').trim() + '.' }
+const clip = (s, n) => { s = String(s || '').replace(/\s+/g, ' ').trim(); if (s.length <= n) return s; const c = s.slice(0, n); const dot = c.lastIndexOf('. '); return dot > 80 ? c.slice(0, dot + 1) : c.slice(0, c.lastIndexOf(' ')).replace(/(\s+(and|the|a|an|of|to|with|for|in|or|our|from|is|are|that|&))+$/i, '').replace(/[,;:&-]$/, '').trim() + '.' }
+const FLUFF = /^(get |achieve|elevate|discover|experience|transform|unleash|shop the|upgrade|step up|say goodbye|stay |indulge|revitali[sz]e|enhance|embrace|introducing|welcome|looking for|bring |treat |give |keep |take |make |unlock|explore|browse our)/i
 const STALE = /than any|largest|number one|most established|leading |ultimate|premium quality|high-quality|discover the|transform your|experience the|unleash|shop the latest/i
 
 async function bulk(lines, mutation) {
@@ -81,7 +82,7 @@ export default async function handler(req, res) {
           const od0 = od
           od = od.replace(/(established |est\.? )?since the 1970s/gi, (m, e) => e ? 'Established 1979' : 'since 1979')
           const badDesc = !od || STALE.test(od) || od.length > 200 || (od.length >= 150 && !/[.!?]$/.test(od)) || od.trim().toLowerCase() === c.title.trim().toLowerCase()
-          const badTitle = !ot || ot.length > 65 || ot.trim().toLowerCase() === c.title.trim().toLowerCase() || (ot.length >= 58 && !/(beauty|leeds|uk)$/i.test(ot)) || /^(upgrade|unleash|discover|experience|achieve|get |shop (the )?latest|eliminate|transform|elevate|buy .* \| lace and synthetic wigs)/i.test(ot)
+          const badTitle = !ot || ot.length > 65 || ot.trim().toLowerCase() === c.title.trim().toLowerCase() || (ot.length >= 58 && !/(beauty|leeds|uk)$/i.test(ot)) || /\byour\b|shop now| - the /i.test(ot) || /^(upgrade|unleash|discover|experience|achieve|get |shop (the )?latest|eliminate|transform|elevate|buy .* \| lace and synthetic wigs)/i.test(ot)
           if (!badDesc && !badTitle && od !== od0) { bump('1970s changed to 1979'); lines.push(JSON.stringify({ input: { id: c.id, seo: { title: ot, description: od } } })); continue }
           if (!badDesc && !badTitle) { bump('already fine'); continue }
           const name = c.title.replace(/\s+/g, ' ').trim()
@@ -89,7 +90,7 @@ export default async function handler(req, res) {
           const first = /^\s*<h2>[\s\S]*?<\/h2>\s*<p>([\s\S]*?)<\/p>/i.exec(c.descriptionHtml || '')
           let desc
           if (first) { desc = clip(stripHtml(first[1]), 155); bump('desc from new text') }
-          else if (text.length > 60 && !STALE.test(text.slice(0, 200)) && text.toLowerCase() !== name.toLowerCase()) { desc = clip(text, 155); bump('desc from own text') }
+          else if (text.length > 60 && !STALE.test(text.slice(0, 200)) && !FLUFF.test(text) && text.toLowerCase() !== name.toLowerCase()) { desc = clip(text, 155); bump('desc from own text') }
           else { desc = clip('Shop ' + name + ' at CC Hair & Beauty. Order online for UK delivery, or visit our Leeds shops in Chapeltown, Roundhay and the City Centre.', 160); bump('desc from template') }
           const title = (name + ' | CC Hair & Beauty').length <= 60 ? name + ' | CC Hair & Beauty' : (name.length <= 60 ? name : name.slice(0, 60).replace(/\s+\S*$/, ''))
           if (badTitle) bump('title set')
