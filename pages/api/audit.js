@@ -133,7 +133,7 @@ export default async function handler(req, res) {
     if (job === 'size') {
       let seen = 0, done = false
       while (Date.now() - started < 30000) {
-        const d = await gql('query($c: String) { products(first: 150, after: $c, reverse: ' + (req.query.rev === '1') + ', query: "status:active") { pageInfo { hasNextPage endCursor } nodes { id title productType vendor vol: metafield(namespace: "custom", key: "volume") { value } old: metafield(namespace: "custom", key: "old_title") { value } variants(first: 3) { nodes { barcode } } } } }', { c: cursor })
+        const d = await gql('query($c: String) { products(first: 100, after: $c, reverse: ' + (req.query.rev === '1') + ', query: "status:active") { pageInfo { hasNextPage endCursor } nodes { id title productType vendor vol: metafield(namespace: "custom", key: "volume") { value } old: metafield(namespace: "custom", key: "old_title") { value } variants(first: 3) { nodes { barcode } } } } }', { c: cursor })
         const cands = []
         for (const p of d.products.nodes || []) {
           seen++
@@ -145,7 +145,7 @@ export default async function handler(req, res) {
           if (!bc || String(bc).replace(/\D/g, '').length < 8) { bump('no size, no barcode'); continue }
           cands.push({ p, bc })
         }
-        await pool(cands, 12, async ({ p, bc }) => {
+        await pool(cands, 5, async ({ p, bc }) => {
           bump('looked up')
           const found = (await lookupElsewhere(bc)).filter(f => f.exact && f.shop !== 'openbeautyfacts.org')
           if (!found.length) { bump('not found on other shops'); return }
@@ -156,7 +156,7 @@ export default async function handler(req, res) {
           const top = list[0]
           const base = o => o.unit === 'ml' || o.unit === 'g' ? o.n : o.unit === 'L' || o.unit === 'kg' ? o.n * 1000 : o.unit === 'lb' ? o.n * 454 : o.n * 29
           const vals = list.map(base)
-          if (top.c < 2 && list.length > 2) { bump('only one shop, several sizes shown'); return }
+          if (top.c < 2) { bump('only one shop shows a size, not enough to trust'); return }
           if (Math.max(...vals) / Math.min(...vals) > 1.15 || list.some(o => o !== top && o.unit === top.unit && o.n !== top.n)) { bump('shops disagree on size'); if (samples.length < 12) samples.push({ t: p.title, disagree: list.map(o => o.text + ' x' + o.c) }); return }
           const mine = sizesIn(p.vol ? p.vol.value : '')[0]
           if (mine) bump(mine.unit === top.unit ? (mine.n === top.n ? 'our volume field agrees' : 'our volume field differs') : 'our volume field in another unit')
