@@ -7,9 +7,9 @@ export const config = { maxDuration: 60 }
 
 export function swap(s) {
   s = String(s || '')
-  return s.replace(/(£|&pound;|&#163;)\s?50(\.00)?(?![\d,])/g, (m, sym, dec, off) => {
+  return s.replace(/((?:over|above|more than|spend|spending|orders of|order of)\s+)(£|&pound;|&#163;)\s?50(\.00)?(?![\d,])/gi, (m, lead, sym, dec, off) => {
     const ctx = stripHtml(s.slice(Math.max(0, off - 140), off + 90))
-    return /deliver|shipping|postage/i.test(ctx) ? sym + '75' : m
+    return /deliver|shipping|postage/i.test(ctx) ? lead + sym + '75' : m
   })
 }
 
@@ -55,13 +55,13 @@ export default async function handler(req, res) {
         if (!d.collections.pageInfo.hasNextPage) break
         c = d.collections.pageInfo.endCursor
       }
-      const pg = await gql('{ pages(first: 250) { nodes { id handle body } } articles(first: 100) { nodes { id handle body } } }')
+      const pg = await gql('{ pages(first: 250) { nodes { id handle body } } articles(first: 250) { nodes { id handle body } } }')
       for (const n of pg.pages.nodes) {
         const nb = swap(n.body)
         if (nb !== (n.body || '')) { out.push('page ' + n.handle); if (go) await gql('mutation($id: ID!, $p: PageUpdateInput!) { pageUpdate(id: $id, page: $p) { userErrors { message } } }', { id: n.id, p: { body: nb } }) }
         else if (/£\s?50(?![\d,])/.test(stripHtml(n.body))) out.push('page ' + n.handle + ' mentions £50, left alone')
       }
-      for (const n of pg.articles.nodes) { if (swap(n.body) !== (n.body || '')) out.push('blog post ' + n.handle + ' (not changed)') }
+      for (const n of pg.articles.nodes) { const nb = swap(n.body); if (nb !== (n.body || '')) { out.push('blog post ' + n.handle); if (go) await gql('mutation($id: ID!, $a: ArticleUpdateInput!) { articleUpdate(id: $id, article: $a) { userErrors { message } } }', { id: n.id, a: { body: nb } }) } }
       return res.status(200).json({ ok: true, job, go, found: out })
     }
     while (Date.now() - started < 36000) {
