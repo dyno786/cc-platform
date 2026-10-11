@@ -9,7 +9,7 @@ import { gql, stripHtml } from '../../lib/intake'
 export const config = { maxDuration: 60 }
 
 const clip = (s, n) => { s = String(s || '').replace(/\s+/g, ' ').trim(); if (s.length <= n) return s; const c = s.slice(0, n); const dot = c.lastIndexOf('. '); return dot > 80 ? c.slice(0, dot + 1) : c.slice(0, c.lastIndexOf(' ')).replace(/[,;:&-]$/, '').trim() + '.' }
-const STALE = /more (choice|brands) than any other|largest|number one|most established|since the 19|leading afro|premium quality|high-quality|discover the|transform your|experience the|unleash|shop the latest/i
+const STALE = /than any|largest|number one|most established|leading |ultimate|premium quality|high-quality|discover the|transform your|experience the|unleash|shop the latest/i
 
 async function bulk(lines, mutation) {
   const su = await gql('mutation { stagedUploadsCreate(input: [{ resource: BULK_MUTATION_VARIABLES, filename: "vars.jsonl", mimeType: "text/jsonl", httpMethod: POST }]) { stagedTargets { url parameters { name value } } userErrors { message } } }')
@@ -27,7 +27,8 @@ async function bulk(lines, mutation) {
 export function cleanTitle(t) {
   let s = String(t || ''), oos = false, keep = false
   if (/\boos\b/i.test(s)) { oos = true; s = s.replace(/\s*[-–(]?\s*\boos\b\)?/gi, '') }
-  if (/[-–]\s*keep\b/i.test(s)) { keep = true; s = s.replace(/\s*[-–]\s*keep\b/gi, '') }
+  s = s.replace(/\s*[-–]\s*U\d\b/gi, '').replace(/\s{2,}/g, ' ').replace(/\s*[-–]\s*$/, '').trim()
+  if (/[-–]\s*keep$/i.test(s)) { keep = true; s = s.replace(/\s*[-–]\s*keep$/i, '') }
   s = s.replace(/\s*[-–]\s*U\d\b/gi, '')
   s = s.replace(/\s{2,}/g, ' ').replace(/\s*[-–]\s*$/, '').trim()
   return { title: s, oos, keep }
@@ -75,9 +76,13 @@ export default async function handler(req, res) {
         for (const c of d.collections.nodes || []) {
           seen++
           if (!c.productsCount || !c.productsCount.count) { bump('empty collection'); continue }
-          const od = (c.seo && c.seo.description) || '', ot = (c.seo && c.seo.title) || ''
-          const badDesc = !od || STALE.test(od) || (od.length >= 150 && !/[.!?]$/.test(od)) || od.trim().toLowerCase() === c.title.trim().toLowerCase()
-          const badTitle = !ot || (ot.length >= 58 && !/(beauty|leeds|uk)$/i.test(ot))
+          let od = (c.seo && c.seo.description) || ''
+          const ot = (c.seo && c.seo.title) || ''
+          const od0 = od
+          od = od.replace(/(established |est\.? )?since the 1970s/gi, (m, e) => e ? 'Established 1979' : 'since 1979')
+          const badDesc = !od || STALE.test(od) || od.length > 200 || (od.length >= 150 && !/[.!?]$/.test(od)) || od.trim().toLowerCase() === c.title.trim().toLowerCase()
+          const badTitle = !ot || ot.length > 65 || ot.trim().toLowerCase() === c.title.trim().toLowerCase() || (ot.length >= 58 && !/(beauty|leeds|uk)$/i.test(ot)) || /^(upgrade|unleash|discover|experience|achieve|get |shop (the )?latest|eliminate|transform|elevate|buy .* \| lace and synthetic wigs)/i.test(ot)
+          if (!badDesc && !badTitle && od !== od0) { bump('1970s changed to 1979'); lines.push(JSON.stringify({ input: { id: c.id, seo: { title: ot, description: od } } })); continue }
           if (!badDesc && !badTitle) { bump('already fine'); continue }
           const name = c.title.replace(/\s+/g, ' ').trim()
           const text = stripHtml(c.descriptionHtml || '').replace(/^\s*(.{0,80}?)\s{2,}/, '$1 ')
@@ -86,10 +91,10 @@ export default async function handler(req, res) {
           if (first) { desc = clip(stripHtml(first[1]), 155); bump('desc from new text') }
           else if (text.length > 60 && !STALE.test(text.slice(0, 200)) && text.toLowerCase() !== name.toLowerCase()) { desc = clip(text, 155); bump('desc from own text') }
           else { desc = clip('Shop ' + name + ' at CC Hair & Beauty. Order online for UK delivery, or visit our Leeds shops in Chapeltown, Roundhay and the City Centre.', 160); bump('desc from template') }
-          const title = (name + ' | CC Hair & Beauty').length <= 60 ? name + ' | CC Hair & Beauty' : name.slice(0, 60)
+          const title = (name + ' | CC Hair & Beauty').length <= 60 ? name + ' | CC Hair & Beauty' : (name.length <= 60 ? name : name.slice(0, 60).replace(/\s+\S*$/, ''))
           if (badTitle) bump('title set')
           lines.push(JSON.stringify({ input: { id: c.id, seo: { title: badTitle ? title : ot, description: badDesc ? desc : od } } }))
-          if (samples.length < 25 && lines.length % 40 === 1) samples.push({ handle: c.handle, was: c.seo, title: badTitle ? title : ot, desc: badDesc ? desc : od })
+          if (samples.length < 14 && lines.length % 90 === 1) samples.push({ handle: c.handle, was: c.seo, title: badTitle ? title : ot, desc: badDesc ? desc : od })
         }
         if (!d.collections.pageInfo.hasNextPage) { done = true; break }
         cursor = d.collections.pageInfo.endCursor
