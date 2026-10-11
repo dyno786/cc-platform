@@ -36,24 +36,23 @@ async function makeImage(id) {
   return Buffer.from(b64, 'base64')
 }
 
-async function store(id, buf, n) {
-  const filename = 'afro-hairstyle-' + id + (n ? '-' + n : '') + '.jpg'
-  const s = await gql('mutation($input: [StagedUploadInput!]!) { stagedUploadsCreate(input: $input) { stagedTargets { url resourceUrl parameters { name value } } userErrors { message } } }', { input: [{ resource: 'IMAGE', filename, mimeType: 'image/jpeg', httpMethod: 'POST', fileSize: String(buf.length) }] })
-  const t = s.stagedUploadsCreate.stagedTargets[0]
-  if (!t) throw new Error('Shopify would not accept the upload: ' + s.stagedUploadsCreate.userErrors.map(e => e.message).join('; '))
-  const form = new FormData()
-  for (const p of t.parameters) form.append(p.name, p.value)
-  form.append('file', new Blob([buf], { type: 'image/jpeg' }), filename)
-  const up = await fetch(t.url, { method: 'POST', body: form })
-  if (!up.ok) throw new Error('The upload failed (status ' + up.status + ').')
-  const style = STYLES.find(x => x.id === id)
-  const f = await gql('mutation($files: [FileCreateInput!]!) { fileCreate(files: $files) { files { id } userErrors { message } } }', { files: [{ originalSource: t.resourceUrl, contentType: 'IMAGE', alt: style.name + ' illustration' }] })
-  const fe = f.fileCreate.userErrors || []
-  if (fe.length) throw new Error(fe.map(e => e.message).join('; '))
-  return f.fileCreate.files[0].id
+// The app's Shopify key cannot add files, so each picture is parked on the page as a temporary field and served
+// from here once, for Shopify to copy into Files. The temporary fields are deleted at the end.
+const mkey = id => 'img_' + id.replace(/-/g, '_')
+async function pageId() {
+  const f = await gql('query($q: String!) { pages(first: 1, query: $q) { nodes { id handle } } }', { q: 'handle:' + PAGE.handle })
+  const p = (f.pages.nodes || []).find(x => x.handle === PAGE.handle)
+  if (!p) throw new Error('Create the page first.')
+  return p.id
 }
-
-const fileUrl = async id => { const d = await gql('query($id: ID!) { node(id: $id) { ... on MediaImage { fileStatus image { url } } } }', { id }); return d.node && d.node.image ? d.node.image.url : null }
+async function park(id, buf) {
+  const r = await gql('mutation($m: [MetafieldsSetInput!]!) { metafieldsSet(metafields: $m) { userErrors { message } } }', { m: [{ ownerId: await pageId(), namespace: 'cc_tmp', key: mkey(id), type: 'json', value: JSON.stringify({ b64: buf.toString('base64') }) }] })
+  if (r.metafieldsSet.userErrors.length) throw new Error(r.metafieldsSet.userErrors.map(e => e.message).join('; '))
+}
+async function parked(id) {
+  const d = await gql('query($id: ID!, $k: String!) { page(id: $id) { metafield(namespace: "cc_tmp", key: $k) { value } } }', { id: await pageId(), k: mkey(id) })
+  return d.page && d.page.metafield ? Buffer.from(JSON.parse(d.page.metafield.value).b64, 'base64') : null
+}
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
@@ -67,13 +66,19 @@ export default async function handler(req, res) {
     if (q.step === 'img') {
       if (!LOOK[q.id]) return res.status(200).json({ ok: false, error: 'Unknown style.' })
       const buf = await makeImage(q.id)
-      return res.status(200).json({ ok: true, id: q.id, file: await store(q.id, buf, q.n || ''), bytes: buf.length })
+      await park(q.id, buf)
+      return res.status(200).json({ ok: true, id: q.id, bytes: buf.length })
     }
-    if (q.step === 'thumb') {
-      const url = await fileUrl(q.file)
-      if (!url) return res.status(200).json({ ok: false, error: 'Not ready yet.' })
-      const r = await fetch(url + (url.includes('?') ? '&' : '?') + 'width=' + (q.w || '220'))
-      return res.status(200).json({ ok: true, url, b64: Buffer.from(await r.arrayBuffer()).toString('base64') })
+    if (q.step === 'raw') {
+      const buf = await parked(String(q.id || ''))
+      if (!buf) return res.status(404).end()
+      res.setHeader('Content-Type', 'image/jpeg')
+      return res.status(200).send(buf)
+    }
+    if (q.step === 'clean') {
+      const ownerId = await pageId()
+      const r = await gql('mutation($m: [MetafieldIdentifierInput!]!) { metafieldsDelete(metafields: $m) { deletedMetafields { key } userErrors { message } } }', { m: STYLES.map(s => ({ ownerId, namespace: 'cc_tmp', key: mkey(s.id) })) })
+      return res.status(200).json({ ok: !r.metafieldsDelete.userErrors.length, deleted: (r.metafieldsDelete.deletedMetafields || []).filter(Boolean).length })
     }
     if (q.step === 'page') {
       const images = JSON.parse(q.images || '{}')
