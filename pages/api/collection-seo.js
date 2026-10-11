@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   const go = req.query.go === '1'
   let cursor = req.query.cursor ? String(req.query.cursor) : null
   const started = Date.now()
-  let seen = 0, ours = 0, saved = 0, emptyAll = 0, emptyDesc = 0, withProducts = 0, done = false
+  let seen = 0, ours = 0, saved = 0, emptyAll = 0, emptyDesc = 0, withProducts = 0, fixedDesc = 0, fixedTitle = 0, done = false
   const samples = [], errors = []
   try {
     while (Date.now() - started < 42000) {
@@ -29,8 +29,12 @@ export default async function handler(req, res) {
         const desc = clip(stripHtml(m[2]).replace(/&amp;/g, '&'), 155)
         const title = (h + ' | CC Hair & Beauty').length <= 60 ? h + ' | CC Hair & Beauty' : h.slice(0, 60)
         if (samples.length < 12) samples.push({ handle: c.handle, was: c.seo, title, desc })
-        if (c.seo && c.seo.title === title && c.seo.description === desc) continue
-        hits.push({ id: c.id, seo: { title, description: desc } })
+        const od = (c.seo && c.seo.description) || '', ot = (c.seo && c.seo.title) || ''
+        const badDesc = !od || /more (choice|brands) than any other|largest|number one|most established|since the 19|leading afro/i.test(od) || (od.length >= 150 && !/[.!?]$/.test(od))
+        const badTitle = !ot || (ot.length >= 58 && !/(beauty|leeds|uk)$/i.test(ot))
+        if (!badDesc && !badTitle) continue
+        fixedDesc += badDesc ? 1 : 0; fixedTitle += badTitle ? 1 : 0
+        hits.push({ id: c.id, seo: { title: badTitle ? title : ot, description: badDesc ? desc : od } })
       }
       if (go) {
         for (let i = 0; i < hits.length; i += 20) {
@@ -44,7 +48,7 @@ export default async function handler(req, res) {
       if (!d.collections.pageInfo.hasNextPage) { done = true; break }
       cursor = d.collections.pageInfo.endCursor
     }
-    res.status(200).json({ ok: true, go, seen, ours, saved, emptyAll, emptyDesc, withProducts, done, cursor, errors: errors.slice(0, 5), samples: go ? [] : samples })
+    res.status(200).json({ ok: true, go, seen, ours, saved, emptyAll, emptyDesc, withProducts, fixedDesc, fixedTitle, done, cursor, errors: errors.slice(0, 5), samples: [] })
   } catch (e) {
     res.status(200).json({ ok: false, error: String(e.message || e), seen, ours, saved, cursor })
   }

@@ -12,6 +12,34 @@ export default async function handler(req, res) {
   let seen = 0, changed = 0, saved = 0, noSize = 0, oos = 0, noSeoDesc = 0, noSeoTitle = 0, done = false
   const samples = [], errors = []
   try {
+    if (req.query.status === '1') {
+      const st = await gql('{ currentBulkOperation(type: MUTATION) { id status errorCode objectCount createdAt completedAt url } }')
+      return res.status(200).json({ ok: true, op: st.currentBulkOperation })
+    }
+    if (req.query.bulk === '1') {
+      const lines = []
+      while (Date.now() - started < 38000) {
+        const d = await gql('query($c: String) { products(first: 250, after: $c, query: "status:active") { pageInfo { hasNextPage endCursor } nodes { id title } } }', { c: cursor })
+        for (const p of d.products.nodes || []) {
+          seen++
+          const n = fixTitle(p.title)
+          if (n !== p.title) lines.push(JSON.stringify({ input: { id: p.id, title: n, metafields: [{ namespace: 'custom', key: 'old_title', type: 'single_line_text_field', value: p.title.slice(0, 250) }] } }))
+        }
+        if (!d.products.pageInfo.hasNextPage) { done = true; break }
+        cursor = d.products.pageInfo.endCursor
+      }
+      if (!lines.length) return res.status(200).json({ ok: true, seen, changed: 0, done, cursor })
+      const su = await gql('mutation { stagedUploadsCreate(input: [{ resource: BULK_MUTATION_VARIABLES, filename: "titles.jsonl", mimeType: "text/jsonl", httpMethod: POST }]) { stagedTargets { url parameters { name value } } userErrors { message } } }')
+      const tgt = su.stagedUploadsCreate.stagedTargets[0]
+      const form = new FormData()
+      let key = ''
+      for (const prm of tgt.parameters) { form.append(prm.name, prm.value); if (prm.name === 'key') key = prm.value }
+      form.append('file', new Blob([lines.join('\n')], { type: 'text/jsonl' }), 'titles.jsonl')
+      const up = await fetch(tgt.url, { method: 'POST', body: form })
+      if (!up.ok) return res.status(200).json({ ok: false, error: 'upload ' + up.status, seen, changed: lines.length, cursor })
+      const run = await gql('mutation($m: String!, $p: String!) { bulkOperationRunMutation(mutation: $m, stagedUploadPath: $p) { bulkOperation { id status } userErrors { message } } }', { m: 'mutation call($input: ProductInput!) { productUpdate(input: $input) { product { id } userErrors { message } } }', p: key })
+      return res.status(200).json({ ok: true, seen, changed: lines.length, done, cursor, run: run.bulkOperationRunMutation })
+    }
     while (Date.now() - started < 42000) {
       const d = await gql('query($c: String) { products(first: 250, after: $c, query: "status:active") { pageInfo { hasNextPage endCursor } nodes { id title seo { title description } } } }', { c: cursor })
       const nodes = d.products.nodes || []
