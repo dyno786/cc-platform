@@ -10,7 +10,7 @@ export const config = { maxDuration: 60 }
 const RANKING = new Set(["13x4-brazilian-lace-wigs", "13x4-closures", "afro-sheen", "agor", "all", "arlos-beard-oil", "bobbi-boss-braids", "bobbi-boss-locs", "bsset", "cameleo", "cc-hair-beauty", "cc-hair-n-beauty", "collection-all", "daggett-and-ramsdell", "difeel-ultra-growth", "doctor-clear", "double-sheen", "dressmaker-brazilian-wigs", "edgebooster", "elasta-qp", "empress-lace-wigs", "frontpage", "hair-care", "hair-ecstasy", "hair-oil", "human-hair-wigs", "jahaitian", "janet-collection-synthetic-wigs-1", "jazzy-blended-hair-braiding", "jazzy-hair-crochet", "kali-braids", "kali-essential", "kali-lace-wigs-1", "kashmir-hair-cosmetics-leeds", "mizz-brazil", "model-model-cocktail-wigs-1", "mpl", "murray-collection", "offers", "outre-xpression", "parnevu", "permanent-hair-dyes", "poppy-ivy", "relaxers-kids", "rich-ruitz", "rush-silky-luxati-weft", "rush-virgin-brazilian-glamour", "search", "sleek-fashion-idol-weave", "sleek-hair-remy-gorgous", "smart-braid-vivitress", "synthetic-hair", "ultra-sheen", "via-natural-1", "view-all-wigs", "wigs"])
 const FLUFFY = /than any|largest|number one|leading |ultimate|premium quality|high-quality|discover the|transform your|experience the|unleash|shop the latest|^(get |achieve|elevate|discover|experience|transform|unleash|upgrade|step up|say goodbye|indulge|revitali[sz]e|enhance|embrace|introducing|welcome|looking for|browse our)/i
 const norm = s => String(s || '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, ' ').trim()
-const HAS_SIZE = /\d\s*(fl\s?oz|oz|ml|g|kg|l|lb|pcs|pc|pack|pieces?|inch|mm|cm|w)\b|\d\s*("|”|″|'')/i
+const HAS_SIZE = /\d\s*(fl\s?oz|oz|0z|ml|g|kg|l|lb|pcs|pc|pack|pieces?|inch|mm|cm|w)\b|\d\s*("|”|″|'')/i
 const LIQUID = /shampoo|conditioner|oil|serum|cream|butter|lotion|gel|spray|sheen|mask|treatment|relaxer|texturi|colour|dye|soap|wash|cleanser|toner|pomade|wax|mousse|moistur|fragrance|deodor|leave-in|scrub|balm|jelly/i
 
 export function sizesIn(text) {
@@ -132,19 +132,20 @@ export default async function handler(req, res) {
 
     if (job === 'size') {
       let seen = 0, done = false
-      while (Date.now() - started < 36000) {
+      while (Date.now() - started < 40000) {
         const d = await gql('query($c: String) { products(first: 40, after: $c, reverse: ' + (req.query.rev === '1') + ', query: "status:active") { pageInfo { hasNextPage endCursor } nodes { id title productType vendor vol: metafield(namespace: "custom", key: "volume") { value } old: metafield(namespace: "custom", key: "old_title") { value } variants(first: 3) { nodes { barcode } } } } }', { c: cursor })
         const cands = []
         for (const p of d.products.nodes || []) {
           seen++
-          if (HAS_SIZE.test(p.title)) continue
+          if (HAS_SIZE.test(p.title) || /\d\.\s?oz/i.test(p.title)) continue
+          if (policyFlag(p.title) || /brighten|lighten|whiten|fade/i.test(p.title)) continue
           if (!LIQUID.test(p.productType + ' ' + p.title)) { bump('no size, not a bottle or jar'); continue }
           if (p.variants.nodes.length !== 1) { bump('no size, has options'); continue }
           const bc = (p.variants.nodes[0] || {}).barcode
           if (!bc || String(bc).replace(/\D/g, '').length < 8) { bump('no size, no barcode'); continue }
           cands.push({ p, bc })
         }
-        await pool(cands, 4, async ({ p, bc }) => {
+        await pool(cands, 9, async ({ p, bc }) => {
           bump('looked up')
           const found = (await lookupElsewhere(bc)).filter(f => f.exact && f.shop !== 'openbeautyfacts.org')
           if (!found.length) { bump('not found on other shops'); return }
