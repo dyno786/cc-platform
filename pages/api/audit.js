@@ -132,8 +132,8 @@ export default async function handler(req, res) {
 
     if (job === 'size') {
       let seen = 0, done = false
-      while (Date.now() - started < 40000) {
-        const d = await gql('query($c: String) { products(first: 40, after: $c, reverse: ' + (req.query.rev === '1') + ', query: "status:active") { pageInfo { hasNextPage endCursor } nodes { id title productType vendor vol: metafield(namespace: "custom", key: "volume") { value } old: metafield(namespace: "custom", key: "old_title") { value } variants(first: 3) { nodes { barcode } } } } }', { c: cursor })
+      while (Date.now() - started < 30000) {
+        const d = await gql('query($c: String) { products(first: 150, after: $c, reverse: ' + (req.query.rev === '1') + ', query: "status:active") { pageInfo { hasNextPage endCursor } nodes { id title productType vendor vol: metafield(namespace: "custom", key: "volume") { value } old: metafield(namespace: "custom", key: "old_title") { value } variants(first: 3) { nodes { barcode } } } } }', { c: cursor })
         const cands = []
         for (const p of d.products.nodes || []) {
           seen++
@@ -145,7 +145,7 @@ export default async function handler(req, res) {
           if (!bc || String(bc).replace(/\D/g, '').length < 8) { bump('no size, no barcode'); continue }
           cands.push({ p, bc })
         }
-        await pool(cands, 9, async ({ p, bc }) => {
+        await pool(cands, 12, async ({ p, bc }) => {
           bump('looked up')
           const found = (await lookupElsewhere(bc)).filter(f => f.exact && f.shop !== 'openbeautyfacts.org')
           if (!found.length) { bump('not found on other shops'); return }
