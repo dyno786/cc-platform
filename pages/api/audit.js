@@ -122,6 +122,12 @@ export default async function handler(req, res) {
     return true
   }
   try {
+    if (job === 'selftest') {
+      const u = 'https://' + req.headers.host + '/api/audit?job=ping'
+      let out
+      try { const r = await fetch(u); out = { status: r.status, body: (await r.text()).slice(0, 200) } } catch (e) { out = { error: String(e.message || e), cause: String((e.cause && e.cause.message) || '') } }
+      return res.status(200).json({ ok: true, host: req.headers.host, out })
+    }
     if (job === 'ping') return res.status(200).json({ ok: true, writingKey: !!process.env.ANTHROPIC_API_KEY, progress: await readBeat() })
 
     if (job === 'size') {
