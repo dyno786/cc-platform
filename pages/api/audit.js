@@ -7,6 +7,8 @@ import { gql, stripHtml, lookupElsewhere, policyFlag } from '../../lib/intake'
 
 export const config = { maxDuration: 60 }
 
+const RANKING = new Set(["13x4-brazilian-lace-wigs", "13x4-closures", "afro-sheen", "agor", "all", "arlos-beard-oil", "bobbi-boss-braids", "bobbi-boss-locs", "bsset", "cameleo", "cc-hair-beauty", "cc-hair-n-beauty", "collection-all", "daggett-and-ramsdell", "difeel-ultra-growth", "doctor-clear", "double-sheen", "dressmaker-brazilian-wigs", "edgebooster", "elasta-qp", "empress-lace-wigs", "frontpage", "hair-care", "hair-ecstasy", "hair-oil", "human-hair-wigs", "jahaitian", "janet-collection-synthetic-wigs-1", "jazzy-blended-hair-braiding", "jazzy-hair-crochet", "kali-braids", "kali-essential", "kali-lace-wigs-1", "kashmir-hair-cosmetics-leeds", "mizz-brazil", "model-model-cocktail-wigs-1", "mpl", "murray-collection", "offers", "outre-xpression", "parnevu", "permanent-hair-dyes", "poppy-ivy", "relaxers-kids", "rich-ruitz", "rush-silky-luxati-weft", "rush-virgin-brazilian-glamour", "search", "sleek-fashion-idol-weave", "sleek-hair-remy-gorgous", "smart-braid-vivitress", "synthetic-hair", "ultra-sheen", "via-natural-1", "view-all-wigs", "wigs"])
+const FLUFFY = /than any|largest|number one|leading |ultimate|premium quality|high-quality|discover the|transform your|experience the|unleash|shop the latest|^(get |achieve|elevate|discover|experience|transform|unleash|upgrade|step up|say goodbye|indulge|revitali[sz]e|enhance|embrace|introducing|welcome|looking for|browse our)/i
 const norm = s => String(s || '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, ' ').trim()
 const HAS_SIZE = /\d\s*(fl\s?oz|oz|ml|g|kg|l|lb|pcs|pc|pack|pieces?|inch|mm|cm|w)\b|\d\s*("|”|″|'')/i
 const LIQUID = /shampoo|conditioner|oil|serum|cream|butter|lotion|gel|spray|sheen|mask|treatment|relaxer|texturi|colour|dye|soap|wash|cleanser|toner|pomade|wax|mousse|moistur|fragrance|deodor|leave-in|scrub|balm|jelly/i
@@ -48,7 +50,6 @@ async function write(c) {
   const prompt = `You are writing the collection page text for CC Hair & Beauty, a family-run afro hair and beauty shop in Leeds, UK, trading since 1979.
 
 COLLECTION NAME: ${c.title}
-NUMBER OF PRODUCTS: ${c.count}
 SOME OF THE PRODUCTS IN IT (titles only; this is everything you know about the range):
 ${c.products.map(p => '- ' + p).join('\n')}
 
@@ -66,6 +67,8 @@ RULES
 - Only state what the product titles support, plus widely known, cautious general care advice. Never invent ingredients, sizes, prices, awards, reviews, stock levels or history of the brand.
 - Never promise hair growth, hair regrowth, or any medical or skin-lightening result. If asked-about growth, say no product can speed up growth.
 - For hair dye, bleach, relaxers, texturisers, hair removal and adhesives, tell the shopper to follow the pack and do a skin or strand test first.
+- Do not praise brands or products (no trusted, reliable, professional-grade, popular, loved, quality, leading). Do not state how many products there are.
+- Never mention fade creams, dark spot, brightening, lightening, whitening or even-tone products, even if they are in the list.
 - Do not say "we are the largest", "number one", "widest range" or compare with other shops.
 - Do not mention delivery prices or thresholds.
 - If the name and titles do not tell you enough to write honestly, reply with exactly: SKIP
@@ -84,6 +87,7 @@ After the HTML, on a new line write META: followed by a 120 to 155 character sea
     const meta = at > 0 ? text.slice(at + 5).replace(/\s+/g, ' ').trim().slice(0, 170) : ''
     if (!/^<h2>/.test(html) || !/<\/p>\s*$/.test(html)) return { skip: true, why: 'shape' }
     if (/\b(grow(s|th)? (your )?hair faster|regrow|lighten(s|ing)? (your )?skin|whiten|largest|number one|guarantee)/i.test(stripHtml(html)) && !/no product can/i.test(html)) return { skip: true, why: 'claim' }
+    if (/fade (milk|cream)|dark spot|brighten|lighten|whiten|even ?tone|trusted|professional-grade/i.test(stripHtml(html))) return { skip: true, why: 'banned wording' }
     html = html.replace(/\s+—\s+|\s+–\s+/g, ', ')
     return { html, meta }
   } catch (e) { return { skip: true, why: String(e.message || e) } }
@@ -130,7 +134,10 @@ export default async function handler(req, res) {
           const list = Object.values(tally).sort((a, b) => b.c - a.c)
           if (!list.length) { bump('found, but no size shown there'); return }
           const top = list[0]
-          if (list.some(o => o !== top && o.unit === top.unit && o.n !== top.n)) { bump('shops disagree on size'); if (samples.length < 12) samples.push({ t: p.title, disagree: list.map(o => o.text + ' x' + o.c) }); return }
+          const base = o => o.unit === 'ml' || o.unit === 'g' ? o.n : o.unit === 'L' || o.unit === 'kg' ? o.n * 1000 : o.unit === 'lb' ? o.n * 454 : o.n * 29
+          const vals = list.map(base)
+          if (top.c < 2 && list.length > 2) { bump('only one shop, several sizes shown'); return }
+          if (Math.max(...vals) / Math.min(...vals) > 1.15 || list.some(o => o !== top && o.unit === top.unit && o.n !== top.n)) { bump('shops disagree on size'); if (samples.length < 12) samples.push({ t: p.title, disagree: list.map(o => o.text + ' x' + o.c) }); return }
           const mine = sizesIn(p.vol ? p.vol.value : '')[0]
           if (mine) bump(mine.unit === top.unit ? (mine.n === top.n ? 'our volume field agrees' : 'our volume field differs') : 'our volume field in another unit')
           const title = (p.title.replace(/\s+$/, '') + ' ' + top.text.replace(' fl oz', ' fl oz')).slice(0, 250)
@@ -176,11 +183,13 @@ export default async function handler(req, res) {
       for (const p of prods) {
         const v = norm(p.vendor), tags = p.tags.slice(), had = new Set(tags.map(norm))
         let changed = false
-        if (brandTag[v] && !had.has(v)) { tags.push(brandTag[v]); changed = true; bump('own brand tag added'); if (samples.length < 14) samples.push({ t: p.title, add: brandTag[v] }) }
+        const tw = norm(p.title).split(' ')
+        const fits = v.split(' ').filter(w => w.length >= 3 && !['and', 'the', 'for'].includes(w)).every(w => tw.some(x => x.startsWith(w) || w.startsWith(x) && x.length >= 4))
+        if (brandTag[v] && !had.has(v) && fits) { tags.push(brandTag[v]); changed = true; bump('own brand tag added'); if (samples.length < 14) samples.push({ t: p.title, add: brandTag[v] }) }
         const vw = new Set((v + ' ' + norm(p.title)).split(' '))
         for (const t of p.tags) {
           const k = norm(t)
-          if (!brandTag[k] || k === v) continue
+          if (!brandTag[k] || k === v || k === 'sulphur 8' || k === 'curls') continue
           const words = k.split(' ').filter(w => w.length >= 3 && !['and', 'the', 'for', 'hair', 'new', 'professional', 'collection', 'natural', 'naturals', 'beauty', 'kids', 'oil', 'care'].includes(w))
           if (!words.length || words.some(w => vw.has(w))) continue
           bump("other brand's tag found")
@@ -196,12 +205,15 @@ export default async function handler(req, res) {
 
     if (job === 'desc') {
       let seen = 0, done = false
-      while (Date.now() - started < 26000) {
-        const d = await gql('query($c: String) { collections(first: 25, after: $c) { pageInfo { hasNextPage endCursor } nodes { id handle title descriptionHtml seo { title description } productsCount { count } products(first: 10, sortKey: BEST_SELLING) { nodes { title status } } } } }', { c: cursor })
+      while (Date.now() - started < 36000) {
+        const d = await gql('query($c: String) { collections(first: 40, after: $c) { pageInfo { hasNextPage endCursor } nodes { id handle title descriptionHtml seo { title description } productsCount { count } products(first: 10, sortKey: BEST_SELLING) { nodes { title status } } } } }', { c: cursor })
         const todo = []
         for (const n of d.collections.nodes) {
           seen++
           if (/^\s*<h2>/i.test(n.descriptionHtml || '')) { bump('already has new text'); continue }
+          if (RANKING.has(n.handle)) { bump('already ranks well, left alone'); continue }
+          const cur = stripHtml(n.descriptionHtml || '')
+          if (cur.length > 220 && !FLUFFY.test(cur.slice(0, 260))) { bump('has its own factual text, left alone'); continue }
           const live = n.products.nodes.filter(p => p.status === 'ACTIVE').map(p => p.title)
           if (live.length < 2) { bump('fewer than 2 live products'); continue }
           if (policyFlag(n.title + ' ' + live.join(' ')) || /skin success|glow|fair|white|bright|lighten|tone ?up|caro|carotone|maxi|clair|bleach(ing)? cream/i.test(n.title)) { bump('skin lightening, left alone'); continue }
