@@ -6,7 +6,7 @@ import { gql } from '../../lib/intake'
 
 export const config = { maxDuration: 60 }
 
-const SKIP = /cc hair|hair|wig|beauty|braid|lash|nail|cosmetic|sleek|kiss|magic collection|eden/i
+const SKIP = /cc hair|hair|wig|beauty|braid|lash|nail|cosmetic|sleek|kiss|magic collection|eden|shea moisture|neko|parachute|natures spirit|bronner|caley|sunsera|electrical|aztec|^muk$|pretty|dimples|sunflower|tinkle|zenix|yardley|knights castle|brittny|top op|hasbro|^toys$|palmers|cussons|astonish|^hive$|cartier|crystal|delasheras/i
 
 export default async function handler(req, res) {
   const go = req.query.go === '1'
