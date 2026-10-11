@@ -38,6 +38,18 @@ async function bulk(lines, mutation) {
   return run.bulkOperationRunMutation
 }
 
+async function beat(job, obj) {
+  try {
+    const sh = await gql('{ shop { id } }')
+    await gql('mutation($m: [MetafieldsSetInput!]!) { metafieldsSet(metafields: $m) { userErrors { message } } }', { m: [{ ownerId: sh.shop.id, namespace: 'cc_audit', key: job, type: 'json', value: JSON.stringify({ at: new Date().toISOString(), ...obj }) }] })
+  } catch (e) { }
+}
+async function readBeat() {
+  const d = await gql('{ shop { size: metafield(namespace: "cc_audit", key: "size") { value } desc: metafield(namespace: "cc_audit", key: "desc") { value } } }')
+  const j = v => { try { return JSON.parse(v.value) } catch (e) { return null } }
+  return { size: j(d.shop.size), desc: j(d.shop.desc), now: new Date().toISOString() }
+}
+
 async function pool(items, n, fn) {
   let i = 0
   const work = async () => { while (i < items.length) { const it = items[i++]; await fn(it) } }
@@ -71,6 +83,7 @@ RULES
 - Never mention fade creams, dark spot, brightening, lightening, whitening or even-tone products, even if they are in the list.
 - Do not say "we are the largest", "number one", "widest range" or compare with other shops.
 - Do not mention delivery prices or thresholds.
+- If you are not sure what a product is for or how it works, name it and leave it at that. Do not guess how a tool or product works.
 - If the name and titles do not tell you enough to write honestly, reply with exactly: SKIP
 
 After the HTML, on a new line write META: followed by a 120 to 155 character search description in the same plain style.`
@@ -87,7 +100,7 @@ After the HTML, on a new line write META: followed by a 120 to 155 character sea
     const meta = at > 0 ? text.slice(at + 5).replace(/\s+/g, ' ').trim().slice(0, 170) : ''
     if (!/^<h2>/.test(html) || !/<\/p>\s*$/.test(html)) return { skip: true, why: 'shape' }
     if (/\b(grow(s|th)? (your )?hair faster|regrow|lighten(s|ing)? (your )?skin|whiten|largest|number one|guarantee)/i.test(stripHtml(html)) && !/no product can/i.test(html)) return { skip: true, why: 'claim' }
-    if (/fade (milk|cream)|dark spot|brighten|lighten|whiten|even ?tone|trusted|professional-grade/i.test(stripHtml(html))) return { skip: true, why: 'banned wording' }
+    if (/fade (milk|cream)|dark spot|brighten|lighten|whiten|even ?tone|papaya|clarifying (lotion|cream|milk|soap)|trusted|professional-grade/i.test(stripHtml(html))) return { skip: true, why: 'banned wording' }
     html = html.replace(/\s+—\s+|\s+–\s+/g, ', ')
     return { html, meta }
   } catch (e) { return { skip: true, why: String(e.message || e) } }
@@ -109,7 +122,7 @@ export default async function handler(req, res) {
     return true
   }
   try {
-    if (job === 'ping') return res.status(200).json({ ok: true, writingKey: !!process.env.ANTHROPIC_API_KEY })
+    if (job === 'ping') return res.status(200).json({ ok: true, writingKey: !!process.env.ANTHROPIC_API_KEY, progress: await readBeat() })
 
     if (job === 'size') {
       let seen = 0, done = false
@@ -153,7 +166,9 @@ export default async function handler(req, res) {
         if (!d.products.pageInfo.hasNextPage) { done = true; cursor = null; break }
         cursor = d.products.pageInfo.endCursor
       }
-      const chained = done ? false : await chainOn()
+      const tot = { seen: seen + parseInt(req.query.ts || '0', 10), saved: (counts.saved || 0) + parseInt(req.query.tw || '0', 10) }
+      if (go) await beat('size', { ...tot, done, cursor })
+      const chained = done ? false : await chainOn('&ts=' + tot.seen + '&tw=' + tot.saved)
       return res.status(200).json({ ok: true, job, go, seen, counts, done, chained, cursor, samples })
     }
 
@@ -232,7 +247,9 @@ export default async function handler(req, res) {
         cursor = d.collections.pageInfo.endCursor
         if (!go && seen >= 200) break
       }
-      const chained = done ? false : await chainOn()
+      const tot = { seen: seen + parseInt(req.query.ts || '0', 10), written: (counts.written || 0) + parseInt(req.query.tw || '0', 10) }
+      if (go) await beat('desc', { ...tot, done, cursor })
+      const chained = done ? false : await chainOn('&ts=' + tot.seen + '&tw=' + tot.written)
       return res.status(200).json({ ok: true, job, go, seen, counts, done, chained, cursor, samples })
     }
     res.status(200).json({ ok: false, error: 'job must be ping, size, brands or desc' })
