@@ -16,24 +16,27 @@ export default function Page() {
   const [rows, setRows] = useState(null)
   const [error, setError] = useState('')
   const [month, setMonth] = useState('')
+  const [wants, setWants] = useState([])
 
   useEffect(() => {
     fetch('/api/salon-finder?report=1').then(r => r.json()).then(j => {
       if (!j.ok) { setError(j.error || 'The counts could not load.'); return }
       setRows(j.rows)
-      const months = [...new Set(j.rows.map(r => r.month))].sort().reverse()
+      setWants(j.wants || [])
+      const months = [...new Set(j.rows.map(r => r.month).concat((j.wants || []).map(w => w.month)))].sort().reverse()
       setMonth(months[0] || '')
     }).catch(() => setError('No connection. Check the internet and reload the page.'))
   }, [])
 
-  const months = rows ? [...new Set(rows.map(r => r.month))].sort().reverse() : []
+  const months = rows ? [...new Set(rows.map(r => r.month).concat(wants.map(w => w.month)))].sort().reverse() : []
   const shown = (rows || []).filter(r => r.month === month).map(r => ({ ...r, total: r.maps + r.phone })).sort((a, b) => b.total - a.total)
   const total = shown.reduce((s, r) => s + r.total, 0)
+  const wantRows = wants.filter(w => w.month === month).sort((a, b) => b.n - a.n)
 
   return (
     <>
       <Head><title>Salon Clicks — CC Intelligence</title></Head>
-      <Shell title="Salon Clicks" subtitle="Clicks from the city pages to each salon">
+      <Shell title="Salon Clicks" subtitle="Clicks to each salon, and where people want one">
         <div style={box}>
           <p style={{ fontSize: 13.5, color: T.textMuted, lineHeight: 1.5 }}>
             Each time a visitor taps a salon's Google Maps link or phone number on a city page, one click is added to that salon. Only the salon is counted, never the visitor.
@@ -41,8 +44,8 @@ export default function Page() {
         </div>
         {error && <div style={{ ...box, borderColor: T.redBorder, background: T.redBg, color: T.red, fontSize: 14 }}>{error}</div>}
         {!error && rows === null && <div style={{ ...box, color: T.textMuted, fontSize: 14 }}>Loading the counts.</div>}
-        {rows && rows.length === 0 && <div style={{ ...box, color: T.textMuted, fontSize: 14 }}>No clicks have been counted yet.</div>}
-        {rows && rows.length > 0 && (
+        {rows && rows.length === 0 && wants.length === 0 && <div style={{ ...box, color: T.textMuted, fontSize: 14 }}>No clicks or postcode requests have been counted yet.</div>}
+        {rows && (rows.length > 0 || wants.length > 0) && (
           <div style={box}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
               <div style={{ fontSize: 15, fontWeight: 600, color: T.text }}>{total} {total === 1 ? 'click' : 'clicks'} in {monthName(month)}</div>
@@ -60,6 +63,20 @@ export default function Page() {
                 </tbody>
               </table>
             </div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: T.text, margin: '22px 0 4px' }}>Where people want a salon</div>
+            <p style={{ fontSize: 13, color: T.textMuted, marginBottom: 8 }}>From the "No salon near you?" box. Only the postcode district is kept.</p>
+            {wantRows.length === 0 ? <div style={{ fontSize: 14, color: T.textMuted }}>No postcode requests this month.</div> : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead><tr><th style={th}>Postcode area</th><th style={th}>Page</th><th style={th}>Styles wanted</th><th style={{ ...th, textAlign: 'right' }}>Requests</th></tr></thead>
+                  <tbody>
+                    {wantRows.map(w => (
+                      <tr key={w.city + w.area}><td style={{ ...td, fontWeight: 600 }}>{w.area}</td><td style={td}>{w.city}</td><td style={td}>{w.styles.map(s => s.style + ' ' + s.n).join(', ')}</td><td style={{ ...num, fontWeight: 600 }}>{w.n}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </Shell>

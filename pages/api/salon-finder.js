@@ -1,8 +1,9 @@
 // Salon finder: called from the city pages on cchairandbeauty.com.
 // Each click on a salon's map link or phone number adds one to that salon's count for the month.
 // No visitor details are kept. The email sign-up on those pages goes straight to Shopify, not through here.
+// A visitor can also say which postcode district they want a salon in; only the district and style are kept.
 // GET ?report=1 gives the counts to the Salon Clicks page.
-import { CITIES, countClick, readClicks } from '../../lib/salon'
+import { CITIES, countClick, readClicks, countWant, readWants, district } from '../../lib/salon'
 import { sameSite } from '../../lib/intake'
 
 export const config = { maxDuration: 30 }
@@ -17,7 +18,7 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      if (req.query.report === '1' && sameSite(req)) return res.status(200).json({ ok: true, rows: await readClicks() })
+      if (req.query.report === '1' && sameSite(req)) return res.status(200).json({ ok: true, rows: await readClicks(), wants: await readWants() })
       return res.status(200).json({ ok: false, error: 'Nothing to show here.' })
     }
     if (req.method !== 'POST' || !fromShop) return res.status(200).json({ ok: false, error: 'This can only be used from the shop website.' })
@@ -32,6 +33,12 @@ export default async function handler(req, res) {
     if (b.action === 'click') {
       const ok = await countClick(city, String(b.id || ''), b.kind === 'phone' ? 'phone' : 'maps')
       return res.status(200).json({ ok })
+    }
+
+    if (b.action === 'want') {
+      const area = district(b.area)
+      if (!area) return res.status(200).json({ ok: false, error: 'Check the postcode.' })
+      return res.status(200).json({ ok: await countWant(city, area, String(b.style || '')) })
     }
 
     return res.status(200).json({ ok: false, error: 'Unknown request.' })
