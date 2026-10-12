@@ -7,16 +7,24 @@ export default async function handler(req, res) {
     if (req.query.step === 'places') {
       const key = process.env.GOOGLE_PLACES_KEY, seen = {}
       for (const q of Q) {
-        const r = await fetch('https://places.googleapis.com/v1/places:searchText', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.types,places.primaryType,places.businessStatus,places.websiteUri,places.editorialSummary' }, body: JSON.stringify({ textQuery: q, regionCode: 'GB', maxResultCount: 20 }) })
-        const d = await r.json()
-        if (d.error) return res.status(200).json({ ok: false, error: d.error.message })
-        for (const p of d.places || []) {
-          if (!seen[p.id]) seen[p.id] = { id: p.id, name: p.displayName && p.displayName.text, addr: p.formattedAddress, phone: p.nationalPhoneNumber || '', primary: p.primaryType || '', types: (p.types || []).filter(t => !['point_of_interest', 'establishment'].includes(t)).join(','), status: p.businessStatus, web: p.websiteUri || '', about: p.editorialSummary ? p.editorialSummary.text : '', q: [] }
-          seen[p.id].q.push(q)
+        const d = await fetch('https://maps.googleapis.com/maps/api/place/textsearch/json?region=gb&query=' + encodeURIComponent(q) + '&key=' + key).then(r => r.json())
+        if (d.status !== 'OK' && d.status !== 'ZERO_RESULTS') return res.status(200).json({ ok: false, error: d.status + ' ' + (d.error_message || '') })
+        for (const p of d.results || []) {
+          if (!seen[p.place_id]) seen[p.place_id] = { id: p.place_id, name: p.name, addr: p.formatted_address, types: (p.types || []).filter(t => !['point_of_interest', 'establishment'].includes(t)).join(','), status: p.business_status, q: [] }
+          seen[p.place_id].q.push(q)
         }
       }
       const list = Object.values(seen).filter(p => /Leeds|LS\d/.test(p.addr || ''))
       return res.status(200).json({ ok: true, count: list.length, list })
+    }
+    if (req.query.step === 'details') {
+      const key = process.env.GOOGLE_PLACES_KEY, out = []
+      for (const id of String(req.query.ids || '').split(',').filter(Boolean).slice(0, 40)) {
+        const d = await fetch('https://maps.googleapis.com/maps/api/place/details/json?fields=name,formatted_address,formatted_phone_number,website,business_status,types,editorial_summary&place_id=' + encodeURIComponent(id) + '&key=' + key).then(r => r.json())
+        const p = d.result || {}
+        out.push({ id, name: p.name, addr: p.formatted_address, phone: p.formatted_phone_number || '', web: p.website || '', status: p.business_status, about: p.editorial_summary ? p.editorial_summary.overview : '' })
+      }
+      return res.status(200).json({ ok: true, out })
     }
     if (req.query.step === 'sc') {
       const t = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ client_id: process.env.GOOGLE_CLIENT_ID, client_secret: process.env.GOOGLE_CLIENT_SECRET, refresh_token: process.env.GOOGLE_REFRESH_TOKEN, grant_type: 'refresh_token' }) }).then(r => r.json())
