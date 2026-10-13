@@ -1,4 +1,4 @@
-// One-off helper: builds brand pages (shop by ingredient, collections, guides, FAQs) from live Shopify data. Remove once done.
+// Brand page builder: builds and refreshes the brand pages (shop by ingredient, collections, guides, FAQs) from live Shopify data. Kept for the weekly brand pages audit and the dashboard "Refresh page" button.
 //   job=vendors&q=regex      list vendor names that match
 //   job=build&b=slug[&go=1]  build one brand page (preview without go=1)
 import { gql, policyFlag } from '../../lib/intake'
