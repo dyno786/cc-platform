@@ -199,7 +199,7 @@ async function blogIndex(go) {
 
 // "Shop this post" block on blog posts: links readers to the products, brand pages and collections a post talks about
 const SHOP_RE = /<!--cc-shop-->[\s\S]*?<!--\/cc-shop-->/g
-const STOP = new Set(['review','reviews','cc','hair','beauty','leeds','and','the','for','with','your','guide','new','in','at','now','of','a','to','how','best','uk','tips','by','is','on','why','you','what','which','2024','2025','2026','5','essential','routine','sunday','benefits','complete','buyer','s','vs','or','one','do','need','it','use','using','from','our','this','that','products','product'])
+const STOP = new Set(['review','reviews','cc','hair','beauty','leeds','and','the','for','with','your','guide','new','in','at','now','of','a','to','how','best','uk','tips','by','is','on','why','you','what','which','2024','2025','2026','5','essential','routine','sunday','benefits','complete','buyer','s','vs','or','one','do','need','it','use','using','from','our','this','that','products','product','should','buy','does','not','turn','white','lay','step','look','causes','fixes','day','daily','all','tips','results','real','new','magic','luxurious','transform','fast','busy','professionals','professional','home','premium','treatment','care','natural','spotlight','brand','excellence'])
 const TOPICS = [[/edge/i, 'edge-control', 'Edge Control'], [/relax|texturi/i, 'relaxers', 'Relaxers'], [/braid|crochet/i, 'crochet-braided', 'Braiding Hair'], [/wig/i, 'wigs-lace-wigs', 'Wigs'], [/shampoo/i, 'shampoo', 'Shampoo'], [/\bdye\b|hair colou?r|hicolor|colour for me|casting|gloss/i, 'hair-dyes', 'Hair Dyes'], [/kid|child/i, 'kids', 'Kids Hair Care'], [/body|lotion|skin|ashy|spf|soap/i, 'lotions', 'Body Lotions & Creams'], [/curl/i, 'curl-creams', 'Curl Creams'], [/oil|serum/i, 'hair-oil', 'Hair Oils'], [/winter/i, 'winter-hair-care', 'Winter Hair Care']]
 const plain = h => String(h || '').replace(SHOP_RE, ' ').replace(/<(script|style)[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&[a-z#0-9]+;/gi, ' ')
 async function shopBlock(a) {
@@ -213,7 +213,7 @@ async function shopBlock(a) {
     prods = d.products.nodes
   }
   // 2. products named in the title
-  const words = unesc(a.title).replace(/['’]/g, '').replace(/[|–—:\-(),!?"]/g, ' ').split(/\s+/).map(w => w.toLowerCase()).filter(w => w.length > 1 && !STOP.has(w))
+  const words = unesc(a.title).replace(/['’]/g, '').replace(/[|–—:\-(),!?"]/g, ' ').split(/\s+/).map(w => w.toLowerCase()).filter(w => w.length > 1 && !STOP.has(w)).filter((w, i, a) => a.indexOf(w) === i)
   if (prods.filter(p => p.status === 'ACTIVE' && p.totalInventory > 0).length < 3 && words.length >= 2) {
     const q = words.slice(0, 6).map(w => 'title:*' + w.replace(/[^a-z0-9]/g, '') + '*').filter(x => x.length > 9)
     for (const n of [Math.min(4, q.length), 3, 2, 1]) {
@@ -226,7 +226,7 @@ async function shopBlock(a) {
       if (prods.filter(p => p.status === 'ACTIVE' && p.totalInventory > 0).length >= 3) break
     }
   }
-  const seenT = new Set(); prods = prods.filter(p => p.status === 'ACTIVE' && p.totalInventory > 0 && p.featuredImage && !policyFlag(p.title) && !LIGHT.test(p.title + ' ' + p.vendor)).filter(p => { const k = p.title.toLowerCase().trim(); if (seenT.has(k)) return false; seenT.add(k); return true }).slice(0, 6)
+  const seenT = new Set(); prods = prods.filter(p => !/razor|blade/i.test(p.title) || /razor|blade|shav/i.test(a.title)).filter(p => p.status === 'ACTIVE' && p.totalInventory > 0 && p.featuredImage && !policyFlag(p.title) && !LIGHT.test(p.title + ' ' + p.vendor)).filter(p => { const k = p.title.toLowerCase().trim(); if (seenT.has(k)) return false; seenT.add(k); return true }).slice(0, 6)
   // 3. brand pages mentioned
   const brands = Object.entries(BRANDS).filter(([slug, B]) => [B.name].concat(B.kw || []).some(k => k.length > 3 && new RegExp('\\b' + k.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/'/g, "['’]?") + '\\b').test(text))).slice(0, 3)
   if (/\bcantu\b/.test(text) && !brands.some(b => b[0] === 'cantu')) brands.unshift(['cantu', { name: 'Cantu' }])
