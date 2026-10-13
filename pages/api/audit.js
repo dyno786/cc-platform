@@ -132,8 +132,8 @@ export default async function handler(req, res) {
 
     if (job === 'size') {
       let seen = 0, done = false
-      while (Date.now() - started < 30000) {
-        const d = await gql('query($c: String) { products(first: 100, after: $c, reverse: ' + (req.query.rev === '1') + ', query: "status:active") { pageInfo { hasNextPage endCursor } nodes { id title productType vendor vol: metafield(namespace: "custom", key: "volume") { value } old: metafield(namespace: "custom", key: "old_title") { value } variants(first: 3) { nodes { barcode } } } } }', { c: cursor })
+      while (Date.now() - started < 15000) {
+        const d = await gql('query($c: String) { products(first: 50, after: $c, reverse: ' + (req.query.rev === '1') + ', query: "status:active") { pageInfo { hasNextPage endCursor } nodes { id title productType vendor vol: metafield(namespace: "custom", key: "volume") { value } old: metafield(namespace: "custom", key: "old_title") { value } variants(first: 3) { nodes { barcode } } } } }', { c: cursor })
         const cands = []
         for (const p of d.products.nodes || []) {
           seen++
