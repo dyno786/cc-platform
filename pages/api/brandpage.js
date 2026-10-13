@@ -85,9 +85,16 @@ async function build(slug, B) {
   let cols = cd.collections.nodes.filter(c => kre.test(c.title) && !/delete|-old|\bold\b|copy|\(dup/i.test(c.title + ' ' + c.handle) && c.productsCount.count >= 2 && !LIGHT.test(c.title))
   if (B.skipCols) { const sk = new RegExp(B.skipCols, 'i'); cols = cols.filter(c => !sk.test(c.title)) }
   cols.sort((a, b) => b.productsCount.count - a.productsCount.count)
+  if (B.cols) { // hand-picked collections, in this order
+    const picked = []
+    for (const h of B.cols) { const d = await gql('query($h:String!){ collectionByHandle(handle:$h){ handle title productsCount{count} image{url} } }', { h }); const c = d.collectionByHandle; if (c && c.productsCount.count >= 1) { if ((B.noImg || []).includes(h)) c.image = null; picked.push(c) } }
+    cols = picked
+  }
+  if (B.main && !cols.find(c => c.handle === B.main)) { const d = await gql('query($h:String!){ collectionByHandle(handle:$h){ handle title productsCount{count} image{url} } }', { h: B.main }); if (d.collectionByHandle) B._main = d.collectionByHandle }
+  const colName = t => B.colStrip ? (String(t).replace(new RegExp(B.colStrip, 'i'), '').trim() || t) : t
   const nm = s => String(s).toLowerCase().replace(/[^a-z0-9]/g, '')
   const exact = cols.filter(c => kw.concat([name]).some(k => nm(c.title) === nm(k)))
-  const main = (B.main && cols.find(c => c.handle === B.main)) || cols.find(c => c.handle === slug) || exact[0] || cols[0] || null
+  const main = (B.main && (cols.find(c => c.handle === B.main) || B._main)) || cols.find(c => c.handle === slug) || exact[0] || cols[0] || null
   const logoCol = cols.find(c => c.image && /logo/i.test(c.image.url) && kw.concat([name]).some(k => nm(c.image.url).includes(nm(k).slice(0, 6))))
   const words = kw.concat([name, slug]).map(nm).filter(x => x.length >= 3)
   const lf = (await logoFiles().catch(() => [])).find(u => { const f = nm(u.split('/').pop().split('?')[0].replace(/logo.*$/i, '')); return f.length >= 3 && words.some(w => w.startsWith(f) || f.startsWith(w)) })
@@ -137,9 +144,9 @@ async function build(slug, B) {
   let rows = sec('best', 'Most popular', name + ' best sellers', 'The ' + esc(name) + ' products our customers buy most, in stock now.', best, main ? `<a class="ct-more" href="/collections/${main.handle}">Shop all ${esc(name)} &rarr;</a>` : '')
   for (const g of groups) {
     const col = cols.find(c => new RegExp(g.label.split(/[ &]/)[0], 'i').test(c.title) && c !== main)
-    rows += sec(g.k, mode === 'ingredient' ? 'Shop by ingredient' : 'Shop by type', name + ' ' + g.label, mode === 'ingredient' ? esc(name) + ' products made with ' + esc(g.label.toLowerCase()) + ', in stock now.' : '', g.items.slice(0, 14), col ? `<a class="ct-more" href="/collections/${col.handle}">Shop ${esc(col.title)} &rarr;</a>` : '')
+    rows += sec(g.k, mode === 'ingredient' ? 'Shop by ingredient' : 'Shop by type', name + ' ' + g.label, mode === 'ingredient' ? esc(name) + ' products made with ' + esc(g.label.toLowerCase()) + ', in stock now.' : '', g.items.slice(0, 14), col ? `<a class="ct-more" href="/collections/${col.handle}">Shop ${esc(colName(col.title))} &rarr;</a>` : '')
   }
-  const colh = cols.slice(0, 24).map(c => `<a class="ct-c" href="/collections/${c.handle}">${c.image ? `<span class="ct-ci"><img src="${esc(c.image.url.split('?')[0])}?width=400" alt="${esc(c.title)} collection" loading="lazy" width="400" height="400"></span>` : `<span class="ct-ci ct-noimg">${esc(name.charAt(0))}</span>`}<span>${esc(c.title)}</span></a>`).join('')
+  const colh = cols.slice(0, 24).map(c => `<a class="ct-c" href="/collections/${c.handle}">${c.image ? `<span class="ct-ci"><img src="${esc(c.image.url.split('?')[0])}?width=400" alt="${esc(c.title)} collection" loading="lazy" width="400" height="400"></span>` : `<span class="ct-ci ct-noimg">${esc(name.charAt(0))}</span>`}<span>${esc(colName(c.title))}</span></a>`).join('')
   const types = {}; prods.forEach(p => { const t = typeName(p.productType); if (t !== 'More') types[t] = (types[t] || 0) + 1 })
   const topTypes = Object.entries(types).sort((a, b) => b[1] - a[1]).slice(0, 5).map(x => x[0].toLowerCase())
   const list = a => a.length > 1 ? a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1] : (a[0] || '')

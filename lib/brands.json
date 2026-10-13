@@ -1,558 +1,617 @@
 {
-"shea-moisture": {
-"name": "Shea Moisture",
-"q": "vendor:Shea*",
-"vre": "^shea ?moisture",
-"kw": [
-"Shea Moisture",
-"SheaMoisture"
-]
-},
-"african-pride": {
-"name": "African Pride",
-"q": "vendor:African*",
-"vre": "^african pride",
-"kw": [
-"African Pride"
-]
-},
-"palmers": {
-"name": "Palmer's",
-"q": "vendor:Palmer*",
-"vre": "^palmer",
-"kw": [
-"Palmer's",
-"Palmers"
-]
-},
-"africas-best": {
-"name": "Africa's Best",
-"q": "vendor:Africa* OR vendor:Texture*",
-"vre": "africa'?s best",
-"kw": [
-"Africa's Best",
-"Africas Best"
-]
-},
-"blue-magic": {
-"name": "Blue Magic",
-"q": "vendor:Blue*",
-"vre": "^blue magic",
-"kw": [
-"Blue Magic"
-]
-},
-"magic-collection": {
-"name": "Magic Collection",
-"q": "vendor:Magic*",
-"vre": "^magic collection",
-"kw": [
-"Magic Collection"
-],
-"byType": true
-},
-"red-by-kiss": {
-"name": "Red by Kiss",
-"q": "vendor:Red*",
-"vre": "^red by kiss",
-"kw": [
-"Red by Kiss"
-],
-"byType": true
-},
-"absolute-new-york": {
-"name": "Absolute New York",
-"q": "vendor:Absolute*",
-"vre": "^absolute",
-"kw": [
-"Absolute New York",
-"Absolute"
-]
-},
-"all-day-got-hold": {
-"name": "All Day Got Hold",
-"q": "vendor:All*",
-"vre": "^all day got hold",
-"kw": [
-"All Day Got Hold"
-]
-},
-"aunt-jackies": {
-"name": "Aunt Jackie's",
-"q": "vendor:Aunt*",
-"vre": "^aunt jackie",
-"kw": [
-"Aunt Jackie",
-"Aunt Jackies"
-]
-},
-"as-i-am": {
-"name": "As I Am",
-"q": "vendor:As*",
-"vre": "^as i am",
-"kw": [
-"As I Am"
-]
-},
-"keracare-affirm": {
-"name": "KeraCare & Affirm",
-"q": "vendor:Kera* OR vendor:Avlon* OR vendor:Affirm* OR vendor:KC*",
-"vre": "^(kera ?care|keracare|kc by keracare|avlon|affirm)",
-"kw": [
-"KeraCare",
-"Kera Care",
-"Affirm",
-"Avlon"
-],
-"intro": "Avlon’s KeraCare and Affirm ranges in one place: shampoos, conditioners, curl care, relaxers and styling for natural and relaxed hair."
-},
-"beauty-formulas": {
-"name": "Beauty Formulas",
-"q": "vendor:Beauty*",
-"vre": "^beauty formula",
-"kw": [
-"Beauty Formulas"
-]
-},
-"la-girl": {
-"name": "L.A. Girl",
-"q": "vendor:LA* OR vendor:L.A*",
-"vre": "^l\\.?a\\.? girl",
-"kw": [
-"LA Girl",
-"L.A. Girl"
-]
-},
-"beauty-forever": {
-"name": "Beauty Forever",
-"q": "vendor:Beauty*",
-"vre": "^beauty forever",
-"kw": [
-"Beauty Forever"
-]
-},
-"camille-rose": {
-"name": "Camille Rose",
-"q": "vendor:Camille*",
-"vre": "^camille",
-"kw": [
-"Camille Rose"
-]
-},
-"cherish": {
-"name": "Cherish Hair",
-"q": "vendor:Cherish*",
-"vre": "^cherish",
-"kw": [
-"Cherish"
-],
-"byType": true,
-"logo": "https://cdn.shopify.com/s/files/1/0605/2118/5501/files/cherish_hair_logo.png"
-},
-"difeel": {
-"name": "Difeel",
-"q": "vendor:Difeel*",
-"vre": "^difeel",
-"kw": [
-"Difeel"
-]
-},
-"design-essentials": {
-"name": "Design Essentials",
-"q": "vendor:Design*",
-"vre": "^design essential",
-"kw": [
-"Design Essentials"
-]
-},
-"dressmaker": {
-"name": "Dressmaker",
-"q": "vendor:Dress*",
-"vre": "^dress ?maker",
-"kw": [
-"Dressmaker",
-"Dress Maker"
-],
-"byType": true
-},
-"ebin-new-york": {
-"name": "Ebin New York",
-"q": "vendor:EBIN*",
-"vre": "^ebin",
-"kw": [
-"Ebin"
-]
-},
-"eco-style": {
-"name": "Eco Style",
-"q": "vendor:Eco*",
-"vre": "^eco(?!denta| bud)",
-"kw": [
-"Eco Style",
-"Eco Styler"
-]
-},
-"feme": {
-"name": "Feme Hair",
-"q": "vendor:Feme*",
-"vre": "^feme",
-"kw": [
-"Feme"
-],
-"byType": true
-},
-"garnier": {
-"name": "Garnier",
-"q": "vendor:Garnier*",
-"vre": "^garnier",
-"kw": [
-"Garnier"
-]
-},
-"loreal-professionnel": {
-"name": "L'Oréal Professionnel",
-"q": "vendor:Loreal*",
-"vre": "^loreal (professional|serie)",
-"kw": [
-"Loreal Professional",
-"Serie Expert",
-"Tecni Art"
-]
-},
-"loreal-paris": {
-"name": "L'Oréal Paris",
-"q": "vendor:Loreal*",
-"vre": "^loreal(?! professional| serie)",
-"kw": [
-"Loreal Paris",
-"Elvive",
-"Loreal Men"
-]
-},
-"hairmaker": {
-"name": "Hairmaker",
-"q": "vendor:Hair*",
-"vre": "^hair ?maker",
-"kw": [
-"Hairmaker",
-"Hair Maker"
-],
-"byType": true
-},
-"ic-fantasia": {
-"name": "IC Fantasia",
-"q": "vendor:IC*",
-"vre": "^ic fantasia",
-"kw": [
-"IC Fantasia"
-]
-},
-"janet-collection": {
-"name": "Janet Collection",
-"q": "vendor:Janet*",
-"vre": "^janet",
-"kw": [
-"Janet Collection"
-],
-"byType": true,
-"logo": "https://cdn.shopify.com/s/files/1/0605/2118/5501/files/janet_logo.png"
-},
-"joico": {
-"name": "Joico",
-"q": "vendor:Joico*",
-"vre": "^joico",
-"kw": [
-"Joico"
-]
-},
-"just-for-me": {
-"name": "Just For Me",
-"q": "vendor:Just*",
-"vre": "^just for me",
-"kw": [
-"Just For Me"
-]
-},
-"kiss": {
-"name": "Kiss",
-"q": "vendor:Kiss*",
-"vre": "^kiss",
-"kw": [
-"Kiss Nails",
-"Kiss Colors",
-"Kiss"
-],
-"byType": true
-},
-"lusters": {
-"name": "Luster’s",
-"q": "vendor:Luster*",
-"vre": "^lusters",
-"kw": [
-"Lusters",
-"S-Curl",
-"Pink"
-]
-},
-"mazuri": {
-"name": "Mazuri",
-"q": "vendor:Mazuri*",
-"vre": "^mazuri",
-"kw": [
-"Mazuri"
-]
-},
-"mielle": {
-"name": "Mielle Organics",
-"q": "vendor:Mielle*",
-"vre": "^mielle",
-"kw": [
-"Mielle"
-]
-},
-"model-model": {
-"name": "Model Model",
-"q": "vendor:Model*",
-"vre": "^model model",
-"kw": [
-"Model Model"
-],
-"byType": true,
-"logo": "https://cdn.shopify.com/s/files/1/0605/2118/5501/files/modelmodel_logo.jpg"
-},
-"nature-spell": {
-"name": "Nature Spell",
-"q": "vendor:Nature*",
-"vre": "^nature spell",
-"kw": [
-"Nature Spell"
-]
-},
-"novex": {
-"name": "Novex",
-"q": "vendor:Novex*",
-"vre": "^novex",
-"kw": [
-"Novex"
-]
-},
-"organic-root-stimulator": {
-"name": "ORS Organic Root Stimulator",
-"q": "vendor:Organic*",
-"vre": "^organic root stimulator",
-"kw": [
-"Organic Root Stimulator",
-"ORS"
-],
-"logo": "https://cdn.shopify.com/s/files/1/0605/2118/5501/files/organic_root_stimulator_logo.jpg"
-},
-"nicka-k": {
-"name": "Nicka K",
-"q": "vendor:Nicka*",
-"vre": "^nicka",
-"kw": [
-"Nicka K"
-]
-},
-"obsession": {
-"name": "Obsession",
-"q": "vendor:Obsession*",
-"vre": "^obsession",
-"kw": [
-"Obsession"
-],
-"byType": true
-},
-"outre": {
-"name": "Outre",
-"q": "vendor:Outre*",
-"vre": "^outre",
-"kw": [
-"Outre"
-],
-"byType": true
-},
-"redken": {
-"name": "Redken",
-"q": "vendor:Redken*",
-"vre": "^redken",
-"kw": [
-"Redken"
-]
-},
-"ruby-kisses": {
-"name": "Ruby Kisses",
-"q": "vendor:Ruby*",
-"vre": "^ruby kisses",
-"kw": [
-"Ruby Kisses"
-],
-"byType": true
-},
-"satin-smooth": {
-"name": "Satin Smooth",
-"q": "vendor:Satin*",
-"vre": "^satin smooth",
-"kw": [
-"Satin Smooth"
-],
-"byType": true
-},
-"hive": {
-"name": "Hive",
-"q": "vendor:Hive*",
-"vre": "^hive",
-"kw": [
-"Hive"
-],
-"byType": true
-},
-"schwarzkopf": {
-"name": "Schwarzkopf",
-"q": "vendor:Schwarzkopf*",
-"vre": "^schwarzkopf",
-"kw": [
-"Schwarzkopf"
-]
-},
-"silicon-mix": {
-"name": "Silicon Mix",
-"q": "vendor:Silicon*",
-"vre": "^silicon mix",
-"kw": [
-"Silicon Mix"
-]
-},
-"sleek-hair": {
-"name": "Sleek Hair",
-"q": "vendor:Sleek*",
-"vre": "^sleek (?!makeup)",
-"kw": [
-"Sleek"
-],
-"byType": true,
-"skipCols": "makeup",
-"logo": "https://cdn.shopify.com/s/files/1/0605/2118/5501/files/sleek_hair_logo.png"
-},
-"sof-n-free": {
-"name": "Sof N' Free",
-"q": "vendor:Sof*",
-"vre": "^sof ?n.? ?free|^sofnfree",
-"kw": [
-"Sof N Free",
-"Sof N' Free"
-]
-},
-"sunny-isle": {
-"name": "Sunny Isle",
-"q": "vendor:Sunny*",
-"vre": "^sunny isle",
-"kw": [
-"Sunny Isle"
-]
-},
-"taliah-waajid": {
-"name": "Taliah Waajid",
-"q": "vendor:Taliah*",
-"vre": "^taliah",
-"kw": [
-"Taliah Waajid"
-]
-},
-"the-doux": {
-"name": "The Doux",
-"q": "vendor:The*",
-"vre": "^the doux",
-"kw": [
-"The Doux",
-"Doux"
-]
-},
-"tyche": {
-"name": "Tyche",
-"q": "vendor:TYCHE*",
-"vre": "^tyche",
-"kw": [
-"Tyche"
-]
-},
-"vaseline": {
-"name": "Vaseline",
-"q": "vendor:Vaseline*",
-"vre": "^vaseline",
-"kw": [
-"Vaseline"
-]
-},
-"vatika-dabur": {
-"name": "Vatika (Dabur)",
-"q": "vendor:Vatika* OR vendor:Dabur*",
-"vre": "^(vatika|dabur)",
-"kw": [
-"Vatika",
-"Dabur"
-]
-},
-"wella": {
-"name": "Wella",
-"q": "vendor:Wella*",
-"vre": "^wella",
-"kw": [
-"Wella"
-]
-},
-"wahl": {
-"name": "Wahl",
-"q": "vendor:Wahl*",
-"vre": "^wahl",
-"kw": [
-"Wahl"
-],
-"byType": true
-},
-"remington": {
-"name": "Remington",
-"q": "vendor:Remington*",
-"vre": "^remington",
-"kw": [
-"Remington"
-],
-"byType": true
-},
-"andis": {
-"name": "Andis",
-"q": "vendor:Andis*",
-"vre": "^andis",
-"kw": [
-"Andis"
-],
-"byType": true
-},
-"veet": {
-"name": "Veet",
-"q": "vendor:Veet*",
-"vre": "^veet",
-"kw": [
-"Veet"
-],
-"byType": true
-},
-"umberto-giannini": {
-"name": "Umberto Giannini",
-"q": "vendor:Umberto*",
-"vre": "^umberto",
-"kw": [
-"Umberto Giannini",
-"Umberto"
-]
-},
-"titan": {
-"name": "Titan",
-"q": "vendor:Titan*",
-"vre": "^titan",
-"kw": [
-"Titan"
-],
-"byType": true
-}
+ "shea-moisture": {
+  "name": "Shea Moisture",
+  "q": "vendor:Shea*",
+  "vre": "^shea ?moisture",
+  "kw": [
+   "Shea Moisture",
+   "SheaMoisture"
+  ]
+ },
+ "african-pride": {
+  "name": "African Pride",
+  "q": "vendor:African*",
+  "vre": "^african pride",
+  "kw": [
+   "African Pride"
+  ]
+ },
+ "palmers": {
+  "name": "Palmer's",
+  "q": "vendor:Palmer*",
+  "vre": "^palmer",
+  "kw": [
+   "Palmer's",
+   "Palmers"
+  ]
+ },
+ "africas-best": {
+  "name": "Africa's Best",
+  "q": "vendor:Africa* OR vendor:Texture*",
+  "vre": "africa'?s best",
+  "kw": [
+   "Africa's Best",
+   "Africas Best"
+  ]
+ },
+ "blue-magic": {
+  "name": "Blue Magic",
+  "q": "vendor:Blue*",
+  "vre": "^blue magic",
+  "kw": [
+   "Blue Magic"
+  ]
+ },
+ "magic-collection": {
+  "name": "Magic Collection",
+  "q": "vendor:Magic*",
+  "vre": "^magic collection",
+  "kw": [
+   "Magic Collection"
+  ],
+  "byType": true
+ },
+ "red-by-kiss": {
+  "name": "Red by Kiss",
+  "q": "vendor:Red*",
+  "vre": "^red by kiss",
+  "kw": [
+   "Red by Kiss"
+  ],
+  "byType": true
+ },
+ "absolute-new-york": {
+  "name": "Absolute New York",
+  "q": "vendor:Absolute*",
+  "vre": "^absolute",
+  "kw": [
+   "Absolute New York",
+   "Absolute"
+  ]
+ },
+ "all-day-got-hold": {
+  "name": "All Day Got Hold",
+  "q": "vendor:All*",
+  "vre": "^all day got hold",
+  "kw": [
+   "All Day Got Hold"
+  ]
+ },
+ "aunt-jackies": {
+  "name": "Aunt Jackie's",
+  "q": "vendor:Aunt*",
+  "vre": "^aunt jackie",
+  "kw": [
+   "Aunt Jackie",
+   "Aunt Jackies"
+  ]
+ },
+ "as-i-am": {
+  "name": "As I Am",
+  "q": "vendor:As*",
+  "vre": "^as i am",
+  "kw": [
+   "As I Am"
+  ]
+ },
+ "keracare-affirm": {
+  "name": "KeraCare & Affirm",
+  "q": "vendor:Kera* OR vendor:Avlon* OR vendor:Affirm* OR vendor:KC*",
+  "vre": "^(kera ?care|keracare|kc by keracare|avlon|affirm)",
+  "kw": [
+   "KeraCare",
+   "Kera Care",
+   "Affirm",
+   "Avlon"
+  ],
+  "intro": "Avlon’s KeraCare and Affirm ranges in one place: shampoos, conditioners, curl care, relaxers and styling for natural and relaxed hair."
+ },
+ "beauty-formulas": {
+  "name": "Beauty Formulas",
+  "q": "vendor:Beauty*",
+  "vre": "^beauty formula",
+  "kw": [
+   "Beauty Formulas"
+  ]
+ },
+ "la-girl": {
+  "name": "L.A. Girl",
+  "q": "vendor:LA* OR vendor:L.A*",
+  "vre": "^l\\.?a\\.? girl",
+  "kw": [
+   "LA Girl",
+   "L.A. Girl"
+  ]
+ },
+ "beauty-forever": {
+  "name": "Beauty Forever",
+  "q": "vendor:Beauty*",
+  "vre": "^beauty forever",
+  "kw": [
+   "Beauty Forever"
+  ]
+ },
+ "camille-rose": {
+  "name": "Camille Rose",
+  "q": "vendor:Camille*",
+  "vre": "^camille",
+  "kw": [
+   "Camille Rose"
+  ]
+ },
+ "cherish": {
+  "name": "Cherish Hair",
+  "q": "vendor:Cherish*",
+  "vre": "^cherish",
+  "kw": [
+   "Cherish"
+  ],
+  "byType": true,
+  "logo": "https://cdn.shopify.com/s/files/1/0605/2118/5501/files/cherish_hair_logo.png"
+ },
+ "difeel": {
+  "name": "Difeel",
+  "q": "vendor:Difeel*",
+  "vre": "^difeel",
+  "kw": [
+   "Difeel"
+  ]
+ },
+ "design-essentials": {
+  "name": "Design Essentials",
+  "q": "vendor:Design*",
+  "vre": "^design essential",
+  "kw": [
+   "Design Essentials"
+  ]
+ },
+ "dressmaker": {
+  "name": "Dressmaker",
+  "q": "vendor:Dress*",
+  "vre": "^dress ?maker",
+  "kw": [
+   "Dressmaker",
+   "Dress Maker"
+  ],
+  "byType": true
+ },
+ "ebin-new-york": {
+  "name": "Ebin New York",
+  "q": "vendor:EBIN*",
+  "vre": "^ebin",
+  "kw": [
+   "Ebin"
+  ]
+ },
+ "eco-style": {
+  "name": "Eco Style",
+  "q": "vendor:Eco*",
+  "vre": "^eco(?!denta| bud)",
+  "kw": [
+   "Eco Style",
+   "Eco Styler"
+  ]
+ },
+ "feme": {
+  "name": "Feme Hair",
+  "q": "vendor:Feme*",
+  "vre": "^feme",
+  "kw": [
+   "Feme"
+  ],
+  "byType": true
+ },
+ "garnier": {
+  "name": "Garnier",
+  "q": "vendor:Garnier*",
+  "vre": "^garnier",
+  "kw": [
+   "Garnier"
+  ]
+ },
+ "loreal-professionnel": {
+  "name": "L'Oréal Professionnel",
+  "q": "vendor:Loreal*",
+  "vre": "^loreal (professional|serie)",
+  "kw": [
+   "Loreal Professional",
+   "Serie Expert",
+   "Tecni Art"
+  ],
+  "main": "loreal",
+  "colStrip": "^\\s*L['’]?Or[eé]al\\s*(Professional|Professionnel|Professionel|Paris)?\\s*[-–:]?\\s*",
+  "noImg": [
+   "loreal-professional-blonde-studio-9"
+  ],
+  "cols": [
+   "loreal-professional-serie-expert-absolut-repair",
+   "loreal-professional-serie-expert-vitamino-colour",
+   "loreal-tecni-art",
+   "loreal-professional-serie-expert-b6-biotin-inforcer",
+   "loreal-professional-serie-expert-blondifier-gloss",
+   "loreal-professional-serie-expert-pro-longer-lengths",
+   "loreal-professional-serie-expert-curl-expression",
+   "loreal-serie-expert-silver-shampoo",
+   "loreal-professional-serie-expert-scalp-advanced",
+   "loreal-professional-serie-expert-volmetry",
+   "loreal-professional-source",
+   "loreal-professional-serie-expert-liss-unlimited",
+   "loreal-professional-serie-expert-metail-detox",
+   "loreal-professional-serie-expert-glycerol-coco-oil",
+   "loreal-professional-serie-expert-serioxyl-advanced-purifier",
+   "loreal-professional-serie-expert-chroma",
+   "loreal-professional-serie-expert-lumino-contrast",
+   "loreal-professional-serie-expert-curl-contour",
+   "loreal-professional-serie-expert-keratin-refill",
+   "loreal-professional-dia-light",
+   "loreal-professional-majirel",
+   "loreal-professional-blonde-studio-9"
+  ]
+ },
+ "loreal-paris": {
+  "name": "L'Oréal Paris",
+  "q": "vendor:Loreal*",
+  "vre": "^loreal(?! professional| serie)",
+  "kw": [
+   "Loreal Paris",
+   "Elvive",
+   "Loreal Men"
+  ],
+  "main": "loreal",
+  "colStrip": "^\\s*L['’]?Or[eé]al\\s*(Professional|Professionnel|Professionel|Paris)?\\s*[-–:]?\\s*",
+  "cols": [
+   "loreal-elvive-extraordinary-oil",
+   "loreal-elvive-colour-protect",
+   "loreal-elvive-hydra-pure",
+   "loreal-elvive-fibrology",
+   "loreal-elvive-nutri-gloss",
+   "loreal-elvive-full-resist",
+   "loreal-elvive-full-restore",
+   "loreal-elvive-extraordinary-clay-dry",
+   "l-oreal-elvive-glycolic-gloss",
+   "l-oreal-elvive-bond-repair",
+   "loreal-elvive-dream-lengths",
+   "loreal-men",
+   "loreal-paris-elnett",
+   "loreal-paris-studio-line",
+   "loreal-paris-mythic-oil",
+   "loreal-paris-colorista",
+   "loreal-paris-preference",
+   "loreal-paris-casting-creme",
+   "loreal-paris-excellence-creme",
+   "loreal-paris-magic-retouch",
+   "loreal-paris-age-perfect-1",
+   "l-oreal-revitalift-filler",
+   "l-oreal-wrinkle-expert",
+   "loreal-paris-hyaluron-expert",
+   "loreal-paris-hydra-genius-hyaluronic",
+   "loreal-paris-sublime-bronze"
+  ]
+ },
+ "hairmaker": {
+  "name": "Hairmaker",
+  "q": "vendor:Hair*",
+  "vre": "^hair ?maker",
+  "kw": [
+   "Hairmaker",
+   "Hair Maker"
+  ],
+  "byType": true
+ },
+ "ic-fantasia": {
+  "name": "IC Fantasia",
+  "q": "vendor:IC*",
+  "vre": "^ic fantasia",
+  "kw": [
+   "IC Fantasia"
+  ]
+ },
+ "janet-collection": {
+  "name": "Janet Collection",
+  "q": "vendor:Janet*",
+  "vre": "^janet",
+  "kw": [
+   "Janet Collection"
+  ],
+  "byType": true,
+  "logo": "https://cdn.shopify.com/s/files/1/0605/2118/5501/files/janet_logo.png"
+ },
+ "joico": {
+  "name": "Joico",
+  "q": "vendor:Joico*",
+  "vre": "^joico",
+  "kw": [
+   "Joico"
+  ]
+ },
+ "just-for-me": {
+  "name": "Just For Me",
+  "q": "vendor:Just*",
+  "vre": "^just for me",
+  "kw": [
+   "Just For Me"
+  ]
+ },
+ "kiss": {
+  "name": "Kiss",
+  "q": "vendor:Kiss*",
+  "vre": "^kiss",
+  "kw": [
+   "Kiss Nails",
+   "Kiss Colors",
+   "Kiss"
+  ],
+  "byType": true
+ },
+ "lusters": {
+  "name": "Luster’s",
+  "q": "vendor:Luster*",
+  "vre": "^lusters",
+  "kw": [
+   "Lusters",
+   "S-Curl",
+   "Pink"
+  ]
+ },
+ "mazuri": {
+  "name": "Mazuri",
+  "q": "vendor:Mazuri*",
+  "vre": "^mazuri",
+  "kw": [
+   "Mazuri"
+  ]
+ },
+ "mielle": {
+  "name": "Mielle Organics",
+  "q": "vendor:Mielle*",
+  "vre": "^mielle",
+  "kw": [
+   "Mielle"
+  ]
+ },
+ "model-model": {
+  "name": "Model Model",
+  "q": "vendor:Model*",
+  "vre": "^model model",
+  "kw": [
+   "Model Model"
+  ],
+  "byType": true,
+  "logo": "https://cdn.shopify.com/s/files/1/0605/2118/5501/files/modelmodel_logo.jpg"
+ },
+ "nature-spell": {
+  "name": "Nature Spell",
+  "q": "vendor:Nature*",
+  "vre": "^nature spell",
+  "kw": [
+   "Nature Spell"
+  ]
+ },
+ "novex": {
+  "name": "Novex",
+  "q": "vendor:Novex*",
+  "vre": "^novex",
+  "kw": [
+   "Novex"
+  ]
+ },
+ "organic-root-stimulator": {
+  "name": "ORS Organic Root Stimulator",
+  "q": "vendor:Organic*",
+  "vre": "^organic root stimulator",
+  "kw": [
+   "Organic Root Stimulator",
+   "ORS"
+  ],
+  "logo": "https://cdn.shopify.com/s/files/1/0605/2118/5501/files/organic_root_stimulator_logo.jpg"
+ },
+ "nicka-k": {
+  "name": "Nicka K",
+  "q": "vendor:Nicka*",
+  "vre": "^nicka",
+  "kw": [
+   "Nicka K"
+  ]
+ },
+ "obsession": {
+  "name": "Obsession",
+  "q": "vendor:Obsession*",
+  "vre": "^obsession",
+  "kw": [
+   "Obsession"
+  ],
+  "byType": true
+ },
+ "outre": {
+  "name": "Outre",
+  "q": "vendor:Outre*",
+  "vre": "^outre",
+  "kw": [
+   "Outre"
+  ],
+  "byType": true
+ },
+ "redken": {
+  "name": "Redken",
+  "q": "vendor:Redken*",
+  "vre": "^redken",
+  "kw": [
+   "Redken"
+  ]
+ },
+ "ruby-kisses": {
+  "name": "Ruby Kisses",
+  "q": "vendor:Ruby*",
+  "vre": "^ruby kisses",
+  "kw": [
+   "Ruby Kisses"
+  ],
+  "byType": true
+ },
+ "satin-smooth": {
+  "name": "Satin Smooth",
+  "q": "vendor:Satin*",
+  "vre": "^satin smooth",
+  "kw": [
+   "Satin Smooth"
+  ],
+  "byType": true
+ },
+ "hive": {
+  "name": "Hive",
+  "q": "vendor:Hive*",
+  "vre": "^hive",
+  "kw": [
+   "Hive"
+  ],
+  "byType": true
+ },
+ "schwarzkopf": {
+  "name": "Schwarzkopf",
+  "q": "vendor:Schwarzkopf*",
+  "vre": "^schwarzkopf",
+  "kw": [
+   "Schwarzkopf"
+  ]
+ },
+ "silicon-mix": {
+  "name": "Silicon Mix",
+  "q": "vendor:Silicon*",
+  "vre": "^silicon mix",
+  "kw": [
+   "Silicon Mix"
+  ]
+ },
+ "sleek-hair": {
+  "name": "Sleek Hair",
+  "q": "vendor:Sleek*",
+  "vre": "^sleek (?!makeup)",
+  "kw": [
+   "Sleek"
+  ],
+  "byType": true,
+  "skipCols": "makeup",
+  "logo": "https://cdn.shopify.com/s/files/1/0605/2118/5501/files/sleek_hair_logo.png"
+ },
+ "sof-n-free": {
+  "name": "Sof N' Free",
+  "q": "vendor:Sof*",
+  "vre": "^sof ?n.? ?free|^sofnfree",
+  "kw": [
+   "Sof N Free",
+   "Sof N' Free"
+  ]
+ },
+ "sunny-isle": {
+  "name": "Sunny Isle",
+  "q": "vendor:Sunny*",
+  "vre": "^sunny isle",
+  "kw": [
+   "Sunny Isle"
+  ]
+ },
+ "taliah-waajid": {
+  "name": "Taliah Waajid",
+  "q": "vendor:Taliah*",
+  "vre": "^taliah",
+  "kw": [
+   "Taliah Waajid"
+  ]
+ },
+ "the-doux": {
+  "name": "The Doux",
+  "q": "vendor:The*",
+  "vre": "^the doux",
+  "kw": [
+   "The Doux",
+   "Doux"
+  ]
+ },
+ "tyche": {
+  "name": "Tyche",
+  "q": "vendor:TYCHE*",
+  "vre": "^tyche",
+  "kw": [
+   "Tyche"
+  ]
+ },
+ "vaseline": {
+  "name": "Vaseline",
+  "q": "vendor:Vaseline*",
+  "vre": "^vaseline",
+  "kw": [
+   "Vaseline"
+  ]
+ },
+ "vatika-dabur": {
+  "name": "Vatika (Dabur)",
+  "q": "vendor:Vatika* OR vendor:Dabur*",
+  "vre": "^(vatika|dabur)",
+  "kw": [
+   "Vatika",
+   "Dabur"
+  ]
+ },
+ "wella": {
+  "name": "Wella",
+  "q": "vendor:Wella*",
+  "vre": "^wella",
+  "kw": [
+   "Wella"
+  ]
+ },
+ "wahl": {
+  "name": "Wahl",
+  "q": "vendor:Wahl*",
+  "vre": "^wahl",
+  "kw": [
+   "Wahl"
+  ],
+  "byType": true
+ },
+ "remington": {
+  "name": "Remington",
+  "q": "vendor:Remington*",
+  "vre": "^remington",
+  "kw": [
+   "Remington"
+  ],
+  "byType": true
+ },
+ "andis": {
+  "name": "Andis",
+  "q": "vendor:Andis*",
+  "vre": "^andis",
+  "kw": [
+   "Andis"
+  ],
+  "byType": true
+ },
+ "veet": {
+  "name": "Veet",
+  "q": "vendor:Veet*",
+  "vre": "^veet",
+  "kw": [
+   "Veet"
+  ],
+  "byType": true
+ },
+ "umberto-giannini": {
+  "name": "Umberto Giannini",
+  "q": "vendor:Umberto*",
+  "vre": "^umberto",
+  "kw": [
+   "Umberto Giannini",
+   "Umberto"
+  ]
+ },
+ "titan": {
+  "name": "Titan",
+  "q": "vendor:Titan*",
+  "vre": "^titan",
+  "kw": [
+   "Titan"
+  ],
+  "byType": true
+ }
 }
