@@ -71,8 +71,11 @@ async function build(slug, B) {
   let cols = cd.collections.nodes.filter(c => kre.test(c.title) && !/delete|-old|\bold\b|copy|\(dup/i.test(c.title + ' ' + c.handle) && c.productsCount.count >= 2 && !LIGHT.test(c.title))
   if (B.skipCols) { const sk = new RegExp(B.skipCols, 'i'); cols = cols.filter(c => !sk.test(c.title)) }
   cols.sort((a, b) => b.productsCount.count - a.productsCount.count)
-  const main = (B.main && cols.find(c => c.handle === B.main)) || cols.find(c => c.handle === slug) || cols[0] || null
-  let logo = B.logo || (main && main.image && main.image.url) || null
+  const nm = s => String(s).toLowerCase().replace(/[^a-z0-9]/g, '')
+  const exact = cols.filter(c => kw.concat([name]).some(k => nm(c.title) === nm(k)))
+  const main = (B.main && cols.find(c => c.handle === B.main)) || cols.find(c => c.handle === slug) || exact[0] || cols[0] || null
+  const logoCol = cols.find(c => c.image && /logo/i.test(c.image.url)) || exact.find(c => c.image) || (main && main.image ? main : null)
+  let logo = B.logo || (logoCol && logoCol.image.url) || null
   // best sellers
   let best = []
   if (main) {
@@ -82,10 +85,12 @@ async function build(slug, B) {
   }
   if (best.length < 4) best = show.slice().sort((a, b) => b.totalInventory - a.totalInventory).slice(0, 12)
   // groups
+  const bre = new RegExp(kw.concat([name]).map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'gi')
+  const stripBrand = t => String(t).replace(bre, ' ')
   let groups = []
   if (!B.byType) {
     for (const [k, label, re] of ING) {
-      const items = show.filter(p => re.test(p.title))
+      const items = show.filter(p => re.test(stripBrand(p.title)))
       if (items.length >= 2) groups.push({ k, label, items })
     }
   }
@@ -167,6 +172,7 @@ export default async function handler(req, res) {
             else if (ex) { const u = await gql('mutation($id:ID!,$p:PageUpdateInput!){ pageUpdate(id:$id, page:$p){ userErrors{message} } }', { id: ex.id, p: { title: B.name, body: r.body, metafields: mf } }); action = 'updated ' + JSON.stringify(u.pageUpdate.userErrors) }
             else { const c = await gql('mutation($p:PageCreateInput!){ pageCreate(page:$p){ page{handle} userErrors{message} } }', { p: { title: B.name, handle, isPublished: true, body: r.body, metafields: mf } }); action = 'created ' + JSON.stringify(c.pageCreate.userErrors) }
           }
+          if (req.query.raw === '1') return res.status(200).send(r.body)
           delete r.body
           out.push({ slug, action, ...r })
         } catch (e) { out.push({ slug, error: String(e.message || e) }) }
