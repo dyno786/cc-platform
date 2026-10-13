@@ -228,7 +228,8 @@ async function shopBlock(a) {
   }
   const seenT = new Set(); prods = prods.filter(p => !/razor|blade/i.test(p.title) || /razor|blade|shav/i.test(a.title)).filter(p => p.status === 'ACTIVE' && p.totalInventory > 0 && p.featuredImage && !policyFlag(p.title) && !LIGHT.test(p.title + ' ' + p.vendor)).filter(p => { const k = p.title.toLowerCase().trim(); if (seenT.has(k)) return false; seenT.add(k); return true }).slice(0, 6)
   // 3. brand pages mentioned
-  const brands = Object.entries(BRANDS).filter(([slug, B]) => [B.name].concat(B.kw || []).some(k => k.length > 3 && new RegExp('\\b' + k.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/'/g, "['’]?") + '\\b').test(text))).slice(0, 3)
+  const COMMON = /^(sleek|absolute|kiss|hive|titan|obsession|feme|outre)$/i
+  const brands = Object.entries(BRANDS).filter(([slug, B]) => [B.name].concat(B.kw || []).some(k => k.length > 3 && !COMMON.test(k.trim()) && new RegExp('\\b' + k.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/'/g, "['’]?") + '\\b').test(text))).slice(0, 3)
   if (/\bcantu\b/.test(text) && !brands.some(b => b[0] === 'cantu')) brands.unshift(['cantu', { name: 'Cantu' }])
   // 4. topic collection
   const topic = TOPICS.find(t => t[0].test(a.title)) || null
