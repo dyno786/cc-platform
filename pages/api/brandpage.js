@@ -248,7 +248,7 @@ async function shopBlogs(off, lim, go, only) {
       const nb = String(a.body || '').replace(SHOP_RE, '').replace(/\s+$/, '') + blk
       let act = 'preview'
       if (go) { const u = await gql('mutation($id:ID!,$a:ArticleUpdateInput!){ articleUpdate(id:$id, article:$a){ userErrors{message} } }', { id: a.id, a: { body: nb } }); act = u.articleUpdate.userErrors.length ? JSON.stringify(u.articleUpdate.userErrors) : 'updated' }
-      out.push({ handle: a.handle, act, products: (blk.match(/\/products\//g) || []).length, brands: (blk.match(/\/pages\//g) || []).length, topic: /\/collections\//.test(blk) })
+      out.push({ handle: a.handle, act, products: [...blk.matchAll(/alt="([^"]*)"/g)].map(m => m[1]), links: [...blk.matchAll(/href="(\/(?:pages|collections)\/[^"]+)"/g)].map(m => m[1]) })
     } catch (e) { out.push({ handle: a.handle, error: String(e.message || e) }) }
   }
   return { total: list.length, off, lim, next: off + lim < list.length ? off + lim : null, out }
