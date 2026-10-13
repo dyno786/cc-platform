@@ -128,7 +128,7 @@ async function build(slug, B) {
     if (arts.length < 3) arts = arts.concat(ad.articles.nodes.filter(a => a.isPublished && a.publishedAt && !arts.includes(a))).slice(0, 6)
   } catch (e) { }
   // html
-  const short = t => { let s = String(t); for (const k of kw) s = s.replace(new RegExp('^\\s*' + k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[\\s:\\-–]*', 'i'), ''); return s.trim() || t }
+  const short = t => { let s = String(t); for (const k of kw.concat([name])) { const e = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/'/g, "['’]?").replace(/\\s+/g, '\\s*'); s = s.replace(new RegExp('^\\s*' + e + "(['’]s)?", 'i'), '') } s = s.replace(/^[\s,:;\-–|\[\]()]+/, '').trim(); return s ? s.charAt(0).toUpperCase() + s.slice(1) : t }
   const card = p => `<a class="ct-p" href="/products/${p.handle}"><span class="ct-pi"><img src="${esc(p.featuredImage.url.split('?')[0])}?width=360" alt="${esc(p.title)}" loading="lazy" width="360" height="360"></span><span class="ct-pn">${esc(short(p.title))}</span><span class="ct-pp">${money(p.priceRangeV2.minVariantPrice.amount)}</span></a>`
   const minP = Math.min(...prods.map(p => +p.priceRangeV2.minVariantPrice.amount).filter(x => x > 0))
   const word = mode === 'ingredient' ? 'ingredient' : 'type'
