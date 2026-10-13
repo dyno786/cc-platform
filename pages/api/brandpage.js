@@ -7,7 +7,7 @@ import BRANDS from '../../lib/brands.json'
 export const config = { maxDuration: 60 }
 const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const money = n => '£' + Number(n).toFixed(2)
-const LIGHT = /lighten|whiten|bleaching cream|fade cream|dark spot|toning (soap|cream|lotion|serum|oil|gel)|hydroquinone|clarifying (cream|lotion|serum)|carotone|caro light|fair\s*(&|and)\s*white|makari|skin tone/i
+const LIGHT = /lighten|whiten|bleaching cream|fade cream|dark spot|toning (soap|cream|lotion|serum|oil|gel)|hydroquinone|clarifying (cream|lotion|serum)|carotone|caro light|fair\s*(&|and)\s*(white|lovely)|fair lady|makari|skin tone/i
 
 const ING = [
   ['shea', 'Shea Butter', /shea/i], ['coconut', 'Coconut', /coconut/i], ['argan', 'Argan Oil', /argan|morocc/i],
@@ -219,12 +219,14 @@ async function shopBlock(a) {
     for (const n of [Math.min(4, q.length), 3, 2]) {
       if (n < 2 || q.length < n) continue
       const d = await gql('query($q:String!){ products(first:12, query:$q, sortKey:RELEVANCE){ nodes{ handle title vendor status totalInventory featuredImage{url} priceRangeV2{minVariantPrice{amount}} } } }', { q: q.slice(0, n).join(' AND ') + ' AND status:active' })
-      const got = d.products.nodes.filter(p => !prods.some(x => x.handle === p.handle))
+      const stem = w => w.replace(/(es|s)$/, '')
+      const need = Math.min(3, words.length)
+      const got = d.products.nodes.filter(p => !prods.some(x => x.handle === p.handle)).filter(p => { const t = p.title.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).map(stem); return words.filter(w => t.includes(stem(w))).length >= need })
       prods = prods.concat(got)
       if (prods.filter(p => p.status === 'ACTIVE' && p.totalInventory > 0).length >= 3) break
     }
   }
-  prods = prods.filter(p => p.status === 'ACTIVE' && p.totalInventory > 0 && p.featuredImage && !policyFlag(p.title) && !LIGHT.test(p.title)).slice(0, 6)
+  const seenT = new Set(); prods = prods.filter(p => p.status === 'ACTIVE' && p.totalInventory > 0 && p.featuredImage && !policyFlag(p.title) && !LIGHT.test(p.title + ' ' + p.vendor)).filter(p => { const k = p.title.toLowerCase().trim(); if (seenT.has(k)) return false; seenT.add(k); return true }).slice(0, 6)
   // 3. brand pages mentioned
   const brands = Object.entries(BRANDS).filter(([slug, B]) => [B.name].concat(B.kw || []).some(k => k.length > 3 && new RegExp('\\b' + k.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/'/g, "['’]?") + '\\b').test(text))).slice(0, 3)
   if (/\bcantu\b/.test(text) && !brands.some(b => b[0] === 'cantu')) brands.unshift(['cantu', { name: 'Cantu' }])
