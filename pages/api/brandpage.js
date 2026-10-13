@@ -111,7 +111,8 @@ async function build(slug, B) {
     }
   }
   let mode = 'ingredient'
-  if (B.byType || groups.length < 3) {
+  const covered = new Set(); groups.forEach(g => g.items.forEach(p => covered.add(p.handle)))
+  if (B.byType || groups.length < 3 || covered.size < show.length * 0.4) {
     mode = 'type'; groups = []
     const by = {}
     show.forEach(p => { const t = typeName(p.productType); (by[t] = by[t] || []).push(p) })
