@@ -270,6 +270,11 @@ export default async function handler(req, res) {
     if (job === 'vendors') {
       return res.status(200).json({ ok: true, vendors: await vendors(req.query.q || '') })
     }
+    if (job === 'cols') { // list every collection (handle|title|products|hasImage), optional title regex re=
+      const re = req.query.re ? new RegExp(req.query.re, 'i') : null; const out = []; let c = null
+      for (let i = 0; i < 20; i++) { const d = await gql('query($c:String){ collections(first:250, after:$c){ pageInfo{hasNextPage endCursor} nodes{ handle title productsCount{count} image{url} } } }', { c }); for (const n of d.collections.nodes) if (!re || re.test(n.title) || re.test(n.handle)) out.push([n.handle, n.title, n.productsCount.count, n.image ? 1 : 0].join('|')); if (!d.collections.pageInfo.hasNextPage) break; c = d.collections.pageInfo.endCursor }
+      res.setHeader('content-type', 'text/plain; charset=utf-8'); return res.status(200).send(out.join('\n'))
+    }
     if (job === 'shopblogs') return res.status(200).json({ ok: true, ...(await shopBlogs(parseInt(req.query.off || '0', 10), Math.min(30, parseInt(req.query.lim || '15', 10)), req.query.go === '1', req.query.h || '')) })
     if (job === 'blogs') return res.status(200).json({ ok: true, ...(await blogIndex(req.query.go === '1')) })
     if (job === 'build') {
