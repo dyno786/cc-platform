@@ -200,7 +200,7 @@ async function blogIndex(go) {
 // "Shop this post" block on blog posts: links readers to the products, brand pages and collections a post talks about
 const SHOP_RE = /<!--cc-shop-->[\s\S]*?<!--\/cc-shop-->/g
 const STOP = new Set(['review','reviews','cc','hair','beauty','leeds','and','the','for','with','your','guide','new','in','at','now','of','a','to','how','best','uk','tips','by','is','on','why','you','what','which','2024','2025','2026','5','essential','routine','sunday','benefits','complete','buyer','s','vs','or','one','do','need','it','use','using','from','our','this','that','products','product'])
-const TOPICS = [[/edge/i, 'edge-control', 'Edge Control'], [/relax/i, 'relaxers', 'Relaxers'], [/braid/i, 'crochet-braided', 'Braiding Hair'], [/wig/i, 'wigs-lace-wigs', 'Wigs'], [/dye|colou?r/i, 'hair-dyes', 'Hair Dyes'], [/kid|child/i, 'kids', 'Kids Hair Care'], [/skin|ashy|spf/i, 'skin-care', 'Skin Care'], [/oil/i, 'hair-oil', 'Hair Oils'], [/shampoo/i, 'shampoo', 'Shampoo'], [/curl/i, 'curl-creams', 'Curl Creams'], [/winter/i, 'winter-hair-care', 'Winter Hair Care'], [/body|lotion|cream/i, 'lotions', 'Body Lotions & Creams']]
+const TOPICS = [[/edge/i, 'edge-control', 'Edge Control'], [/relax|texturi/i, 'relaxers', 'Relaxers'], [/braid|crochet/i, 'crochet-braided', 'Braiding Hair'], [/wig/i, 'wigs-lace-wigs', 'Wigs'], [/shampoo/i, 'shampoo', 'Shampoo'], [/\bdye\b|hair colou?r|hicolor|colour for me|casting|gloss/i, 'hair-dyes', 'Hair Dyes'], [/kid|child/i, 'kids', 'Kids Hair Care'], [/body|lotion|skin|ashy|spf|soap/i, 'lotions', 'Body Lotions & Creams'], [/curl/i, 'curl-creams', 'Curl Creams'], [/oil|serum/i, 'hair-oil', 'Hair Oils'], [/winter/i, 'winter-hair-care', 'Winter Hair Care']]
 const plain = h => String(h || '').replace(SHOP_RE, ' ').replace(/<(script|style)[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&[a-z#0-9]+;/gi, ' ')
 async function shopBlock(a) {
   const body = a.body || ''
@@ -213,15 +213,15 @@ async function shopBlock(a) {
     prods = d.products.nodes
   }
   // 2. products named in the title
-  const words = unesc(a.title).replace(/[|–—:\-(),!?'’"]/g, ' ').split(/\s+/).map(w => w.toLowerCase()).filter(w => w.length > 1 && !STOP.has(w))
+  const words = unesc(a.title).replace(/['’]/g, '').replace(/[|–—:\-(),!?"]/g, ' ').split(/\s+/).map(w => w.toLowerCase()).filter(w => w.length > 1 && !STOP.has(w))
   if (prods.filter(p => p.status === 'ACTIVE' && p.totalInventory > 0).length < 3 && words.length >= 2) {
     const q = words.slice(0, 6).map(w => 'title:*' + w.replace(/[^a-z0-9]/g, '') + '*').filter(x => x.length > 9)
-    for (const n of [Math.min(4, q.length), 3, 2]) {
-      if (n < 2 || q.length < n) continue
+    for (const n of [Math.min(4, q.length), 3, 2, 1]) {
+      if (n < 1 || q.length < n) continue
       const d = await gql('query($q:String!){ products(first:12, query:$q, sortKey:RELEVANCE){ nodes{ handle title vendor status totalInventory featuredImage{url} priceRangeV2{minVariantPrice{amount}} } } }', { q: q.slice(0, n).join(' AND ') + ' AND status:active' })
       const stem = w => w.replace(/(es|s)$/, '')
       const need = Math.min(3, words.length)
-      const got = d.products.nodes.filter(p => !prods.some(x => x.handle === p.handle)).filter(p => { const t = p.title.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).map(stem); return words.filter(w => t.includes(stem(w))).length >= need })
+      const got = d.products.nodes.filter(p => !prods.some(x => x.handle === p.handle)).filter(p => { const t = p.title.toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).map(stem); return words.filter(w => t.includes(stem(w))).length >= need })
       prods = prods.concat(got)
       if (prods.filter(p => p.status === 'ACTIVE' && p.totalInventory > 0).length >= 3) break
     }
