@@ -58,9 +58,8 @@ function css() {
 async function build(slug, B) {
   const name = B.name, kw = B.kw || [name]
   // products
-  const vq = B.vendors.map(v => 'vendor:"' + v.replace(/"/g, '\\"') + '"')
-  let prods = B.vendors.length ? await products('(' + vq.join(' OR ') + ') AND status:active') : []
-  if (B.title) prods = prods.concat(await products('title:"' + B.title + '" AND status:active'))
+  const vre = new RegExp(B.vre, 'i')
+  let prods = (await products('(' + B.q + ') AND status:active')).filter(p => vre.test(p.vendor))
   const seen = new Set(); const ex = B.exclude ? new RegExp(B.exclude, 'i') : null; const inc = B.mustMatch ? new RegExp(B.mustMatch, 'i') : null
   prods = prods.filter(p => { if (seen.has(p.handle)) return false; seen.add(p.handle); if (policyFlag(p.title) || LIGHT.test(p.title)) return false; if (ex && ex.test(p.title)) return false; if (inc && !inc.test(p.title + ' ' + p.vendor)) return false; return true })
   const total = prods.length
