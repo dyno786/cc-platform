@@ -197,12 +197,70 @@ async function blogIndex(go) {
   return { action, posts: pub.length, categories: cats.filter(x => by[x[0]]).map(x => x[1] + ' (' + by[x[0]].length + ')') }
 }
 
+// "Shop this post" block on blog posts: links readers to the products, brand pages and collections a post talks about
+const SHOP_RE = /<!--cc-shop-->[\s\S]*?<!--\/cc-shop-->/g
+const STOP = new Set(['review','reviews','cc','hair','beauty','leeds','and','the','for','with','your','guide','new','in','at','now','of','a','to','how','best','uk','tips','by','is','on','why','you','what','which','2024','2025','2026','5','essential','routine','sunday','benefits','complete','buyer','s','vs','or','one','do','need','it','use','using','from','our','this','that','products','product'])
+const TOPICS = [[/edge/i, 'edge-control', 'Edge Control'], [/relax/i, 'relaxers', 'Relaxers'], [/braid/i, 'crochet-braided', 'Braiding Hair'], [/wig/i, 'wigs-lace-wigs', 'Wigs'], [/dye|colou?r/i, 'hair-dyes', 'Hair Dyes'], [/kid|child/i, 'kids', 'Kids Hair Care'], [/skin|ashy|spf/i, 'skin-care', 'Skin Care'], [/oil/i, 'hair-oil', 'Hair Oils'], [/shampoo/i, 'shampoo', 'Shampoo'], [/curl/i, 'curl-creams', 'Curl Creams'], [/winter/i, 'winter-hair-care', 'Winter Hair Care'], [/body|lotion|cream/i, 'lotions', 'Body Lotions & Creams']]
+const plain = h => String(h || '').replace(SHOP_RE, ' ').replace(/<(script|style)[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&[a-z#0-9]+;/gi, ' ')
+async function shopBlock(a) {
+  const body = a.body || ''
+  const text = (a.title + ' ' + plain(body)).toLowerCase()
+  // 1. products the post already links to
+  const linked = [...new Set([...body.matchAll(/\/products\/([a-z0-9\-]+)/gi)].map(m => m[1].toLowerCase()))].slice(0, 8)
+  let prods = []
+  if (linked.length) {
+    const d = await gql('query($q:String!){ products(first:20, query:$q){ nodes{ handle title vendor status totalInventory featuredImage{url} priceRangeV2{minVariantPrice{amount}} } } }', { q: linked.map(h => 'handle:' + h).join(' OR ') })
+    prods = d.products.nodes
+  }
+  // 2. products named in the title
+  const words = unesc(a.title).replace(/[|–—:\-(),!?'’"]/g, ' ').split(/\s+/).map(w => w.toLowerCase()).filter(w => w.length > 1 && !STOP.has(w))
+  if (prods.filter(p => p.status === 'ACTIVE' && p.totalInventory > 0).length < 3 && words.length >= 2) {
+    const q = words.slice(0, 6).map(w => 'title:*' + w.replace(/[^a-z0-9]/g, '') + '*').filter(x => x.length > 9)
+    for (const n of [Math.min(4, q.length), 3, 2]) {
+      if (n < 2 || q.length < n) continue
+      const d = await gql('query($q:String!){ products(first:12, query:$q, sortKey:RELEVANCE){ nodes{ handle title vendor status totalInventory featuredImage{url} priceRangeV2{minVariantPrice{amount}} } } }', { q: q.slice(0, n).join(' AND ') + ' AND status:active' })
+      const got = d.products.nodes.filter(p => !prods.some(x => x.handle === p.handle))
+      prods = prods.concat(got)
+      if (prods.filter(p => p.status === 'ACTIVE' && p.totalInventory > 0).length >= 3) break
+    }
+  }
+  prods = prods.filter(p => p.status === 'ACTIVE' && p.totalInventory > 0 && p.featuredImage && !policyFlag(p.title) && !LIGHT.test(p.title)).slice(0, 6)
+  // 3. brand pages mentioned
+  const brands = Object.entries(BRANDS).filter(([slug, B]) => [B.name].concat(B.kw || []).some(k => k.length > 3 && new RegExp('\\b' + k.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/'/g, "['’]?") + '\\b').test(text))).slice(0, 3)
+  if (/\bcantu\b/.test(text) && !brands.some(b => b[0] === 'cantu')) brands.unshift(['cantu', { name: 'Cantu' }])
+  // 4. topic collection
+  const topic = TOPICS.find(t => t[0].test(a.title)) || null
+  if (!prods.length && !brands.length && !topic) return null
+  const card = p => `<a href="/products/${p.handle}" style="flex:0 0 150px;display:flex;flex-direction:column;background:#fff;border:1px solid #E3E8F4;border-radius:12px;overflow:hidden;text-decoration:none;color:#121A33"><span style="display:block;aspect-ratio:1/1;background:#fff"><img src="${esc(p.featuredImage.url.split('?')[0])}?width=300" alt="${esc(p.title)}" loading="lazy" width="300" height="300" style="width:100%;height:100%;object-fit:contain;padding:6px;margin:0"></span><span style="display:block;font-size:14px;font-weight:700;line-height:1.3;padding:6px 10px 2px;flex:1">${esc(p.title)}</span><span style="display:block;font-weight:800;color:#C2312B;padding:2px 10px 10px">${money(p.priceRangeV2.minVariantPrice.amount)}</span></a>`
+  const btn = (href, t) => `<a href="${href}" style="display:inline-block;background:#1D3E9E;color:#fff;text-decoration:none;font-weight:800;border-radius:999px;padding:10px 18px;margin:4px 6px 0 0;font-size:15px">${esc(t)}</a>`
+  return `<!--cc-shop--><div style="margin:32px 0 8px;padding:20px 16px;background:#EEF2FB;border-radius:16px;font-family:inherit"><p style="margin:0 0 4px;font-size:13px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#C2312B">Shop this post</p><p style="margin:0 0 14px;font-size:22px;font-weight:800;line-height:1.2;color:#121A33">${prods.length ? 'The products in this post, in stock now' : 'Shop the range'}</p>${prods.length ? `<div style="display:flex;gap:10px;overflow-x:auto;padding:0 0 10px">${prods.map(card).join('')}</div>` : ''}<div>${brands.map(([slug, B]) => btn('/pages/' + slug, 'Shop all ' + B.name)).join('')}${topic ? btn('/collections/' + topic[1], 'Shop ' + topic[2]) : ''}</div><p style="margin:12px 0 0;font-size:14px;color:#4A5578">Free UK delivery on orders over £75, or visit our Leeds stores on Chapeltown Road, Roundhay Road and in the City Centre.</p></div><!--/cc-shop-->`
+}
+async function shopBlogs(off, lim, go, only) {
+  const d = await gql('query{ articles(first:250, sortKey:PUBLISHED_AT, reverse:true){ nodes{ id title handle isPublished publishedAt body blog{handle} } } }')
+  let list = d.articles.nodes.filter(a => a.isPublished && a.publishedAt && a.blog.handle !== 'news')
+  if (only) list = list.filter(a => a.handle === only)
+  const out = []; const slice = list.slice(off, off + lim); const t0 = Date.now()
+  for (const a of slice) {
+    if (Date.now() - t0 > 45000) { out.push({ handle: a.handle, skipped: 'time' }); continue }
+    try {
+      const blk = await shopBlock(a)
+      if (!blk) { out.push({ handle: a.handle, block: false }); continue }
+      const nb = String(a.body || '').replace(SHOP_RE, '').replace(/\s+$/, '') + blk
+      let act = 'preview'
+      if (go) { const u = await gql('mutation($id:ID!,$a:ArticleUpdateInput!){ articleUpdate(id:$id, article:$a){ userErrors{message} } }', { id: a.id, a: { body: nb } }); act = u.articleUpdate.userErrors.length ? JSON.stringify(u.articleUpdate.userErrors) : 'updated' }
+      out.push({ handle: a.handle, act, products: (blk.match(/\/products\//g) || []).length, brands: (blk.match(/\/pages\//g) || []).length, topic: /\/collections\//.test(blk) })
+    } catch (e) { out.push({ handle: a.handle, error: String(e.message || e) }) }
+  }
+  return { total: list.length, off, lim, next: off + lim < list.length ? off + lim : null, out }
+}
+
 export default async function handler(req, res) {
   try {
     const job = String(req.query.job || '')
     if (job === 'vendors') {
       return res.status(200).json({ ok: true, vendors: await vendors(req.query.q || '') })
     }
+    if (job === 'shopblogs') return res.status(200).json({ ok: true, ...(await shopBlogs(parseInt(req.query.off || '0', 10), Math.min(30, parseInt(req.query.lim || '15', 10)), req.query.go === '1', req.query.h || '')) })
     if (job === 'blogs') return res.status(200).json({ ok: true, ...(await blogIndex(req.query.go === '1')) })
     if (job === 'build') {
       const slugs = String(req.query.b || '').split(',').filter(Boolean)
