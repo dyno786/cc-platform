@@ -45,11 +45,13 @@ let LOGOS = null
 async function logoFiles() {
   if (LOGOS) return LOGOS
   LOGOS = []; let c = null
+  try {
   for (let i = 0; i < 5; i++) {
     const d = await gql('query($c:String){ files(first:250, after:$c, query:"filename:*logo*"){ pageInfo{hasNextPage endCursor} nodes{ ... on MediaImage{ image{url} } } } }', { c })
     d.files.nodes.forEach(n => { if (n.image && !/cchairandbeauty|cc_logo|cc-logo|cc_hnb|newsletter|nologo|template/i.test(n.image.url)) LOGOS.push(n.image.url) })
     if (!d.files.pageInfo.hasNextPage) break; c = d.files.pageInfo.endCursor
   }
+  } catch (e) { }
   return LOGOS
 }
 
@@ -88,7 +90,7 @@ async function build(slug, B) {
   const main = (B.main && cols.find(c => c.handle === B.main)) || cols.find(c => c.handle === slug) || exact[0] || cols[0] || null
   const logoCol = cols.find(c => c.image && /logo/i.test(c.image.url) && kw.concat([name]).some(k => nm(c.image.url).includes(nm(k).slice(0, 6))))
   const words = kw.concat([name, slug]).map(nm).filter(x => x.length >= 3)
-  const lf = (await logoFiles()).find(u => { const f = nm(u.split('/').pop().split('?')[0].replace(/logo.*$/i, '')); return f.length >= 3 && words.some(w => w.startsWith(f) || f.startsWith(w)) })
+  const lf = (await logoFiles().catch(() => [])).find(u => { const f = nm(u.split('/').pop().split('?')[0].replace(/logo.*$/i, '')); return f.length >= 3 && words.some(w => w.startsWith(f) || f.startsWith(w)) })
   let logo = B.logo || lf || (logoCol && logoCol.image.url) || null
   // best sellers
   let best = []

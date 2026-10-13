@@ -146,7 +146,8 @@
 "kw": [
 "Cherish"
 ],
-"byType": true
+"byType": true,
+"logo": "https://cdn.shopify.com/s/files/1/0605/2118/5501/files/cherish_hair_logo.png"
 },
 "difeel": {
 "name": "Difeel",
@@ -253,7 +254,8 @@
 "kw": [
 "Janet Collection"
 ],
-"byType": true
+"byType": true,
+"logo": "https://cdn.shopify.com/s/files/1/0605/2118/5501/files/janet_logo.png"
 },
 "joico": {
 "name": "Joico",
@@ -315,7 +317,8 @@
 "kw": [
 "Model Model"
 ],
-"byType": true
+"byType": true,
+"logo": "https://cdn.shopify.com/s/files/1/0605/2118/5501/files/modelmodel_logo.jpg"
 },
 "nature-spell": {
 "name": "Nature Spell",
@@ -340,7 +343,8 @@
 "kw": [
 "Organic Root Stimulator",
 "ORS"
-]
+],
+"logo": "https://cdn.shopify.com/s/files/1/0605/2118/5501/files/organic_root_stimulator_logo.jpg"
 },
 "nicka-k": {
 "name": "Nicka K",
@@ -427,7 +431,8 @@
 "Sleek"
 ],
 "byType": true,
-"skipCols": "makeup"
+"skipCols": "makeup",
+"logo": "https://cdn.shopify.com/s/files/1/0605/2118/5501/files/sleek_hair_logo.png"
 },
 "sof-n-free": {
 "name": "Sof N' Free",
