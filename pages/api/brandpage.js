@@ -186,7 +186,7 @@ export default async function handler(req, res) {
             const ex = pd.pages.nodes.find(p => p.handle === handle)
             const mf = [{ namespace: 'global', key: 'title_tag', type: 'single_line_text_field', value: r.seoT }, { namespace: 'global', key: 'description_tag', type: 'single_line_text_field', value: r.seoD }]
             if (ex && !/class="ct"/.test(ex.body) && req.query.force !== '1') action = 'skipped: a different page already uses /pages/' + handle
-            else if (ex) { const u = await gql('mutation($id:ID!,$p:PageUpdateInput!){ pageUpdate(id:$id, page:$p){ userErrors{message} } }', { id: ex.id, p: { title: B.name, body: r.body, metafields: mf } }); action = 'updated ' + JSON.stringify(u.pageUpdate.userErrors) }
+            else if (ex) { const u = await gql('mutation($id:ID!,$p:PageUpdateInput!){ pageUpdate(id:$id, page:$p){ userErrors{message} } }', { id: ex.id, p: Object.assign({ title: B.name, body: r.body, metafields: mf }, req.query.force === '1' ? { templateSuffix: '' } : {}) }); action = 'updated ' + JSON.stringify(u.pageUpdate.userErrors) }
             else { const c = await gql('mutation($p:PageCreateInput!){ pageCreate(page:$p){ page{handle} userErrors{message} } }', { p: { title: B.name, handle, isPublished: true, body: r.body, metafields: mf } }); action = 'created ' + JSON.stringify(c.pageCreate.userErrors) }
           }
           if (req.query.raw === '1') return res.status(200).send(r.body)
