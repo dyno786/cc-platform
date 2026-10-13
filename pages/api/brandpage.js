@@ -27,14 +27,17 @@ function typeName(t) {
   return t.replace(/\b\w/g, c => c.toUpperCase())
 }
 
-async function vendors(re) {
-  const out = []; let c = null
-  for (let i = 0; i < 20; i++) {
-    const d = await gql('query($c:String){ shop { productVendors(first:250, after:$c){ pageInfo{hasNextPage endCursor} edges{node} } } }', { c })
-    const pv = d.shop.productVendors
-    pv.edges.forEach(e => { if (re.test(e.node)) out.push(e.node) })
-    if (!pv.pageInfo.hasNextPage) break; c = pv.pageInfo.endCursor
-  }
+async function vendors(q) {
+  const kws = String(q).split('|').map(x => x.trim()).filter(Boolean)
+  const out = {}
+  let i = 0
+  const work = async () => { while (i < kws.length) { const k = kws[i++]; try {
+    const w = k.split(/\s+/).sort((a, b) => b.length - a.length)[0].replace(/[^a-z0-9]/gi, '')
+    const d = await gql('query($q:String!){ products(first:250, query:$q){ nodes{ vendor status } } }', { q: 'vendor:*' + w + '*' })
+    const re = new RegExp(k, 'i')
+    d.products.nodes.forEach(n => { if (re.test(n.vendor)) { const o = out[n.vendor] = out[n.vendor] || { kw: k, active: 0, all: 0 }; o.all++; if (n.status === 'ACTIVE') o.active++ } })
+  } catch (e) { out['ERR ' + k] = String(e.message) } } }
+  await Promise.all(Array.from({ length: 8 }, work))
   return out
 }
 
@@ -146,8 +149,7 @@ export default async function handler(req, res) {
   try {
     const job = String(req.query.job || '')
     if (job === 'vendors') {
-      const re = new RegExp(String(req.query.q || '.'), 'i')
-      return res.status(200).json({ ok: true, vendors: await vendors(re) })
+      return res.status(200).json({ ok: true, vendors: await vendors(req.query.q || '') })
     }
     if (job === 'build') {
       const slugs = String(req.query.b || '').split(',').filter(Boolean)
