@@ -1,0 +1,116 @@
+{%- comment -%}
+  CC Hair & Beauty – Shop by Brands (compact logo strip)
+  Brands come from the navigation menu "Shop By Brands" (Online Store > Navigation).
+  A menu item can link to a brand shop page (/pages/...) or a collection. The tile image is the
+  brand's collection image: for a page, the collection named in the page metafield
+  custom.brand_collection, or the collection with the same handle as the page.
+  Items with no collection image are skipped. A different mix shows on every visit.
+{%- endcomment -%}
+{%- assign menu_handle = section.settings.menu | default: 'shop-by-brands' -%}
+{%- assign brand_links = linklists[menu_handle].links -%}
+{%- assign max = section.settings.max | default: 12 -%}
+{%- assign tile = section.settings.tile | default: 130 -%}
+{%- assign shown = 0 -%}
+
+<div class="ccb" id="ccb-{{ section.id }}" style="--ccb-tile: {{ tile }}px; --ccb-accent: {{ section.settings.accent | default: '#C8322E' }};">
+  <div class="page-width">
+    <div class="ccb__head">
+      <h2 class="ccb__title">{{ section.settings.title | default: 'Shop By Brands' | escape }}</h2>
+      <div class="ccb__nav">
+        <a class="ccb__all" href="{{ section.settings.view_all_link | default: '/pages/brand-shops' }}">All brands</a>
+        <button type="button" aria-label="Scroll left" data-ccb-prev>&#8249;</button>
+        <button type="button" aria-label="Scroll right" data-ccb-next>&#8250;</button>
+      </div>
+    </div>
+    <ul class="ccb__track" id="ccb-track-{{ section.id }}" role="list">
+      {%- for link in brand_links -%}
+        {%- liquid
+          assign collection = nil
+          if link.type == 'collection_link'
+            assign collection = link.object
+          elsif link.type == 'page_link'
+            assign ch = link.object.metafields.custom.brand_collection.value | default: link.object.handle
+            assign collection = collections[ch]
+          endif
+        -%}
+        {%- if collection.featured_image != blank and shown < 40 -%}
+          {%- assign shown = shown | plus: 1 -%}
+          <li{% if shown > max %} data-ccb-extra{% endif %}>
+            <a class="ccb__item" href="{{ link.url }}">
+              <span class="ccb__logo">{{ collection.featured_image | image_url: width: 300 | image_tag: loading: 'lazy', widths: '150, 300', sizes: '150px', alt: link.title }}</span>
+              <span class="ccb__name">{{ link.title | escape }}</span>
+            </a>
+          </li>
+        {%- endif -%}
+      {%- endfor -%}
+    </ul>
+  </div>
+</div>
+
+<style>
+  #ccb-{{ section.id }} { padding: {{ section.settings.pad | default: 24 }}px 0; }
+  #ccb-{{ section.id }} .ccb__head { display: flex; align-items: center; justify-content: space-between; gap: 1.2rem; margin: 0 0 1.6rem; }
+  #ccb-{{ section.id }} .ccb__title { margin: 0; font-size: 2rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; position: relative; padding-left: 1.4rem; }
+  #ccb-{{ section.id }} .ccb__title::before { content: ""; position: absolute; left: 0; top: 0.2em; bottom: 0.2em; width: 0.5rem; border-radius: 2px; background: var(--ccb-accent); }
+  #ccb-{{ section.id }} .ccb__title::after { content: none; display: none; }
+  #ccb-{{ section.id }} .ccb__nav { display: flex; align-items: center; gap: 0.8rem; }
+  #ccb-{{ section.id }} .ccb__all { font-size: 1.4rem; font-weight: 700; color: var(--ccb-accent); text-decoration: none; margin-right: 0.6rem; }
+  #ccb-{{ section.id }} .ccb__all:hover { text-decoration: underline; }
+  #ccb-{{ section.id }} .ccb__nav button { width: 3.6rem; height: 3.6rem; border-radius: 50%; border: 1px solid rgba(0,0,0,0.2); background: #fff; color: #121212; font-size: 2rem; line-height: 1; cursor: pointer; padding: 0 0 0.2rem; }
+  #ccb-{{ section.id }} .ccb__nav button:hover { background: var(--ccb-accent); border-color: var(--ccb-accent); color: #fff; }
+  #ccb-{{ section.id }} .ccb__track { list-style: none; margin: 0; padding: 0.4rem 0 0.8rem; display: flex; gap: 1.6rem; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: none; }
+  #ccb-{{ section.id }} .ccb__track::-webkit-scrollbar { display: none; }
+  #ccb-{{ section.id }} .ccb__track > li { flex: 0 0 var(--ccb-tile); scroll-snap-align: start; }
+  #ccb-{{ section.id }} .ccb__track > li[data-ccb-extra] { display: none; }
+  #ccb-{{ section.id }} .ccb__item { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; text-decoration: none; color: #121212; }
+  #ccb-{{ section.id }} .ccb__logo { display: block; width: var(--ccb-tile); height: var(--ccb-tile); border-radius: 1.4rem; overflow: hidden; background: #fff; border: 1px solid #ececec; box-shadow: 0 2px 6px rgba(0,0,0,0.05); transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
+  #ccb-{{ section.id }} .ccb__logo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #ccb-{{ section.id }} .ccb__item:hover .ccb__logo { transform: translateY(-3px); border-color: var(--ccb-accent); box-shadow: 0 8px 18px rgba(0,0,0,0.12); }
+  #ccb-{{ section.id }} .ccb__name { font-size: 1.3rem; font-weight: 700; text-align: center; line-height: 1.25; max-width: var(--ccb-tile); }
+  #ccb-{{ section.id }} .ccb__item:hover .ccb__name { color: var(--ccb-accent); }
+  #ccb-{{ section.id }} a:focus-visible, #ccb-{{ section.id }} button:focus-visible { outline: 2px solid var(--ccb-accent); outline-offset: 3px; }
+  @media screen and (max-width: 749px) {
+    #ccb-{{ section.id }} .ccb__title { font-size: 1.6rem; }
+    #ccb-{{ section.id }} .ccb__nav button { display: none; }
+    #ccb-{{ section.id }} .ccb__track { gap: 1.2rem; }
+    #ccb-{{ section.id }} .ccb__track > li { flex-basis: 9.6rem; }
+    #ccb-{{ section.id }} .ccb__logo { width: 9.6rem; height: 9.6rem; border-radius: 1.2rem; }
+    #ccb-{{ section.id }} .ccb__name { font-size: 1.2rem; }
+  }
+  @media (prefers-reduced-motion: reduce) { #ccb-{{ section.id }} .ccb__logo { transition: none; } }
+</style>
+
+<script>
+  (function () {
+    var t = document.getElementById('ccb-track-{{ section.id }}');
+    if (!t) return;
+    var root = document.getElementById('ccb-{{ section.id }}');
+    root.querySelector('[data-ccb-prev]').addEventListener('click', function () { t.scrollBy({ left: -t.clientWidth * 0.8, behavior: 'smooth' }); });
+    root.querySelector('[data-ccb-next]').addEventListener('click', function () { t.scrollBy({ left: t.clientWidth * 0.8, behavior: 'smooth' }); });
+    {%- if section.settings.shuffle != false %}
+    var keep = {{ section.settings.pin | default: 0 }}, max = {{ max }};
+    var items = Array.prototype.slice.call(t.children), pinned = items.slice(0, keep), rest = items.slice(keep);
+    for (var i = rest.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var x = rest[i]; rest[i] = rest[j]; rest[j] = x; }
+    pinned.concat(rest).forEach(function (li, n) { if (n < max) li.removeAttribute('data-ccb-extra'); else li.setAttribute('data-ccb-extra', ''); t.appendChild(li); });
+    {%- endif %}
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "CC: Shop by brands",
+  "tag": "section",
+  "settings": [
+    { "type": "link_list", "id": "menu", "label": "Brands menu", "info": "Leave empty to use the \"Shop By Brands\" menu" },
+    { "type": "text", "id": "title", "label": "Heading", "default": "Shop By Brands" },
+    { "type": "range", "id": "max", "min": 4, "max": 24, "step": 1, "default": 12, "label": "Brands to show" },
+    { "type": "range", "id": "tile", "min": 90, "max": 200, "step": 10, "unit": "px", "default": 130, "label": "Logo size on desktop" },
+    { "type": "checkbox", "id": "shuffle", "default": true, "label": "Show a different mix on every visit" },
+    { "type": "range", "id": "pin", "min": 0, "max": 6, "step": 1, "default": 0, "label": "Keep the first brands fixed" },
+    { "type": "url", "id": "view_all_link", "label": "\"All brands\" link", "info": "Defaults to the Brand Shops page" },
+    { "type": "color", "id": "accent", "label": "Accent colour", "default": "#C8322E" },
+    { "type": "range", "id": "pad", "min": 0, "max": 60, "step": 4, "unit": "px", "default": 24, "label": "Space above and below" }
+  ],
+  "presets": [ { "name": "CC: Shop by brands" } ]
+}
+{% endschema %}
