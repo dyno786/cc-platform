@@ -4,6 +4,7 @@
 import { gql, policyFlag } from '../../lib/intake'
 import BRANDS from '../../lib/brands.json'
 import SEASONS from '../../lib/seasons.json'
+import STATIC from '../../lib/staticpages'
 
 export const config = { maxDuration: 60 }
 const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -275,6 +276,17 @@ export default async function handler(req, res) {
       const tid = 'gid://shopify/OnlineStoreTheme/' + (req.query.t || '128853410013'); const re = new RegExp(req.query.re, 'g'); const out = []; let c = null
       for (let i = 0; i < 20; i++) { const d = await gql('query($id:ID!,$c:String){ theme(id:$id){ files(first:50, after:$c){ pageInfo{hasNextPage endCursor} nodes{ filename body{ ... on OnlineStoreThemeFileBodyText{ content } } } } } }', { id: tid, c }); const f = d.theme.files; for (const n of f.nodes) { const t = n.body && n.body.content; if (!t) continue; const m = t.match(re); if (m) { const k = t.search(new RegExp(req.query.re)); out.push(n.filename + '|' + m.length + '|' + t.slice(Math.max(0, k - 60), k + 100).replace(/\s+/g, ' ')) } } if (!f.pageInfo.hasNextPage) break; c = f.pageInfo.endCursor }
       res.setHeader('content-type', 'text/plain; charset=utf-8'); return res.status(200).send(out.join('\n') || 'none')
+    }
+    if (job === 'staticpage') { // publish a hand-written page kept in lib/staticpages.js
+      const P = STATIC[req.query.h]; if (!P) return res.status(400).json({ ok: false, error: 'unknown page' })
+      const pd = await gql('query($q:String!){ pages(first:3, query:$q){ nodes{ id handle } } }', { q: 'handle:' + req.query.h })
+      const ex = pd.pages.nodes.find(p => p.handle === req.query.h)
+      const mf = [{ namespace: 'global', key: 'title_tag', type: 'single_line_text_field', value: P.seoT }, { namespace: 'global', key: 'description_tag', type: 'single_line_text_field', value: P.seoD }]
+      if (req.query.go !== '1') return res.status(200).json({ ok: true, action: 'preview', exists: !!ex, len: P.body.length })
+      let action
+      if (ex) { const u = await gql('mutation($id:ID!,$p:PageUpdateInput!){ pageUpdate(id:$id, page:$p){ userErrors{message} } }', { id: ex.id, p: { title: P.title, body: P.body, metafields: mf } }); action = 'updated ' + JSON.stringify(u.pageUpdate.userErrors) }
+      else { const c = await gql('mutation($p:PageCreateInput!){ pageCreate(page:$p){ page{handle} userErrors{message} } }', { p: { title: P.title, handle: req.query.h, isPublished: true, body: P.body, metafields: mf } }); action = 'created ' + JSON.stringify(c.pageCreate.userErrors) }
+      return res.status(200).json({ ok: true, action })
     }
     if (job === 'season') { // seasonal calendar: what is live / coming up on a date (default today, Europe/London)
       const S = SEASONS
