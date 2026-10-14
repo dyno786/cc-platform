@@ -172,7 +172,7 @@ async function build(slug, B) {
     `<section class="ct-sec ct-faq"><h2>${esc(name)} FAQs</h2>${faqh}</section></div><script type="application/ld+json">${JSON.stringify(ld)}</script>`
   const seoT = (name + ' UK | Shop by ' + (mode === 'ingredient' ? 'Ingredient' : 'Type')).slice(0, 60)
   const seoD = ('Shop ' + total + ' ' + name + ' products' + (topTypes.length ? ': ' + list(topTypes.slice(0, 3)) : '') + '. Leeds stores and free UK delivery over £75.').slice(0, 160)
-  return { body, seoT, seoD, total, shown: show.length, mode, groups: groups.map(g => g.label + ' (' + g.items.length + ')'), cols: cols.length, colList: cols.slice(0, 24).map(c => [c.handle, colName(c.title), c.image ? 1 : 0, c.productsCount.count]), main: main && main.handle, logo: logo ? logo.split('/').pop().split('?')[0] : null, blogs: arts.length, best: best.length }
+  return { body, seoT, seoD, total, shown: show.length, mode, groups: groups.map(g => g.label + ' (' + g.items.length + ')'), cols: cols.length, colList: cols.slice(0, 24).map(c => [c.handle, colName(c.title), c.image ? 1 : 0, c.productsCount.count]), main: main && main.handle, logo: logo ? logo.split('/').pop().split('?')[0] : null, blogs: arts.length, best: best.length, bestHandles: best.map(p => p.handle), mainCol: main && main.handle }
 }
 
 const BLOG_CSS = "<style>.main-page-title{text-align:center}.bl{--b:#1D3E9E;--r:#C2312B;--ink:#121A33;--mut:#4A5578;--soft:#EEF2FB;--ln:#E3E8F4;color:var(--ink);font-size:17px;line-height:1.55}.bl *{box-sizing:border-box}.bl p{margin:0}.bl-hero{background:var(--b);color:#fff;border-radius:24px;padding:36px 20px;text-align:center;background-image:radial-gradient(rgba(255,255,255,.09) 2px,transparent 2.5px);background-size:20px 20px}.bl .bl-big{color:#fff;font-size:36px;line-height:1.05;font-weight:900;margin:0 0 12px}.bl-hero p{color:#E6ECFB;max-width:640px;margin:0 auto 18px}.bl-find{width:100%;max-width:520px;border:0;border-radius:999px;padding:13px 20px;font-size:16px;color:var(--ink)}.bl-chips{display:flex;gap:8px;overflow-x:auto;padding:18px 2px 6px;scrollbar-width:thin}.bl-chips a{flex:0 0 auto;background:var(--soft);border-radius:999px;padding:9px 15px;font-weight:700;font-size:15px;text-decoration:none;color:var(--ink);white-space:nowrap}.bl-chips a b{color:var(--r);margin-left:4px}.bl-chips a:hover{background:var(--b);color:#fff}.bl-s{padding:34px 0 8px;scroll-margin-top:90px}.bl-h{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;margin:0 0 14px}.bl h2{font-size:26px;line-height:1.15;font-weight:800;margin:0 0 4px}.bl-h p{color:var(--mut);font-size:15px;max-width:640px}.bl-all{font-weight:800;color:var(--b)!important;text-decoration:none;white-space:nowrap}.bl-g{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.bl-c{display:flex;flex-direction:column;background:#fff;border:1px solid var(--ln);border-radius:14px;overflow:hidden;text-decoration:none;color:var(--ink)}.bl-c:hover{border-color:var(--b)}.bl-i{display:block;position:relative;aspect-ratio:16/10;background:var(--soft)}.bl .bl-i img{position:absolute;inset:0;width:100%!important;height:100%!important;max-width:none!important;object-fit:cover;margin:0!important}.bl-ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:900;color:var(--b)}.bl-d{display:block;font-size:12.5px;color:var(--mut);padding:10px 12px 0;font-weight:600}.bl-t{display:block;font-weight:800;font-size:15px;line-height:1.3;padding:4px 12px 14px}.bl-s.cut .bl-c:nth-child(n+9){display:none}.bl-more{display:block;margin:14px auto 0;background:#fff;border:2px solid var(--b);color:var(--b);border-radius:999px;padding:10px 22px;font-weight:800;font-size:15px;cursor:pointer}.bl-s:not(.cut) .bl-more{display:none}.bl-none{display:none;text-align:center;color:var(--mut);padding:30px 0}.bl.q .bl-s .bl-c{display:none!important}.bl.q .bl-s .bl-c.hit{display:flex!important}.bl.q .bl-more,.bl.q #bl-latest{display:none}.bl.q .bl-s.miss{display:none}@media(min-width:750px){.bl-hero{padding:52px 40px}.bl .bl-big{font-size:52px}.bl-g{grid-template-columns:repeat(4,1fr);gap:16px}}@media(min-width:990px){.bl{width:min(1240px,calc(100vw - 100px));position:relative;left:50%;transform:translateX(-50%)}}</style>"
@@ -266,6 +266,76 @@ async function shopBlogs(off, lim, go, only) {
   return { total: list.length, off, lim, next: off + lim < list.length ? off + lim : null, out }
 }
 
+
+// ---------- homepage slots ----------
+const SLOTS = {
+  'cc-todays-edit': "Today's Edit",
+  'cc-new-in': 'New In This Week',
+  'cc-brand-of-the-week': 'Brand of the Week',
+  'cc-seasonal': 'Seasonal Picks',
+  'cc-trending': 'Trending in Leeds This Week'
+}
+const DAY_EDIT = [ // Sun..Sat, same themes as the nightly newsletter
+  ['lotions', 'Self-Care Sunday', 'Body lotions, creams and butters for soft skin all week.'],
+  ['hair-dyes', 'Colour Monday', 'Salon-grade colour at home, from the brands Leeds buys most.'],
+  ['crochet-braided', 'Braid Tuesday', 'Braiding and crochet hair in every core colour.'],
+  ['shampoo', 'Wash Day Wednesday', 'Shampoo, conditioner and leave-ins for wash day.'],
+  ['edge-control', 'Edges Thursday', 'Edge control, gels and scarves to lay, wrap and hold.'],
+  ['human-hair-extensions', 'Bundle Friday', 'Human hair bundles and weaves for your next install.'],
+  ['make-up', 'Makeup Saturday', 'Setting sprays, powders and the makeup to last all night.']
+]
+const okP = p => p && p.status === 'ACTIVE' && p.totalInventory >= 3 && p.featuredImage && !policyFlag(p.title) && !LIGHT.test(p.title + ' ' + (p.vendor || ''))
+async function colBest(handle, n) {
+  const d = await gql('query($h:String!){ collectionByHandle(handle:$h){ products(first:80, sortKey:BEST_SELLING){ nodes{ id handle title vendor status totalInventory featuredImage{url} } } } }', { h: handle })
+  if (!d.collectionByHandle) return []
+  const seen = new Set(); return d.collectionByHandle.products.nodes.filter(okP).filter(p => { const k = p.title.toLowerCase().replace(/\s*-\s*\d.*$/, ''); if (seen.has(k)) return false; seen.add(k); return true }).slice(0, n)
+}
+async function ensureSlot(handle) {
+  const d = await gql('query($h:String!){ collectionByHandle(handle:$h){ id } }', { h: handle })
+  if (d.collectionByHandle) return d.collectionByHandle.id
+  const c = await gql('mutation($i:CollectionInput!){ collectionCreate(input:$i){ collection{ id } userErrors{ message } } }', { i: { title: SLOTS[handle] || handle, handle, sortOrder: 'MANUAL', metafields: [{ namespace: 'seo', key: 'hidden', type: 'number_integer', value: '1' }] } })
+  const id = c.collectionCreate.collection && c.collectionCreate.collection.id
+  if (!id) throw new Error('collectionCreate ' + JSON.stringify(c.collectionCreate.userErrors))
+  try { await gql('mutation($id:ID!,$p:[PublicationInput!]!){ publishablePublish(id:$id, input:$p){ userErrors{ message } } }', { id, p: [{ publicationId: 'gid://shopify/Publication/77511721181' }] }) } catch (e) { }
+  return id
+}
+async function fillSlot(handle, title, desc, prods) {
+  const id = await ensureSlot(handle)
+  const cur = await gql('query($id:ID!){ collection(id:$id){ products(first:250){ nodes{ id } } } }', { id })
+  const old = cur.collection.products.nodes.map(n => n.id)
+  if (old.length) await gql('mutation($id:ID!,$p:[ID!]!){ collectionRemoveProducts(id:$id, productIds:$p){ userErrors{ message } } }', { id, p: old })
+  if (prods.length) await gql('mutation($id:ID!,$p:[ID!]!){ collectionAddProducts(id:$id, productIds:$p){ userErrors{ message } } }', { id, p: prods.map(p => p.id) })
+  await gql('mutation($i:CollectionInput!){ collectionUpdate(input:$i){ userErrors{ message } } }', { i: { id, title, descriptionHtml: desc ? '<p>' + desc + '</p>' : '' } })
+  return { handle, title, n: prods.length, items: prods.map(p => p.title).slice(0, 8) }
+}
+async function homeSlots(only) {
+  const out = []; const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/London' }))
+  const want = h => !only || only.split(',').includes(h)
+  if (want('cc-todays-edit')) { const [h, t, d] = DAY_EDIT[today.getDay()]; out.push(await fillSlot('cc-todays-edit', "Today's Edit: " + t, d, await colBest(h, 8))) }
+  if (want('cc-new-in')) {
+    const since = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10)
+    const d = await gql('query($q:String!){ products(first:100, query:$q, sortKey:CREATED_AT, reverse:true){ nodes{ id handle title vendor status totalInventory featuredImage{url} } } }', { q: 'status:active created_at:>' + since })
+    out.push(await fillSlot('cc-new-in', 'New In This Week', 'The latest arrivals at CC Hair & Beauty, in stock now.', d.products.nodes.filter(okP).slice(0, 12)))
+  }
+  if (want('cc-brand-of-the-week')) {
+    const keys = Object.keys(BRANDS).filter(k => !['sleek-hair', 'feme', 'dressmaker', 'janet-collection', 'model-model', 'outre', 'obsession', 'hairmaker', 'remington', 'andis', 'satin-smooth'].includes(k))
+    const wk = Math.floor((Date.now() / 864e5 + 3) / 7); const slug = keys[wk % keys.length]; const B = BRANDS[slug]
+    const r = await build(slug, B)
+    const d = r.bestHandles.length ? await gql('query($q:String!){ products(first:20, query:$q){ nodes{ id handle title vendor status totalInventory featuredImage{url} } } }', { q: r.bestHandles.map(h => 'handle:' + h).join(' OR ') }) : { products: { nodes: [] } }
+    const byH = Object.fromEntries(d.products.nodes.map(p => [p.handle, p]))
+    out.push(Object.assign(await fillSlot('cc-brand-of-the-week', 'Brand of the Week: ' + B.name, 'Shop the best of ' + B.name + ' at CC Hair & Beauty. <a href="/pages/' + slug + '">See the full ' + B.name + ' range</a>.', r.bestHandles.map(h => byH[h]).filter(okP).slice(0, 8)), { brand: slug }))
+  }
+  if (want('cc-seasonal')) {
+    const d0 = today.toLocaleDateString('en-CA'); const day = s => Math.round((Date.parse(s) - Date.parse(d0)) / 864e5)
+    const ev = SEASONS.events.filter(e => e.collections.length && day(e.end) >= 0 && day(e.start) <= Math.max(e.lead || 0, 14)).sort((a, b) => day(a.start) - day(b.start))
+    const e = ev.find(x => day(x.start) > 0) || ev[0]
+    if (e) { let ps = []; for (const h of e.collections) { ps = ps.concat(await colBest(h, 6)); if (ps.length >= 12) break }
+      const seen = new Set(); ps = ps.filter(p => !seen.has(p.id) && seen.add(p.id)).slice(0, 12)
+      out.push(Object.assign(await fillSlot('cc-seasonal', e.name, e.angle + (e.page ? ' <a href="' + e.page + '">Find out more</a>.' : ''), ps), { event: e.id })) }
+  }
+  return out
+}
+
 export default async function handler(req, res) {
   try {
     const job = String(req.query.job || '')
@@ -276,6 +346,13 @@ export default async function handler(req, res) {
       const tid = 'gid://shopify/OnlineStoreTheme/' + (req.query.t || '128853410013'); const re = new RegExp(req.query.re, 'g'); const out = []; let c = null
       for (let i = 0; i < 20; i++) { const d = await gql('query($id:ID!,$c:String){ theme(id:$id){ files(first:50, after:$c){ pageInfo{hasNextPage endCursor} nodes{ filename body{ ... on OnlineStoreThemeFileBodyText{ content } } } } } }', { id: tid, c }); const f = d.theme.files; for (const n of f.nodes) { const t = n.body && n.body.content; if (!t) continue; const m = t.match(re); if (m) { const k = t.search(new RegExp(req.query.re)); out.push(n.filename + '|' + m.length + '|' + t.slice(Math.max(0, k - 60), k + 100).replace(/\s+/g, ' ')) } } if (!f.pageInfo.hasNextPage) break; c = f.pageInfo.endCursor }
       res.setHeader('content-type', 'text/plain; charset=utf-8'); return res.status(200).send(out.join('\n') || 'none')
+    }
+    if (job === 'homeslots') return res.status(200).json({ ok: true, slots: await homeSlots(req.query.only || '') })
+    if (job === 'setslot') { // h=collection handle, p=product handles comma list, t=title, d=description
+      const hs = (req.query.p || '').split(',').filter(Boolean)
+      const d = hs.length ? await gql('query($q:String!){ products(first:50, query:$q){ nodes{ id handle title vendor status totalInventory featuredImage{url} } } }', { q: hs.map(h => 'handle:' + h).join(' OR ') }) : { products: { nodes: [] } }
+      const byH = Object.fromEntries(d.products.nodes.map(p => [p.handle, p]))
+      return res.status(200).json({ ok: true, slot: await fillSlot(req.query.h, req.query.t || SLOTS[req.query.h] || req.query.h, req.query.d || '', hs.map(h => byH[h]).filter(okP)) })
     }
     if (job === 'staticpage') { // publish a hand-written page kept in lib/staticpages.js
       const P = STATIC[req.query.h]; if (!P) return res.status(400).json({ ok: false, error: 'unknown page' })
