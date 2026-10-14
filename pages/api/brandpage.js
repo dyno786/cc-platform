@@ -336,6 +336,73 @@ async function homeSlots(only) {
   return out
 }
 
+// ---------- homepage auto slideshow: 5 slides x 3 products, refreshed 5 times a day ----------
+// Each slide is a hidden collection cc-slide-1..5 (title = heading, description = text,
+// metafields custom.kicker / custom.link / custom.button). The theme section reads them.
+const SLIDE_RUNS = [7, 10, 13, 16, 19] // London hours the scheduled task fires
+async function slideProducts(q, n) {
+  const d = await gql('query($q:String!){ products(first:' + n + ', query:$q){ nodes{ id handle title vendor status totalInventory featuredImage{url} } } }', { q })
+  return d.products.nodes
+}
+async function setSlide(i, s, prods) {
+  const handle = 'cc-slide-' + i
+  if (!SLOTS[handle]) SLOTS[handle] = 'Homepage slide ' + i
+  const r = await fillSlot(handle, s.title, s.text, prods)
+  const id = await ensureSlot(handle)
+  await gql('mutation($m:[MetafieldsSetInput!]!){ metafieldsSet(metafields:$m){ userErrors{ message } } }', { m: [
+    { ownerId: id, namespace: 'custom', key: 'kicker', type: 'single_line_text_field', value: s.kicker },
+    { ownerId: id, namespace: 'custom', key: 'link', type: 'single_line_text_field', value: s.link },
+    { ownerId: id, namespace: 'custom', key: 'button', type: 'single_line_text_field', value: s.button || 'Shop now' }
+  ] })
+  return Object.assign(r, { kicker: s.kicker, link: s.link })
+}
+async function homeSlides(runParam) {
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/London' }))
+  const doy = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 864e5)
+  let run = runParam !== undefined && runParam !== '' ? parseInt(runParam, 10) : SLIDE_RUNS.reduce((a, h, k) => now.getHours() >= h ? k : a, 0)
+  const turn = doy * SLIDE_RUNS.length + run // changes every run, every day
+  const used = new Set()
+  const pick = (pool, k) => { // 3 products from the pool, a different window each run, no repeats across slides
+    pool = pool.filter(p => !used.has(p.id)); if (!pool.length) return []
+    const groups = Math.max(1, Math.floor(pool.length / 3)); const start = (k % groups) * 3
+    const out = pool.slice(start, start + 3); if (out.length < 3) out.push(...pool.filter(p => !out.includes(p)).slice(0, 3 - out.length))
+    out.forEach(p => used.add(p.id)); return out
+  }
+  const slides = []
+  // 1. Season or event
+  const d0 = now.toLocaleDateString('en-CA'); const day = s => Math.round((Date.parse(s) - Date.parse(d0)) / 864e5)
+  const ev = SEASONS.events.filter(e => e.collections.length && day(e.end) >= 0 && day(e.start) <= Math.max(e.lead || 0, 14)).sort((a, b) => day(a.start) - day(b.start))
+  const e = ev.find(x => day(x.start) > 0) || ev[0]
+  if (e) {
+    let ps = []; for (const h of e.collections) { ps = ps.concat(await colBest(h, 8)); if (ps.length >= 18) break }
+    const seen = new Set(); ps = ps.filter(p => !seen.has(p.id) && seen.add(p.id))
+    const fmt = s => new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+    slides.push([{ kicker: day(e.start) > 0 ? 'Coming up · ' + fmt(e.start) + (e.end !== e.start ? '–' + fmt(e.end) : '') : 'On now · ' + e.name, title: e.name, text: e.angle, link: e.page || '/collections/' + e.collections[0], button: 'Shop now' }, pick(ps, turn)])
+  }
+  // 2. Best sellers
+  slides.push([{ kicker: "Leeds' best sellers", title: 'What Leeds is buying', text: 'Our most-bought products right now, in stock and ready to go.', link: '/collections/best-sellers-live', button: 'Shop best sellers' }, pick(await colBest('best-sellers-live', 24), turn)])
+  // 3. Today's edit (weekday theme, same as the newsletter)
+  const [dh, dt, dd] = DAY_EDIT[now.getDay()]
+  slides.push([{ kicker: "Today's edit", title: dt, text: dd, link: '/collections/' + dh, button: 'Shop the edit' }, pick(await colBest(dh, 18), turn)])
+  // 4. Brand of the week (same brand as the homepage row and newsletter)
+  const keys = Object.keys(BRANDS).filter(k => !['sleek-hair', 'feme', 'dressmaker', 'janet-collection', 'model-model', 'outre', 'obsession', 'hairmaker', 'remington', 'andis', 'satin-smooth'].includes(k))
+  const wk = Math.floor((Date.now() / 864e5 + 3) / 7); const slug = keys[wk % keys.length]; const B = BRANDS[slug]
+  const r = await build(slug, B)
+  const bp = r.bestHandles.length ? await slideProducts(r.bestHandles.map(h => 'handle:' + h).join(' OR '), 30) : []
+  const byH = Object.fromEntries(bp.map(p => [p.handle, p]))
+  slides.push([{ kicker: 'Brand of the week', title: B.name, text: 'The ' + B.name + ' products our customers rate most, all in one place.', link: '/pages/' + slug, button: 'Shop ' + B.name }, pick(r.bestHandles.map(h => byH[h]).filter(okP), turn)])
+  // 5. Just landed
+  const since = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10)
+  const d = await gql('query($q:String!){ products(first:100, query:$q, sortKey:CREATED_AT, reverse:true){ nodes{ id handle title vendor status totalInventory featuredImage{url} } } }', { q: 'status:active created_at:>' + since })
+  slides.push([{ kicker: 'Just landed', title: 'New in at CC', text: 'The latest arrivals across our Leeds shops, in stock now.', link: '/collections/all?sort_by=created-descending', button: 'See what is new' }, pick(d.products.nodes.filter(okP).slice(0, 30), turn)])
+  const out = []
+  for (let i = 0; i < 5; i++) {
+    const [s, prods] = slides[i] || [{ kicker: '', title: 'Homepage slide ' + (i + 1), text: '', link: '/', button: '' }, []]
+    out.push(await setSlide(i + 1, s, prods))
+  }
+  return { run, turn, slides: out }
+}
+
 export default async function handler(req, res) {
   try {
     const job = String(req.query.job || '')
@@ -347,6 +414,7 @@ export default async function handler(req, res) {
       for (let i = 0; i < 20; i++) { const d = await gql('query($id:ID!,$c:String){ theme(id:$id){ files(first:50, after:$c){ pageInfo{hasNextPage endCursor} nodes{ filename body{ ... on OnlineStoreThemeFileBodyText{ content } } } } } }', { id: tid, c }); const f = d.theme.files; for (const n of f.nodes) { const t = n.body && n.body.content; if (!t) continue; const m = t.match(re); if (m) { const k = t.search(new RegExp(req.query.re)); out.push(n.filename + '|' + m.length + '|' + t.slice(Math.max(0, k - 60), k + 100).replace(/\s+/g, ' ')) } } if (!f.pageInfo.hasNextPage) break; c = f.pageInfo.endCursor }
       res.setHeader('content-type', 'text/plain; charset=utf-8'); return res.status(200).send(out.join('\n') || 'none')
     }
+    if (job === 'slides') return res.status(200).json({ ok: true, ...(await homeSlides(req.query.run)) })
     if (job === 'homeslots') return res.status(200).json({ ok: true, slots: await homeSlots(req.query.only || '') })
     if (job === 'setslot') { // h=collection handle, p=product handles comma list, t=title, d=description
       const hs = (req.query.p || '').split(',').filter(Boolean)
