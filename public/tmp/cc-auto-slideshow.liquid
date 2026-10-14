@@ -1,0 +1,227 @@
+{% comment %}
+  CC Hair & Beauty – Auto slideshow
+  Same look as the Feature slideshow, but the slides fill themselves.
+  Each slide reads a hidden collection (cc-slide-1 to cc-slide-5):
+    title = heading, description = text, first 3 products = the product cards,
+    metafields custom.kicker / custom.link / custom.button = label, link and button.
+  Claude refreshes those collections 5 times a day (7am, 10am, 1pm, 4pm, 7pm),
+  so the season, best sellers, today's edit, brand of the week and new arrivals
+  change through the day with different products each time.
+{% endcomment %}
+
+{%- liquid
+  assign extra = section.settings.height | default: 0
+  if extra > 200
+    assign extra = 0
+  endif
+  assign slide_count = 0
+  for i in (1..5)
+    assign h = 'cc-slide-' | append: i
+    if collections[h].products_count > 0
+      assign slide_count = slide_count | plus: 1
+    endif
+  endfor
+-%}
+
+<div
+  class="fs"
+  id="fs-{{ section.id }}"
+  data-autoplay="{{ section.settings.autoplay }}"
+  style="
+    --fs-bg: {{ section.settings.bg }};
+    --fs-text: {{ section.settings.text }};
+    --fs-accent: {{ section.settings.accent }};
+    --fs-seconds: {{ section.settings.seconds }}s;
+        --fs-radius: {{ section.settings.radius }}px;
+    --fs-extra: {{ extra }}px;
+  "
+>
+  <div class="fs__inner">
+    <div class="fs__slides">
+      {%- assign shown = 0 -%}
+      {%- for i in (1..5) -%}
+        {%- assign h = 'cc-slide-' | append: i -%}
+        {%- assign c = collections[h] -%}
+        {%- if c.products_count > 0 -%}
+          {%- liquid
+            assign shown = shown | plus: 1
+            assign kicker = c.metafields.custom.kicker.value | default: c.metafields.custom.kicker
+            assign link = c.metafields.custom.link.value | default: c.metafields.custom.link | default: c.url
+            assign button = c.metafields.custom.button.value | default: c.metafields.custom.button | default: 'Shop now'
+          -%}
+          <div class="fs__slide ccas__tint-{{ shown }}{% if shown == 1 %} is-active{% endif %}" data-fs-slide {% unless shown == 1 %}aria-hidden="true"{% endunless %}>
+            <div class="fs__text">
+              {%- if section.settings.greeting != blank -%}<p class="ccas__hello">{{ section.settings.greeting | escape }}</p>{%- endif -%}
+              {%- if kicker != blank -%}<p class="fs__eyebrow">{{ kicker | escape }}</p>{%- endif -%}
+              <h2 class="fs__heading">{{ c.title | escape }}</h2>
+              {%- if c.description != blank -%}<p class="fs__body">{{ c.description | strip_html | truncatewords: 30 }}</p>{%- endif -%}
+              <a class="fs__button" href="{{ link }}">
+                {{ button | escape }}
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+              </a>
+            </div>
+            <div class="fs__media">
+              <ul class="ccas__cards" role="list">
+                {%- for p in c.products limit: 3 -%}
+                  <li>
+                    <a class="ccas__card" href="{{ p.url }}">
+                      <span class="ccas__img">
+                        {%- if p.featured_image -%}
+                          {{ p.featured_image | image_url: width: 500 | image_tag: loading: 'lazy', widths: '250, 400, 500', sizes: '(min-width: 750px) 16vw, 30vw', alt: p.title }}
+                        {%- endif -%}
+                        {%- if p.compare_at_price > p.price -%}<span class="ccas__badge">Sale</span>{%- endif -%}
+                      </span>
+                      <span class="ccas__name">{{ p.title | escape }}</span>
+                      <span class="ccas__price">
+                        {%- if p.compare_at_price > p.price -%}<s>{{ p.compare_at_price | money }}</s> {%- endif -%}
+                        {%- if p.price_varies -%}From {% endif -%}{{ p.price | money }}
+                      </span>
+                    </a>
+                  </li>
+                {%- endfor -%}
+              </ul>
+            </div>
+          </div>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+
+    {%- if slide_count > 1 -%}
+      <div class="fs__controls">
+        <button type="button" class="fs__arrow" data-fs-prev aria-label="Previous slide">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        {%- for i in (1..slide_count) -%}
+          <button type="button" class="fs__dot{% if forloop.first %} is-active{% endif %}" data-fs-dot aria-label="Go to slide {{ i }}"><span class="fs__fill" data-fs-fill></span></button>
+        {%- endfor -%}
+        <button type="button" class="fs__arrow" data-fs-next aria-label="Next slide">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+        <button type="button" class="fs__pause" data-fs-pause aria-label="Pause slideshow">Pause</button>
+      </div>
+    {%- endif -%}
+  </div>
+</div>
+
+<style>
+  #fs-{{ section.id }} { padding: {{ section.settings.padding_top }}px 1.5rem {{ section.settings.padding_bottom }}px; }
+  #fs-{{ section.id }} .fs__inner { position: relative; max-width: {{ section.settings.max_width }}px; margin: 0 auto; border-radius: var(--fs-radius); background: var(--fs-bg); color: var(--fs-text); overflow: hidden; }
+  #fs-{{ section.id }} .fs__slides { display: grid; }
+  #fs-{{ section.id }} .fs__slide { grid-area: 1 / 1; display: grid; grid-template-columns: 1fr; opacity: 0; visibility: hidden; transition: opacity 0.6s ease, visibility 0.6s ease; }
+  #fs-{{ section.id }} .fs__slide.is-active { opacity: 1; visibility: visible; }
+  #fs-{{ section.id }} .fs__text { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.6rem 2rem 6rem; text-align: center; }
+  #fs-{{ section.id }} .ccas__hello { margin: 0 0 0.6rem; font-size: 1.3rem; color: var(--fs-text); opacity: 0.7; }
+  #fs-{{ section.id }} .ccas__tint-1 { background: #FBEDE3; }
+  #fs-{{ section.id }} .ccas__tint-2 { background: #F9E9EE; }
+  #fs-{{ section.id }} .ccas__tint-3 { background: #FFF5E1; }
+  #fs-{{ section.id }} .ccas__tint-4 { background: #EEEAF7; }
+  #fs-{{ section.id }} .ccas__tint-5 { background: #E6F3EC; }
+  #fs-{{ section.id }} .fs__eyebrow { margin: 0 0 0.8rem; font-size: 1.25rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fs-accent); }
+  #fs-{{ section.id }} .fs__heading { width: auto; margin: 0 0 1rem; font-size: 2.6rem !important; font-weight: 700; line-height: 1.1; letter-spacing: 0; text-transform: none; text-align: center; color: var(--fs-text); }
+  #fs-{{ section.id }} .fs__heading::after { content: none; display: none; }
+  #fs-{{ section.id }} .fs__body { max-width: 40rem; margin: 0 0 1.8rem; font-size: 1.5rem; line-height: 1.5; color: var(--fs-text); }
+  #fs-{{ section.id }} .fs__button { display: inline-flex; align-items: center; gap: 0.6rem; padding: 1.1rem 2.2rem; border-radius: 999px; background: var(--fs-text); color: #ffffff; font-size: 1.4rem; font-weight: 600; text-decoration: none; transition: background 0.2s ease; }
+  #fs-{{ section.id }} .fs__button:hover { background: var(--fs-accent); color: #ffffff; }
+  #fs-{{ section.id }} .fs__media { order: -1; display: flex; align-items: center; justify-content: center; padding: 1.6rem 1.2rem 0; }
+  #fs-{{ section.id }} .ccas__cards { list-style: none; margin: 0; padding: 0; width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.8rem; align-items: start; max-width: 60rem; }
+  #fs-{{ section.id }} .ccas__card { display: flex; flex-direction: column; background: #ffffff; border-radius: calc(var(--fs-radius) * 0.75); padding: 0.8rem; color: var(--fs-text); text-decoration: none; box-shadow: 0 1px 3px rgba(0,0,0,0.06); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+  #fs-{{ section.id }} .ccas__card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,0.10); }
+  #fs-{{ section.id }} .ccas__img { position: relative; display: block; aspect-ratio: 1 / 1; margin-bottom: 0.6rem; padding: 0.4rem; }
+  #fs-{{ section.id }} .ccas__img img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  #fs-{{ section.id }} .ccas__badge { position: absolute; left: 0; bottom: 0; background: var(--fs-accent); color: #fff; font-size: 1.1rem; font-weight: 700; padding: 0.2rem 0.8rem; border-radius: 999px; }
+  #fs-{{ section.id }} .ccas__name { font-size: 1.2rem; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 3.2rem; }
+  #fs-{{ section.id }} .ccas__price { padding-top: 0.4rem; font-size: 1.35rem; font-weight: 700; }
+  #fs-{{ section.id }} .ccas__price s { font-weight: 400; opacity: 0.6; margin-right: 0.3rem; }
+  #fs-{{ section.id }} .fs__controls { position: absolute; z-index: 2; left: 0; right: 0; bottom: 1.2rem; display: flex; align-items: center; justify-content: center; gap: 1rem; }
+  #fs-{{ section.id }} .fs__arrow, #fs-{{ section.id }} .fs__pause { display: flex; align-items: center; justify-content: center; padding: 0.6rem; border: 0; background: none; color: var(--fs-text); font-family: inherit; font-size: 1.2rem; cursor: pointer; }
+  #fs-{{ section.id }} .fs__pause { margin-left: 0.6rem; text-decoration: underline; }
+  #fs-{{ section.id }} .fs__dot { position: relative; width: 1.1rem; height: 1.1rem; padding: 0; border: 0; border-radius: 999px; background: rgba(128,128,128,0.45); overflow: hidden; cursor: pointer; transition: width 0.3s ease; }
+  #fs-{{ section.id }} .fs__dot.is-active { width: 4.8rem; }
+  #fs-{{ section.id }} .fs__fill { display: block; position: absolute; top: 0; left: 0; width: 0; height: 100%; border-radius: inherit; background: var(--fs-accent); }
+  #fs-{{ section.id }} .fs__dot.is-active .fs__fill { width: 100%; }
+  #fs-{{ section.id }}.is-playing .fs__dot.is-active .fs__fill { animation: ccas-progress var(--fs-seconds) linear forwards; }
+  #fs-{{ section.id }}.is-playing:hover .fs__fill, #fs-{{ section.id }}.is-playing:focus-within .fs__fill { animation-play-state: paused; }
+  #fs-{{ section.id }} button:focus-visible, #fs-{{ section.id }} a:focus-visible { outline: 2px solid var(--fs-accent); outline-offset: 3px; }
+  @keyframes ccas-progress { from { width: 0; } to { width: 100%; } }
+  @media screen and (min-width: 750px) {
+    #fs-{{ section.id }} .fs__slide { grid-template-columns: 42fr 58fr; align-items: center; padding-block: calc(var(--fs-extra) / 2); }
+    #fs-{{ section.id }} .fs__text { align-items: flex-start; text-align: left; padding: 3rem 2rem 6rem 5rem; }
+    #fs-{{ section.id }} .fs__heading { font-size: 3.8rem !important; text-align: left; }
+    #fs-{{ section.id }} .fs__media { order: 0; padding: 2.4rem 4rem 2.4rem 1rem; }
+    #fs-{{ section.id }} .ccas__cards { max-width: 62rem; }
+    #fs-{{ section.id }} .ccas__cards { gap: 1.6rem; }
+    #fs-{{ section.id }} .ccas__card { padding: 1rem; }
+    #fs-{{ section.id }} .ccas__name { font-size: 1.3rem; }
+    #fs-{{ section.id }} .ccas__price { font-size: 1.4rem; }
+    #fs-{{ section.id }} .fs__controls { right: 58%; justify-content: flex-start; padding-left: 5rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #fs-{{ section.id }} .fs__slide, #fs-{{ section.id }} .fs__dot, #fs-{{ section.id }} .ccas__card { transition: none; }
+  }
+</style>
+
+<script>
+  (function () {
+    var root = document.getElementById('fs-{{ section.id }}');
+    if (!root) return;
+    var slides = root.querySelectorAll('[data-fs-slide]');
+    var dots = root.querySelectorAll('[data-fs-dot]');
+    var pauseBtn = root.querySelector('[data-fs-pause]');
+    if (slides.length < 2) return;
+    var index = 0;
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var canPlay = root.dataset.autoplay === 'true' && !reduce;
+    function setPlaying(playing) {
+      root.classList.toggle('is-playing', playing);
+      if (pauseBtn) {
+        pauseBtn.textContent = playing ? 'Pause' : 'Play';
+        pauseBtn.setAttribute('aria-label', playing ? 'Pause slideshow' : 'Play slideshow');
+      }
+    }
+    function show(next) {
+      index = (next + slides.length) % slides.length;
+      slides.forEach(function (slide, i) {
+        slide.classList.toggle('is-active', i === index);
+        if (i === index) slide.removeAttribute('aria-hidden'); else slide.setAttribute('aria-hidden', 'true');
+      });
+      dots.forEach(function (dot, i) {
+        dot.classList.toggle('is-active', i === index);
+        var fill = dot.querySelector('[data-fs-fill]');
+        fill.style.animation = 'none'; void fill.offsetWidth; fill.style.animation = '';
+      });
+    }
+    root.addEventListener('animationend', function (event) {
+      if (event.target.hasAttribute('data-fs-fill') && root.classList.contains('is-playing')) show(index + 1);
+    });
+    root.querySelector('[data-fs-prev]').addEventListener('click', function () { show(index - 1); });
+    root.querySelector('[data-fs-next]').addEventListener('click', function () { show(index + 1); });
+    dots.forEach(function (dot, i) { dot.addEventListener('click', function () { show(i); }); });
+    if (pauseBtn) {
+      if (!canPlay) pauseBtn.hidden = true;
+      pauseBtn.addEventListener('click', function () { setPlaying(!root.classList.contains('is-playing')); });
+    }
+    setPlaying(canPlay);
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "CC: Auto slideshow",
+  "tag": "section",
+  "settings": [
+    { "type": "paragraph", "content": "Fills itself from the cc-slide-1 to cc-slide-5 collections, which Claude refreshes 5 times a day. Nothing to edit here except the look." },
+    { "type": "checkbox", "id": "autoplay", "label": "Change slides automatically", "default": true },
+    { "type": "range", "id": "seconds", "label": "Seconds per slide", "min": 3, "max": 12, "step": 1, "unit": "s", "default": 6 },
+    { "type": "color", "id": "bg", "label": "Panel background", "default": "#F6F5F2" },
+    { "type": "color", "id": "text", "label": "Text and button", "default": "#121212" },
+    { "type": "color", "id": "accent", "label": "Accent (label, timer bar, button hover)", "default": "#C8322B" },
+    { "type": "range", "id": "height", "label": "Extra height on desktop", "min": 0, "max": 200, "step": 20, "unit": "px", "default": 0, "info": "The slide sizes itself to its content. Add height here only if you want more space." },
+    { "type": "text", "id": "greeting", "label": "Welcome line", "default": "Welcome to CC Hair & Beauty, Leeds since 1979", "info": "Small friendly line above every slide. Leave empty to hide." },
+    { "type": "range", "id": "radius", "label": "Corner rounding", "min": 0, "max": 32, "step": 2, "unit": "px", "default": 12 },
+    { "type": "range", "id": "max_width", "label": "Maximum width", "min": 1000, "max": 1800, "step": 50, "unit": "px", "default": 1600 },
+    { "type": "range", "id": "padding_top", "label": "Top spacing", "min": 0, "max": 80, "step": 4, "unit": "px", "default": 16 },
+    { "type": "range", "id": "padding_bottom", "label": "Bottom spacing", "min": 0, "max": 80, "step": 4, "unit": "px", "default": 16 }
+  ],
+  "presets": [ { "name": "CC: Auto slideshow" } ]
+}
+{% endschema %}
