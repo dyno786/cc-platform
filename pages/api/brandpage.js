@@ -270,6 +270,11 @@ export default async function handler(req, res) {
     if (job === 'vendors') {
       return res.status(200).json({ ok: true, vendors: await vendors(req.query.q || '') })
     }
+    if (job === 'themegrep') { // search theme files: t=theme gid number, re=regex; returns filename|count|first match
+      const tid = 'gid://shopify/OnlineStoreTheme/' + (req.query.t || '128853410013'); const re = new RegExp(req.query.re, 'g'); const out = []; let c = null
+      for (let i = 0; i < 20; i++) { const d = await gql('query($id:ID!,$c:String){ theme(id:$id){ files(first:50, after:$c){ pageInfo{hasNextPage endCursor} nodes{ filename body{ ... on OnlineStoreThemeFileBodyText{ content } } } } } }', { id: tid, c }); const f = d.theme.files; for (const n of f.nodes) { const t = n.body && n.body.content; if (!t) continue; const m = t.match(re); if (m) { const k = t.search(new RegExp(req.query.re)); out.push(n.filename + '|' + m.length + '|' + t.slice(Math.max(0, k - 60), k + 100).replace(/\s+/g, ' ')) } } if (!f.pageInfo.hasNextPage) break; c = f.pageInfo.endCursor }
+      res.setHeader('content-type', 'text/plain; charset=utf-8'); return res.status(200).send(out.join('\n') || 'none')
+    }
     if (job === 'cols') { // list every collection (handle|title|products|hasImage), optional title regex re=
       const re = req.query.re ? new RegExp(req.query.re, 'i') : null; const out = []; let c = null
       for (let i = 0; i < 20; i++) { const d = await gql('query($c:String){ collections(first:250, after:$c){ pageInfo{hasNextPage endCursor} nodes{ handle title productsCount{count} image{url} } } }', { c }); for (const n of d.collections.nodes) if (!re || re.test(n.title) || re.test(n.handle)) out.push([n.handle, n.title, n.productsCount.count, n.image ? 1 : 0].join('|')); if (!d.collections.pageInfo.hasNextPage) break; c = d.collections.pageInfo.endCursor }
