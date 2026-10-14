@@ -75,6 +75,18 @@
   "vre": "^all day got hold",
   "kw": [
    "All Day Got Hold"
+  ],
+  "main": "all-day-got-hold-edge-control",
+  "colStrip": "^\\s*All Day Got Hold\\s*[-–:]?\\s*",
+  "cols": [
+   "all-day-got-hold-edge-control",
+   "all-day-got-hold-lock-n-twist",
+   "all-day-got-hold-braid-and-scalp-care",
+   "all-day-got-hold-styling",
+   "all-day-got-hold-wig-adhesive",
+   "all-day-got-hold-adhesive-sprays",
+   "all-day-got-hold-boho-braids",
+   "all-day-got-hold-brushes"
   ]
  },
  "aunt-jackies": {
