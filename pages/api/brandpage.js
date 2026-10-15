@@ -376,8 +376,9 @@ async function homeSlides(runParam) {
   const slides = []
   // 1. Season or event
   const d0 = now.toLocaleDateString('en-CA'); const day = s => Math.round((Date.parse(s) - Date.parse(d0)) / 864e5)
-  const ev = SEASONS.events.filter(e => e.collections.length && day(e.end) >= 0 && day(e.start) <= Math.max(e.lead || 0, 14)).sort((a, b) => day(a.start) - day(b.start))
-  const e = ev.find(x => day(x.start) > 0) || ev[0]
+  // slidePriority / slideLead in seasons.json let an event (e.g. Halloween) take slide 1 early, ahead of nearer events
+  const ev = SEASONS.events.filter(e => e.collections.length && day(e.end) >= 0 && day(e.start) <= Math.max(e.slideLead || e.lead || 0, 14)).sort((a, b) => (b.slidePriority || 0) - (a.slidePriority || 0) || day(a.start) - day(b.start))
+  const e = ev.find(x => x.slidePriority) || ev.find(x => day(x.start) > 0) || ev[0]
   if (e) {
     let ps = []; for (const h of e.collections) { ps = ps.concat(await colBest(h, 8)); if (ps.length >= 18) break }
     const seen = new Set(); ps = ps.filter(p => !seen.has(p.id) && seen.add(p.id))
