@@ -286,7 +286,7 @@ const DAY_EDIT = [ // Sun..Sat, same themes as the nightly newsletter
 ]
 const okP = p => p && p.status === 'ACTIVE' && p.totalInventory >= 3 && p.featuredImage && !policyFlag(p.title) && !LIGHT.test(p.title + ' ' + (p.vendor || ''))
 async function colBest(handle, n) {
-  const d = await gql('query($h:String!){ collectionByHandle(handle:$h){ products(first:80, sortKey:BEST_SELLING){ nodes{ id handle title vendor status totalInventory featuredImage{url} } } } }', { h: handle })
+  const d = await gql('query($h:String!){ collectionByHandle(handle:$h){ products(first:80, sortKey:BEST_SELLING){ nodes{ id handle title vendor productType status totalInventory featuredImage{url} } } } }', { h: handle })
   if (!d.collectionByHandle) return []
   const seen = new Set(); return d.collectionByHandle.products.nodes.filter(okP).filter(p => { const k = p.title.toLowerCase().replace(/\s*-\s*\d.*$/, ''); if (seen.has(k)) return false; seen.add(k); return true }).slice(0, n)
 }
@@ -340,8 +340,11 @@ async function homeSlots(only) {
 // Each slide is a hidden collection cc-slide-1..5 (title = heading, description = text,
 // metafields custom.kicker / custom.link / custom.button). The theme section reads them.
 const SLIDE_RUNS = [7, 10, 13, 16, 19] // London hours the scheduled task fires
+// Rough product kind, so a slide shows e.g. a gel, a brush and a scarf rather than three oils
+const KINDS = [['durag', /du-?rag/i], ['bonnet', /bonnet/i], ['cap', /\bcaps?\b/i], ['scarf', /scarf|\bwrap\b/i], ['wig', /\bwigs?\b|lace front/i], ['braid', /braid|crochet|\blocs?\b|twist/i], ['bundle', /bundle|weave|weft|clip-?in/i], ['edge', /edge/i], ['gel', /\bgel\b|glue/i], ['makeup', /\blip|lash|brow|foundation|concealer|mascara|eyeliner|palette|blush|highlighter|setting spray|primer/i], ['nail', /\bnail|polish/i], ['oil', /\boils?\b/i], ['shampoo', /shampoo|cleans/i], ['conditioner', /condition|leave-?in|mask|masque|detangl/i], ['colour', /colou?r|\bdye|bleach|lighten/i], ['styler', /mousse|spray|foam|\bwax|pomade|serum/i], ['cream', /cream|butter|lotion|moistur|custard|pudding/i], ['tool', /brush|\bcomb\b|\bclips?\b|\bpins?\b|dryer|straighten|curler|\btongs?\b|clipper|trimmer|razor/i]]
+const kindOf = p => { const t = p.title || ''; const k = KINDS.find(([, re]) => re.test(t)); return k ? k[0] : 'type:' + typeName(p.productType).toLowerCase() }
 async function slideProducts(q, n) {
-  const d = await gql('query($q:String!){ products(first:' + n + ', query:$q){ nodes{ id handle title vendor status totalInventory featuredImage{url} } } }', { q })
+  const d = await gql('query($q:String!){ products(first:' + n + ', query:$q){ nodes{ id handle title vendor productType status totalInventory featuredImage{url} } } }', { q })
   return d.products.nodes
 }
 async function setSlide(i, s, prods) {
@@ -362,10 +365,12 @@ async function homeSlides(runParam) {
   let run = runParam !== undefined && runParam !== '' ? parseInt(runParam, 10) : SLIDE_RUNS.reduce((a, h, k) => now.getHours() >= h ? k : a, 0)
   const turn = doy * SLIDE_RUNS.length + run // changes every run, every day
   const used = new Set()
-  const pick = (pool, k) => { // 3 products from the pool, a different window each run, no repeats across slides
+  const pick = (pool, k) => { // 3 products of different kinds, a different window each run, no repeats across slides
     pool = pool.filter(p => !used.has(p.id)); if (!pool.length) return []
-    const groups = Math.max(1, Math.floor(pool.length / 3)); const start = (k % groups) * 3
-    const out = pool.slice(start, start + 3); if (out.length < 3) out.push(...pool.filter(p => !out.includes(p)).slice(0, 3 - out.length))
+    const off = (k * 3) % pool.length; const rot = pool.slice(off).concat(pool.slice(0, off))
+    const out = []; const kinds = new Set()
+    for (const p of rot) { if (out.length >= 3) break; const t = kindOf(p); if (!kinds.has(t)) { out.push(p); kinds.add(t) } }
+    for (const p of rot) { if (out.length >= 3) break; if (!out.includes(p)) out.push(p) } // only if the pool has fewer than 3 kinds
     out.forEach(p => used.add(p.id)); return out
   }
   const slides = []
@@ -384,16 +389,22 @@ async function homeSlides(runParam) {
   // 3. Today's edit (weekday theme, same as the newsletter)
   const [dh, dt, dd] = DAY_EDIT[now.getDay()]
   slides.push([{ kicker: "Today's edit", title: dt, text: dd, link: '/collections/' + dh, button: 'Shop the edit' }, pick(await colBest(dh, 18), turn)])
-  // 4. Brand of the week (same brand as the homepage row and newsletter)
+  // 4. Brand spotlight: a different brand every run (the homepage row and newsletter keep the weekly brand, so skip that one here)
   const keys = Object.keys(BRANDS).filter(k => !['sleek-hair', 'feme', 'dressmaker', 'janet-collection', 'model-model', 'outre', 'obsession', 'hairmaker', 'remington', 'andis', 'satin-smooth'].includes(k))
-  const wk = Math.floor((Date.now() / 864e5 + 3) / 7); const slug = keys[wk % keys.length]; const B = BRANDS[slug]
-  const r = await build(slug, B)
-  const bp = r.bestHandles.length ? await slideProducts(r.bestHandles.map(h => 'handle:' + h).join(' OR '), 30) : []
-  const byH = Object.fromEntries(bp.map(p => [p.handle, p]))
-  slides.push([{ kicker: 'Brand of the week', title: B.name, text: 'The ' + B.name + ' products our customers rate most, all in one place.', link: '/pages/' + slug, button: 'Shop ' + B.name }, pick(r.bestHandles.map(h => byH[h]).filter(okP), turn)])
+  const wk = Math.floor((Date.now() / 864e5 + 3) / 7); const weekly = keys[wk % keys.length]
+  const bkeys = keys.filter(k => k !== weekly); let brandSlide = null; const t0 = Date.now()
+  for (let a = 0; a < 4 && !brandSlide; a++) { // move on to the next brand if this one has fewer than 3 products to show
+    const slug = bkeys[(turn + a) % bkeys.length]; const B = BRANDS[slug]
+    const r = await build(slug, B)
+    const bp = r.bestHandles.length ? await slideProducts(r.bestHandles.map(h => 'handle:' + h).join(' OR '), 30) : []
+    const byH = Object.fromEntries(bp.map(p => [p.handle, p]))
+    const pool = r.bestHandles.map(h => byH[h]).filter(okP).filter(p => !used.has(p.id))
+    if (pool.length >= 3 || a === 3 || Date.now() - t0 > 25000) brandSlide = [{ kicker: 'Brand spotlight', title: B.name, text: 'The ' + B.name + ' products our customers rate most, all in one place.', link: '/pages/' + slug, button: 'Shop ' + B.name }, pick(pool, turn)]
+  }
+  slides.push(brandSlide)
   // 5. Just landed
   const since = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10)
-  const d = await gql('query($q:String!){ products(first:100, query:$q, sortKey:CREATED_AT, reverse:true){ nodes{ id handle title vendor status totalInventory featuredImage{url} } } }', { q: 'status:active created_at:>' + since })
+  const d = await gql('query($q:String!){ products(first:100, query:$q, sortKey:CREATED_AT, reverse:true){ nodes{ id handle title vendor productType status totalInventory featuredImage{url} } } }', { q: 'status:active created_at:>' + since })
   slides.push([{ kicker: 'Just landed', title: 'New in at CC', text: 'The latest arrivals across our Leeds shops, in stock now.', link: '/collections/all?sort_by=created-descending', button: 'See what is new' }, pick(d.products.nodes.filter(okP).slice(0, 30), turn)])
   const out = []
   for (let i = 0; i < 5; i++) {
