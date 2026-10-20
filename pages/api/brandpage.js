@@ -385,6 +385,16 @@ async function homeSlides(runParam) {
     const fmt = s => new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
     slides.push([{ kicker: day(e.start) > 0 ? 'Coming up · ' + fmt(e.start) + (e.end !== e.start ? '–' + fmt(e.end) : '') : 'On now · ' + e.name, title: e.name, text: e.angle, link: e.page || '/collections/' + e.collections[0], button: 'Shop now' }, pick(ps, turn)])
   }
+  // Takeover: an event with a "takeover" list in seasons.json (e.g. Halloween) fills slides 2-5 too, until its end date.
+  // Each takeover slide lists collections in order; products come from the first ones with enough stock. Text and links are the owner's, never invented.
+  if (e && Array.isArray(e.takeover) && e.takeover.length) {
+    for (const t of e.takeover.slice(0, 4)) {
+      let ps = []; for (const h of t.collections || []) { ps = ps.concat(await colBest(h, 8)); if (ps.filter(p => !used.has(p.id)).length >= 9) break }
+      const seen = new Set(); ps = ps.filter(p => !seen.has(p.id) && seen.add(p.id))
+      slides.push([{ kicker: t.kicker, title: t.title, text: t.text, link: t.link || e.page || '/', button: t.button || 'Shop now' }, pick(ps, turn)])
+    }
+  }
+  if (slides.length < 5) {
   // 2. Best sellers
   slides.push([{ kicker: "Leeds' best sellers", title: 'What Leeds is buying', text: 'Our most-bought products right now, in stock and ready to go.', link: '/collections/best-sellers-live', button: 'Shop best sellers' }, pick(await colBest('best-sellers-live', 24), turn)])
   // 3. Today's edit (weekday theme, same as the newsletter)
@@ -407,6 +417,7 @@ async function homeSlides(runParam) {
   const since = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10)
   const d = await gql('query($q:String!){ products(first:100, query:$q, sortKey:CREATED_AT, reverse:true){ nodes{ id handle title vendor productType status totalInventory featuredImage{url} } } }', { q: 'status:active created_at:>' + since })
   slides.push([{ kicker: 'Just landed', title: 'New in at CC', text: 'The latest arrivals across our Leeds shops, in stock now.', link: '/collections/all?sort_by=created-descending', button: 'See what is new' }, pick(d.products.nodes.filter(okP).slice(0, 30), turn)])
+  }
   const out = []
   for (let i = 0; i < 5; i++) {
     const [s, prods] = slides[i] || [{ kicker: '', title: 'Homepage slide ' + (i + 1), text: '', link: '/', button: '' }, []]
