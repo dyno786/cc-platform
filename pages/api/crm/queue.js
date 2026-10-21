@@ -5,7 +5,7 @@ import { compose, waLink, gmailLink } from '../../../lib/crm/messages'
 
 export const config = { maxDuration: 60 }
 
-// overdueDays: how far back a "due" date may be and still show (default 3). The older backlog from before
+// overdueDays: how far back a "due" date may be and still show (default 1). The older backlog from before
 // the CRM existed is counted but hidden unless all=1, so the first days aren't a 2,000-item list.
 export async function loadQueue(opts) {
   const o = opts || {}
@@ -13,7 +13,7 @@ export async function loadQueue(opts) {
   if (!snap) return { ok: false, error: 'No data yet. Run the first sync from Settings.', pending: true }
   const q = buildActions(snap, state, settings)
   const S = q.settings.store
-  const cutoff = new Date(Date.now() - (o.overdueDays == null ? 3 : o.overdueDays) * 86400000).toISOString()
+  const cutoff = new Date(Date.now() - (o.overdueDays == null ? 1 : o.overdueDays) * 86400000).toISOString()
   const backlog = {}
   const kept = q.actions.filter(a => { if (o.all || a.due >= cutoff || ['confirm', 'shipped', 'checkout'].includes(a.flow)) return true; backlog[a.flow] = (backlog[a.flow] || 0) + 1; return false })
   const actions = kept.map(a => {
