@@ -49,7 +49,7 @@ async function build(o, c) {
   }
   const sub = {}; const existing = {}
   for (const cu of crows) { sub[cu.id] = (cu.emailMarketingConsent || {}).marketingState === 'SUBSCRIBED'; existing[cu.id] = new Set((cu.tags || []).map(t => t.trim().toLowerCase())) }
-  const stats = {}; const todo = []
+  const stats = {}; const todo = []; const staleTop = []
   for (const [cid, P] of Object.entries(per)) {
     const ranked = Object.entries(P).sort((a, b) => b[1].orders - a[1].orders || b[1].units - a[1].units || (a[1].last < b[1].last ? 1 : -1) || (a[0] < b[0] ? -1 : 1))
     const tags = ranked.map(([k]) => 'buys-' + k)
@@ -63,9 +63,11 @@ async function build(o, c) {
     const ex = existing[cid] || new Set()
     const need = tags.filter(t => !ex.has(t))
     if (need.length) todo.push({ id: cid, tags: need })
+    const stale = [...ex].filter(t => t.startsWith('top-') && t !== 'top-' + ranked[0][0])
+    if (stale.length) staleTop.push({ id: cid, tags: stale })
   }
   const table = Object.entries(stats).map(([k, s]) => ({ tag: 'buys-' + k, topTag: 'top-' + k, ...s })).sort((a, b) => b.customers - a.customers)
-  return { ordersRead: Object.keys(orders).length, skippedTest, skippedCancelled, noCustomer, customersWithOrders: Object.keys(per).length, customersNeedingTags: todo.length, tagsToAdd: todo.reduce((n, t) => n + t.tags.length, 0), excludedTypes, table, todo }
+  return { staleTop, per, sub, existing, ordersRead: Object.keys(orders).length, skippedTest, skippedCancelled, noCustomer, customersWithOrders: Object.keys(per).length, customersNeedingTags: todo.length, tagsToAdd: todo.reduce((n, t) => n + t.tags.length, 0), excludedTypes, table, todo }
 }
 
 async function stagedUpload(jsonl) {
@@ -103,21 +105,53 @@ async function db(c) {
   return { customers: rows.length, types: list.length, csv }
 }
 
+const THEMES = [
+  ['Shampoo & conditioner', ['shampoo', 'conditioner', 'shampoo-and-conditioner-sets']],
+  ['Curl creams & leave-ins', ['leave-in-and-curl-cream', 'hair-butter-and-cream', 'hair-mousse-and-foam']],
+  ['Hair oils & treatments', ['hair-oil-and-serum', 'hair-mask-and-treatment', 'scalp-and-hair-loss-treatment']],
+  ['Hair colour', ['hair-colour', 'professional-hair-colour', 'hair-color', 'bleach-and-developer', 'temporary-hair-colour']],
+  ['Braiding hair', ['braiding-and-crochet-hair', 'x-pression-pre-stretched-braids', 'french-curl-braids', 'cherish-braids', 'afro-kinky-bulk']],
+  ['Wigs & weaves', ['wigs', 'lace-wigs', 'synthetic-wigs', 'human-hair-wigs', 'weaves-and-bundles', 'brazilian-hair-bundles', 'wig-glue-and-tape', 'wig-caps-and-accessories']],
+  ['Styling & edges', ['hair-gel', 'edge-control', 'pomade-and-hair-dress', 'hair-spray-and-sheen']],
+  ['Relaxers', ['hair-relaxer']],
+  ['Makeup & nails', ['concealer', 'face-makeup', 'lip-makeup-and-care', 'eye-and-brow-makeup', 'nails']],
+  ['Skin & body', ['body-lotion-and-cream', 'body-lotion', 'soap-and-hand-wash', 'face-cleanser-and-toner', 'face-cream-and-serum']],
+  ["Men's grooming", ['shaving-and-razor-bump-care', 'beard-care', 'hair-clippers-and-trimmers']],
+]
+
+// data for the Newsletter Maker "Targets" tab, worked out from the order history and the customers' group tags
+function targets(B) {
+  const grpOf = id => { const ex = B.existing[id]; if (!ex) return ''; for (const t of ex) if (/^group\d+$/.test(t)) return t; return '' }
+  const groups = {}
+  for (const [id, ex] of Object.entries(B.existing)) { for (const t of ex) if (/^group\d+$/.test(t)) { const G = groups[t] = groups[t] || { positions: 0, subscribedNow: 0 }; G.positions++; if (B.sub[id]) G.subscribedNow++ } }
+  const themes = THEMES.map(([name, keys]) => {
+    const R = { name, buyers: 0, subscribed: 0, byGroup: {} }
+    for (const [id, P] of Object.entries(B.per)) { if (!keys.some(k => P[k])) continue; R.buyers++; if (B.sub[id]) { R.subscribed++; const g = grpOf(id); if (g) R.byGroup[g] = (R.byGroup[g] || 0) + 1 } }
+    return R
+  })
+  const types = B.table.slice(0, 40).map(t => ({ type: t.type, tag: t.tag, buyers: t.customers, subscribed: t.subscribed, topFor: t.topFor, topSubscribed: t.topForSubscribed }))
+  return { asOf: new Date().toISOString(), ordersRead: B.ordersRead, customersWithOrders: B.customersWithOrders, typeCount: B.table.length, groups, themes, types }
+}
+
 export default async function handler(req, res) {
   try {
     const job = String(req.query.job || '')
     if (job === 'db') { const d = await db(req.query.c); return res.status(200).json({ ok: true, ...d }) }
     const B = await build(req.query.o, req.query.c)
-    const { todo, ...report } = B
+    const { todo, staleTop, per, sub, existing, ...report } = B
+    if (job === 'targets') return res.status(200).json({ ok: true, ...targets(B) })
+    report.staleTopTags = staleTop.length
     if (job === 'analyse' || req.query.go !== '1') return res.status(200).json({ ok: true, ...report, sample: todo.slice(0, 3) })
-    if (job === 'tag') {
+    if (job === 'fixtop' || job === 'tag') {
       const running = await gql('query{ currentBulkOperation(type:MUTATION){ id status } }')
       if (running.currentBulkOperation && /CREATED|RUNNING/.test(running.currentBulkOperation.status)) return res.status(409).json({ ok: false, error: 'another bulk tagging run is still going', running: running.currentBulkOperation })
-      if (!todo.length) return res.status(200).json({ ok: true, nothingToDo: true, ...report })
-      const path = await stagedUpload(todo.map(t => JSON.stringify(t)).join('\n'))
+      const list = job === 'fixtop' ? staleTop : todo // fixtop removes only top- tags that no longer match the customer's most-ordered type
+      if (!list.length) return res.status(200).json({ ok: true, nothingToDo: true, ...report })
+      const path = await stagedUpload(list.map(t => JSON.stringify(t)).join('\n'))
+      const op = job === 'fixtop' ? 'tagsRemove' : 'tagsAdd'
       const m = await gql('mutation($m:String!,$p:String!){ bulkOperationRunMutation(mutation:$m, stagedUploadPath:$p){ bulkOperation{ id status } userErrors{ message } } }',
-        { m: 'mutation call($id:ID!,$tags:[String!]!){ tagsAdd(id:$id, tags:$tags){ userErrors{ message } } }', p: path })
-      return res.status(200).json({ ok: true, started: m.bulkOperationRunMutation, ...report })
+        { m: 'mutation call($id:ID!,$tags:[String!]!){ ' + op + '(id:$id, tags:$tags){ userErrors{ message } } }', p: path })
+      return res.status(200).json({ ok: true, op, lines: list.length, started: m.bulkOperationRunMutation, ...report })
     }
     return res.status(400).json({ ok: false, error: 'unknown job' })
   } catch (e) { return res.status(500).json({ ok: false, error: String(e.message || e) }) }
