@@ -146,6 +146,26 @@ export default async function handler(req, res) {
         { m: 'mutation call($id:ID!,$tags:[String!]!){ tagsAdd(id:$id, tags:$tags){ userErrors{ message } } }', p: path })
       return res.status(200).json({ ok: true, started: m.bulkOperationRunMutation, lines: P.todo.length, ...summary })
     }
+    if (job === 'breakdown') { // how subscribed customers came to be subscribed, from stored data only
+      const rows = await load(req.query.u)
+      const FORM = /^(newsletter|shopify-forms-\d+|automizely-popups|aftership-popups&forms|forms|password page|halloween-quiz-winner)$/i
+      const out = { subscribed: 0, accountState: {}, withSignupFormTag: 0, formTagByName: {}, consentSameMinuteAsCreated: 0, consentLaterThanCreated: 0, noConsentDate: 0, formTagAndAccount: 0, loginWithShop: 0, chat: 0, byYearCreated: {} }
+      for (const c of rows) {
+        const e = c.emailMarketingConsent || {}; if (e.marketingState !== 'SUBSCRIBED') continue
+        out.subscribed++
+        out.accountState[c.state] = (out.accountState[c.state] || 0) + 1
+        const tags = (c.tags || []).map(t => t.trim())
+        const ft = tags.filter(t => FORM.test(t))
+        if (ft.length) { out.withSignupFormTag++; ft.forEach(t => { out.formTagByName[t.toLowerCase()] = (out.formTagByName[t.toLowerCase()] || 0) + 1 }); if (c.state === 'ENABLED') out.formTagAndAccount++ }
+        if (tags.some(t => /^login with shop$/i.test(t))) out.loginWithShop++
+        if (tags.some(t => /^inbox online store chat$/i.test(t))) out.chat++
+        const y = c.createdAt.slice(0, 4); out.byYearCreated[y] = (out.byYearCreated[y] || 0) + 1
+        if (!e.consentUpdatedAt) out.noConsentDate++
+        else if (Math.abs(new Date(e.consentUpdatedAt) - new Date(c.createdAt)) < 60000) out.consentSameMinuteAsCreated++
+        else out.consentLaterThanCreated++
+      }
+      return res.status(200).json({ ok: true, ...out })
+    }
     if (job === 'upload') { // build the tagsAdd file and post it to a staged upload target made by the app that will run the bulk tagging
       // t = base64url JSON {url, parameters:[{name,value}]}
       const tg = JSON.parse(Buffer.from(String(req.query.t || ''), 'base64url').toString('utf8'))
