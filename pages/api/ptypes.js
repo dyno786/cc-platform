@@ -81,9 +81,32 @@ async function stagedUpload(jsonl) {
   return tg.parameters.find(p => p.name === 'key').value
 }
 
+// counts straight from the tags now on customers (fresh customer export): the product-type database
+async function db(c) {
+  const rows = await lines(c)
+  const T = {}
+  for (const cu of rows) {
+    const tags = (cu.tags || []).map(t => t.trim().toLowerCase())
+    const sub = (cu.emailMarketingConsent || {}).marketingState === 'SUBSCRIBED'
+    const grp = (tags.find(t => /^group\d+$/.test(t)) || '')
+    for (const t of tags) {
+      const m = t.match(/^(buys|top)-(.+)$/); if (!m) continue
+      const R = T[m[2]] = T[m[2]] || { buys: 0, buysSub: 0, top: 0, topSub: 0, g: {} }
+      if (m[1] === 'buys') { R.buys++; if (sub) { R.buysSub++; if (grp) R.g[grp] = (R.g[grp] || 0) + 1 } }
+      else { R.top++; if (sub) R.topSub++ }
+    }
+  }
+  const groups = [...new Set(Object.values(T).flatMap(r => Object.keys(r.g)))].sort((a, b) => parseInt(a.slice(5)) - parseInt(b.slice(5)))
+  const head = ['rank', 'product_type_tag', 'customers_bought', 'subscribed_bought', 'customers_top_type', 'subscribed_top_type', ...groups.map(g => 'subscribed_in_' + g)]
+  const list = Object.entries(T).sort((a, b) => b[1].buys - a[1].buys)
+  const csv = [head.join(',')].concat(list.map(([k, r], i) => [i + 1, k, r.buys, r.buysSub, r.top, r.topSub, ...groups.map(g => r.g[g] || 0)].join(','))).join('\n')
+  return { customers: rows.length, types: list.length, csv }
+}
+
 export default async function handler(req, res) {
   try {
     const job = String(req.query.job || '')
+    if (job === 'db') { const d = await db(req.query.c); return res.status(200).json({ ok: true, ...d }) }
     const B = await build(req.query.o, req.query.c)
     const { todo, ...report } = B
     if (job === 'analyse' || req.query.go !== '1') return res.status(200).json({ ok: true, ...report, sample: todo.slice(0, 3) })
