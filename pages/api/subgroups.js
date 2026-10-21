@@ -131,7 +131,7 @@ async function assignNew(go) {
 export default async function handler(req, res) {
   try {
     const job = String(req.query.job || '')
-    if (job === 'scopes') { const d = await gql('query{ currentAppInstallation{ accessScopes{ handle } } }'); return res.status(200).json({ ok: true, scopes: d.currentAppInstallation.accessScopes.map(s => s.handle).filter(h => /customer|bulk|metafield|shop/.test(h)) }) }
+    if (job === 'scopes') { const d = await gql('query{ currentAppInstallation{ app{ title developerType } accessScopes{ handle } } }'); return res.status(200).json({ ok: true, app: d.currentAppInstallation.app, scopes: d.currentAppInstallation.accessScopes.map(s => s.handle).filter(h => /customer|bulk|metafield|shop/.test(h)) }) }
     if (job === 'analyse' || job === 'tag') {
       const rows = await load(req.query.u)
       const P = plan(rows)
