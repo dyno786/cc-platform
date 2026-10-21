@@ -146,6 +146,20 @@ export default async function handler(req, res) {
         { m: 'mutation call($id:ID!,$tags:[String!]!){ tagsAdd(id:$id, tags:$tags){ userErrors{ message } } }', p: path })
       return res.status(200).json({ ok: true, started: m.bulkOperationRunMutation, lines: P.todo.length, ...summary })
     }
+    if (job === 'upload') { // build the tagsAdd file and post it to a staged upload target made by the app that will run the bulk tagging
+      // t = base64url JSON {url, parameters:[{name,value}]}
+      const tg = JSON.parse(Buffer.from(String(req.query.t || ''), 'base64url').toString('utf8'))
+      if (!/^https:\/\/shopify-staged-uploads\.storage\.googleapis\.com\/?$/.test(tg.url)) return res.status(400).json({ ok: false, error: 'unexpected upload target' })
+      const rows = await load(req.query.u); const P = plan(rows)
+      if (P.conflicts.length) return res.status(409).json({ ok: false, error: 'conflicting group tags; nothing uploaded', conflicts: P.conflicts.slice(0, 50) })
+      const jsonl = P.todo.map(t => JSON.stringify({ id: t.id, tags: [t.g] })).join('\n')
+      const fd = new FormData()
+      for (const p of tg.parameters) fd.append(p.name, p.value)
+      fd.append('file', new Blob([jsonl], { type: 'text/jsonl' }), 'groups.jsonl')
+      const r = await fetch(tg.url, { method: 'POST', body: fd })
+      const per = {}; P.todo.forEach(t => { per[t.g] = (per[t.g] || 0) + 1 })
+      return res.status(200).json({ ok: r.status < 300, uploadStatus: r.status, lines: P.todo.length, perGroup: per, firstLine: jsonl.split('\n')[0] })
+    }
     if (job === 'status') {
       const d = await gql('query($id:ID!){ node(id:$id){ ... on BulkOperation{ status objectCount errorCode url partialDataUrl completedAt } } }', { id: req.query.id })
       const n = d.node || {}
