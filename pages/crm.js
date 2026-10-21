@@ -22,14 +22,20 @@ const Empty = ({ children }) => <div style={{ ...card, color: T.textMuted, fontS
 const Consent = ({ a }) => <span style={{ display: 'inline-flex', gap: 4 }}>{a.consent && a.consent.email && <Pill color={T.blue} bg={T.blueBg}>Email ✓</Pill>}{a.consent && (a.consent.sms || a.consent.waOk) && <Pill color={WA} bg="#e3f3e8">WhatsApp ✓</Pill>}</span>
 
 function useQueue() {
-  const [q, setQ] = useState(null); const [err, setErr] = useState('')
-  const load = useCallback(() => api('queue').then(d => { setQ(d); setErr(d.ok ? '' : d.error || '') }).catch(e => setErr(e.message)), [])
+  const [q, setQ] = useState(null); const [err, setErr] = useState(''); const [all, setAll] = useState(false)
+  const load = useCallback(() => api('queue' + (all ? '?all=1' : '')).then(d => { setQ(d); setErr(d.ok ? '' : d.error || '') }).catch(e => setErr(e.message)), [all])
   useEffect(() => { load() }, [load])
   const mark = useCallback(async (a, status) => {
     setQ(prev => prev ? { ...prev, actions: prev.actions.filter(x => x.key !== a.key) } : prev)
     await post('action', { customerId: a.customerId, key: a.key, flow: a.flow, channel: a.channel, marketing: a.marketing, status, name: a.name })
   }, [])
-  return { q, err, load, mark }
+  return { q, err, load, mark, all, setAll }
+}
+
+// Long lists: show the first 25, then a button for the rest
+function Limited({ items, render }) {
+  const [n, setN] = useState(25)
+  return <>{items.slice(0, n).map(render)}{items.length > n && <button onClick={() => setN(items.length)} style={{ ...btn(T.surface, T.blue), marginTop: 6 }}>Show all {items.length}</button>}</>
 }
 
 // One queued action: who, why, the message, and the buttons
@@ -88,7 +94,7 @@ const STEP_DEFS = [
   { flows: ['winback'], title: 'Win-back messages (60 / 90 / 180 days)', why: 'Gentle at 60, stronger at 90, reactivation at 180.' },
 ]
 function Today({ Q }) {
-  const { q, err, load, mark } = Q
+  const { q, err, load, mark, all, setAll } = Q
   const [doneSteps, setDone] = useState({})
   if (err) return <Empty>{err} {q && q.pending && <>— go to <b>Settings</b> and press <b>Run first sync</b>.</>}</Empty>
   if (!q) return <Empty>Working out today's list…</Empty>
@@ -106,7 +112,7 @@ function Today({ Q }) {
         <Stat label="Open checkouts" value={q.checkouts} color={T.purple} />
       </div>
       <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 6, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
-        <span>Data from Shopify at {fmtDT(q.updatedAt)} · {q.counts && q.counts.orders} orders in view · <a onClick={load} style={{ color: T.blue, cursor: 'pointer' }}>refresh list</a></span>
+        <span>Data from Shopify at {fmtDT(q.updatedAt)} · {q.counts && q.counts.orders} orders in view · <a onClick={load} style={{ color: T.blue, cursor: 'pointer' }}>refresh list</a>{q.backlogTotal > 0 && <> · {q.backlogTotal} older reminders and review requests from before the CRM existed are hidden (<a onClick={() => setAll(true)} style={{ color: T.blue, cursor: 'pointer' }}>show them</a>)</>}{all && <> · showing the full backlog (<a onClick={() => setAll(false)} style={{ color: T.blue, cursor: 'pointer' }}>hide</a>)</>}</span>
         {quiet && <span style={{ color: T.amber, fontWeight: 600 }}>Quiet hours (before 9am / after 8pm): service messages only, hold the marketing ones until morning.</span>}
       </div>
       <div style={{ height: 6, background: T.borderLight, borderRadius: 99, overflow: 'hidden', marginBottom: 12 }}><div style={{ width: (finished / total * 100) + '%', height: '100%', background: T.green, transition: 'width .3s' }} /></div>
@@ -120,7 +126,7 @@ function Today({ Q }) {
             </div>
             {g.items.length > 0 && <button onClick={() => setDone(d => ({ ...d, [i]: !d[i] }))} style={btn(doneSteps[i] ? T.surface : T.green, doneSteps[i] ? T.text : '#fff')}>{doneSteps[i] ? 'Reopen' : 'Step done'}</button>}
           </div>
-          {!doneSteps[i] && g.items.length > 0 && <div style={{ marginTop: 8 }}>{g.items.map(a => <ActionRow key={a.key} a={a} mark={mark} />)}</div>}
+          {!doneSteps[i] && g.items.length > 0 && <div style={{ marginTop: 8 }}><Limited items={g.items} render={a => <ActionRow key={a.key} a={a} mark={mark} />} /></div>}
         </div>
       ))}
       <div style={{ ...card, marginBottom: 8 }}>
@@ -281,7 +287,7 @@ function Channel({ Q, channel }) {
         <button onClick={() => setFlow('')} style={btn(!flow ? T.blue : T.surface, !flow ? '#fff' : T.text)}>All ({all.length})</button>
         {flows.map(f => <button key={f} onClick={() => setFlow(f)} style={btn(flow === f ? T.blue : T.surface, flow === f ? '#fff' : T.text)}>{f} ({all.filter(a => a.flowName === f).length})</button>)}
       </div>
-      <div style={card}>{list.length ? list.map(a => <ActionRow key={a.key} a={a} mark={mark} />) : <span style={{ color: T.textMuted, fontSize: 12 }}>Nothing waiting. Nice.</span>}</div>
+      <div style={card}>{list.length ? <Limited items={list} render={a => <ActionRow key={a.key} a={a} mark={mark} />} /> : <span style={{ color: T.textMuted, fontSize: 12 }}>Nothing waiting. Nice.</span>}</div>
     </>
   )
 }
