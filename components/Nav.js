@@ -15,7 +15,6 @@ const NAV_ITEMS = [
   { section:'Sales', items:[
     { id:'/paid-ads',        label:'Paid Ads',             icon:'💰' },
     { id:'/roas',            label:'ROAS Calculator',      icon:'📈' },
-    { id:'/abandoned-carts', label:'Abandoned Carts',      icon:'🛒' },
   ]},
   { section:'SEO', items:[
     { id:'/organic-seo',     label:'Organic SEO',          icon:'🔍' },
@@ -29,9 +28,13 @@ const NAV_ITEMS = [
     { id:'/brand-videos',    label:'Brand Videos',         icon:'🎬' },
     { id:'/events',          label:'Events Calendar',      icon:'📅' },
   ]},
+  { section:'Customers', items:[
+    { id:'/crm',             label:'CRM & Flows',          icon:'💬' },
+    { id:'/customers',       label:'Customer Intelligence', icon:'👥' },
+    { id:'/abandoned-carts', label:'Abandoned Carts',      icon:'🛒' },
+  ]},
   { section:'Store', items:[
     { id:'/shopify-content', label:'Shopify Content',      icon:'🛍️' },
-    { id:'/customers',       label:'Customers',            icon:'👥' },
     { id:'/salon-clicks',    label:'Salon Clicks',         icon:'💇' },
     { id:'/intake',          label:'Add Products (Scan)',  icon:'🔎' },
     { id:'/stock',           label:'Stock Alerts',         icon:'📦' },
