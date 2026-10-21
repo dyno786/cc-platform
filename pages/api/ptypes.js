@@ -7,7 +7,7 @@
 import { gql } from '../../lib/intake'
 
 export const config = { maxDuration: 300 }
-const LIGHT = /lighten|whiten|bleach|fade|dark spot|toning|hydroquinone|skin tone|carotone|caro light|fair\s*(&|and)/i
+const LIGHT = /skin.?(lighten|whiten|bleach)|whitening|lightening (cream|lotion|serum|soap)|fade cream|dark spot|hydroquinone|skin tone|carotone|caro (light|white)|fair\s*(&|and)\s*(white|lovely)/i
 const SKIP = /^(|general|cc|other|health and beauty|default|gift card|shipping)$/i
 export const slug = t => String(t).toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
