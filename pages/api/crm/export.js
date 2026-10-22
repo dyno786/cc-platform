@@ -3,6 +3,10 @@ import { loadQueue } from './queue'
 import { getJSON, PATHS } from '../../../lib/crm/store'
 import { customerView, buildActions, flowName, mergeSettings } from '../../../lib/crm/engine'
 import { FLOWS, CATEGORIES, CROSS_SELL } from '../../../lib/crm/rules'
+import reordersHandler from './reorders'
+import suggestHandler from './suggest'
+import newsletterHandler from './newsletter'
+const call = (h, query) => new Promise(resolve => h({ method: 'GET', query: query || {} }, { status: () => ({ json: resolve, send: resolve }), setHeader() {} }))
 
 export const config = { maxDuration: 60 }
 
@@ -21,6 +25,7 @@ export default async function handler(req, res) {
       return { id: c.id, name: v.name, email: v.email, phone: v.phone, city: v.city, emailSub: v.emailSub, smsSub: v.smsSub, orders: v.orders.length, ltv: Math.round(v.ltv * 100) / 100, lastOrderAt: v.lastOrder ? v.lastOrder.createdAt : null, days: v.daysSinceOrder, cats: v.cats.slice(0, 3).map(x => x.name), brands: v.brands.slice(0, 3), lastItems: v.lastOrder ? v.lastOrder.items.slice(0, 3).map(i => i.title) : [], next: nextBy[c.id] || null, paused: !!st.paused, issue: !!st.issue,
         history: v.orders.slice(0, 6).map(o => ({ name: o.name, at: o.createdAt, total: o.total, items: o.items.slice(0, 4).map(i => i.title), shipped: o.fulfilledAt })) }
     }).sort((a, b) => (a.lastOrderAt || '') < (b.lastOrderAt || '') ? 1 : -1)
-    res.status(200).json({ ok: true, builtAt: snap.updatedAt, counts: snap.counts, subscribers: snap.subscribers.length, settings: mergeSettings(settingsRaw), flows: FLOWS, categories: CATEGORIES.map(c => ({ key: c.key, name: c.name, reorder: c.reorder })), crossSell: CROSS_SELL, actions, backlog: q.backlog, customers })
+    const [reorders, suggest, nlMeta, nlLocal, nlUk] = await Promise.all([call(reordersHandler), call(suggestHandler), call(newsletterHandler), call(newsletterHandler, { day: 'wed', aud: 'local' }), call(newsletterHandler, { day: 'wed', aud: 'uk' })])
+    res.status(200).json({ ok: true, reorders, suggest, newsletter: { meta: nlMeta, local: nlLocal, uk: nlUk }, builtAt: snap.updatedAt, counts: snap.counts, subscribers: snap.subscribers.length, settings: mergeSettings(settingsRaw), flows: FLOWS, categories: CATEGORIES.map(c => ({ key: c.key, name: c.name, reorder: c.reorder })), crossSell: CROSS_SELL, actions, backlog: q.backlog, customers })
   } catch (e) { res.status(500).json({ ok: false, error: String(e.message || e) }) }
 }
