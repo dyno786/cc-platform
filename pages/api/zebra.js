@@ -147,7 +147,7 @@ async function labelPdf(zpls) {
   if (!r.ok) throw new Error('label PDF failed ' + r.status + ' ' + (await r.text()).slice(0, 120))
   return Buffer.from(await r.arrayBuffer()).toString('base64')
 }
-async function sendToPrinter(o, zpls, why, paper = process.env.ZEBRA_PAPER || '') {
+async function sendToPrinter(o, zpls, why, paper = process.env.ZEBRA_PAPER || 'w288h432') {
   const p = await printer()
   const raw = process.env.ZEBRA_MODE === 'raw'
   const body = { printerId: p.id, title: 'CC ' + o.name + (why ? ' ' + why : ''), source: 'CC Shopify pick labels' }
@@ -209,7 +209,7 @@ export default async function handler(req, res) {
     }
     if (job === 'reprint') {
       const o = await findOrder(req.query.order); if (!o) return res.status(404).json({ ok: false, error: 'order not found' })
-      return res.status(200).json({ ok: true, order: o.name, ...(await sendToPrinter(o, buildZpl(o), 'reprint', req.query.paper || process.env.ZEBRA_PAPER || '')) })
+      return res.status(200).json({ ok: true, order: o.name, ...(await sendToPrinter(o, buildZpl(o), 'reprint', req.query.paper || process.env.ZEBRA_PAPER || 'w288h432')) })
     }
     if (job === 'cron') {
       const s = await switchState()
