@@ -11,6 +11,10 @@
     {
       "path": "/api/picklist?cron=1",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/zebra?cron=1",
+      "schedule": "* * * * *"
     }
   ]
 }
