@@ -51,7 +51,8 @@ function groupItems(o) {
       if (!li.remainingQuantity) continue
       // QR link to the product page (that shade/size selected) so staff can see the picture; none if the product isn't on the website
       const purl = li.lineItem && li.lineItem.product && li.lineItem.product.onlineStoreUrl
-      const url = purl ? purl + (li.variant && li.variant.legacyResourceId ? '?variant=' + li.variant.legacyResourceId : '') : ''
+      // short form https://cchairandbeauty.com/variants/<id> (Shopify sends it on to the product page) keeps the QR small
+      const url = purl ? (li.variant && li.variant.legacyResourceId ? new URL(purl).origin + '/variants/' + li.variant.legacyResourceId : purl) : ''
       const item = { url, q: li.remainingQuantity, sku: li.sku || '', title: li.productTitle + (li.variantTitle && li.variantTitle !== 'Default Title' ? ' (' + li.variantTitle + ')' : '') }
       if (g >= 0) groups[g].items.push(item)
       else (other[loc] = other[loc] || { label: loc.replace(/ Branch$/, ''), items: [] }).items.push(item)
@@ -79,7 +80,7 @@ function buildZpl(o) {
     z += T(W - M - 250, 64, 26, date)
     z += `^FO${M},128^BY2,3,84^B3N,N,84,N,N^FD${num}^FS`
     z += T(M + 470, 140, 24, 'Scan in PackCheck')
-    z += T(M + 470, 170, 20, 'Item QR codes: scan to see picture')
+    z += T(M + 470, 170, 20, 'Item QR: see picture')
     y = 226
     if (!first) { z += T(M, y, 26, 'continued...'); y += 36; return }
     for (const l of wrap('Delivery: ' + ((o.shippingLine && o.shippingLine.title) || 'Not specified'), 52).slice(0, 2)) { z += T(M, y, 26, l); y += 30 }
