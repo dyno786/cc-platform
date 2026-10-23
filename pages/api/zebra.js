@@ -147,12 +147,12 @@ async function labelPdf(zpls) {
   if (!r.ok) throw new Error('label PDF failed ' + r.status + ' ' + (await r.text()).slice(0, 120))
   return Buffer.from(await r.arrayBuffer()).toString('base64')
 }
-async function sendToPrinter(o, zpls, why) {
+async function sendToPrinter(o, zpls, why, paper = process.env.ZEBRA_PAPER || '') {
   const p = await printer()
   const raw = process.env.ZEBRA_MODE === 'raw'
   const body = { printerId: p.id, title: 'CC ' + o.name + (why ? ' ' + why : ''), source: 'CC Shopify pick labels' }
   if (raw) { body.contentType = 'raw_base64'; body.content = Buffer.from(zpls.join('\n')).toString('base64') }
-  else { body.contentType = 'pdf_base64'; body.content = await labelPdf(zpls); body.options = { fit_to_page: true } }
+  else { body.contentType = 'pdf_base64'; body.content = await labelPdf(zpls); body.options = { fit_to_page: true }; if (paper) body.options.paper = paper }
   const job = await pn('/printjobs', { method: 'POST', body: JSON.stringify(body) })
   return { printer: p.name, job, labels: zpls.length, as: raw ? 'zpl' : 'pdf' }
 }
@@ -182,6 +182,11 @@ export default async function handler(req, res) {
       const zpls = buildZpl(o); const i = Math.min(Number(req.query.label || 0), zpls.length - 1)
       return res.status(200).json({ ok: true, order: o.name, labels: zpls.length, zpl: zpls[i], png: req.query.png === '0' ? undefined : await labelPng(zpls[i]) })
     }
+    if (job === 'caps') { // what the Zebra driver offers (paper sizes) as PrintNode sees it
+      const p = await printer(); const d = await pn('/printers/' + p.id)
+      const c = (d[0] && d[0].capabilities) || {}
+      return res.status(200).json({ ok: true, printer: p, papers: c.papers, medias: c.medias, dpis: c.dpis, supports_custom_paper_size: c.supports_custom_paper_size, default: d[0] && d[0].default })
+    }
     if (job === 'pdfcheck') { // size of the label PDF for an order (a cut-off label gives a much smaller file)
       const o = await findOrder(req.query.order); const z = buildZpl(o)
       const fd = new FormData(); fd.append('file', new Blob([z.join('\n')], { type: 'text/plain' }), 'label.zpl')
@@ -204,7 +209,7 @@ export default async function handler(req, res) {
     }
     if (job === 'reprint') {
       const o = await findOrder(req.query.order); if (!o) return res.status(404).json({ ok: false, error: 'order not found' })
-      return res.status(200).json({ ok: true, order: o.name, ...(await sendToPrinter(o, buildZpl(o), 'reprint')) })
+      return res.status(200).json({ ok: true, order: o.name, ...(await sendToPrinter(o, buildZpl(o), 'reprint', req.query.paper || process.env.ZEBRA_PAPER || '')) })
     }
     if (job === 'cron') {
       const s = await switchState()
