@@ -129,7 +129,17 @@ async function pn(path, opts = {}) {
   if (!r.ok) throw new Error('PrintNode ' + r.status + ': ' + t.slice(0, 200))
   return j
 }
-async function printer() {
+// HP (or any office printer) for when staff want the pick list on A4 instead of the Zebra
+async function hpPrinter() {
+  if (process.env.PRINTNODE_HP_ID) return { id: Number(process.env.PRINTNODE_HP_ID), name: 'set in Vercel', kind: 'hp' }
+  const list = await pn('/printers')
+  const score = x => (x.state === 'online' ? 8 : 0) + (x.computer && /thes-imac/i.test(x.computer.name) ? 2 : 0)
+  const p = list.filter(x => /\bhp\b|hp_|laserjet|deskjet|officejet|envy|smart_tank/i.test(x.name + ' ' + (x.description || ''))).sort((a, b) => score(b) - score(a))[0]
+  if (!p) throw new Error('No HP printer found in PrintNode. Printers seen: ' + list.map(x => x.name + ' (' + x.state + ')').join(', '))
+  return { id: p.id, name: p.name, state: p.state, computer: p.computer && p.computer.name, kind: 'hp' }
+}
+async function printer(device) {
+  if (device === 'hp') return hpPrinter()
   if (process.env.PRINTNODE_PRINTER_ID) return { id: Number(process.env.PRINTNODE_PRINTER_ID), name: 'set in Vercel' }
   const list = await pn('/printers')
   // the GK420d by name, online ones first (old offline copies of the same printer are ignored); 'amazon_zebra' only as a last resort
@@ -147,14 +157,15 @@ async function labelPdf(zpls) {
   if (!r.ok) throw new Error('label PDF failed ' + r.status + ' ' + (await r.text()).slice(0, 120))
   return Buffer.from(await r.arrayBuffer()).toString('base64')
 }
-async function sendToPrinter(o, zpls, why, paper = process.env.ZEBRA_PAPER || 'w288h432') {
-  const p = await printer()
-  const raw = process.env.ZEBRA_MODE === 'raw'
+async function sendToPrinter(o, zpls, why, paper = process.env.ZEBRA_PAPER || 'w288h432', device = 'zebra') {
+  const p = await printer(device)
+  if (device === 'hp') paper = '' // HP: its own A4 paper; the 6 x 4 label is scaled up to fill the page
+  const raw = device !== 'hp' && process.env.ZEBRA_MODE === 'raw'
   const body = { printerId: p.id, title: 'CC ' + o.name + (why ? ' ' + why : ''), source: 'CC Shopify pick labels' }
   if (raw) { body.contentType = 'raw_base64'; body.content = Buffer.from(zpls.join('\n')).toString('base64') }
   else { body.contentType = 'pdf_base64'; body.content = await labelPdf(zpls); body.options = { fit_to_page: true }; if (paper) body.options.paper = paper }
   const job = await pn('/printjobs', { method: 'POST', body: JSON.stringify(body) })
-  return { printer: p.name, job, labels: zpls.length, as: raw ? 'zpl' : 'pdf' }
+  return { printer: p.name, device, job, labels: zpls.length, as: raw ? 'zpl' : 'pdf' }
 }
 
 // ---- on/off switch, kept on the shop so it survives deploys
@@ -182,6 +193,10 @@ export default async function handler(req, res) {
       const zpls = buildZpl(o); const i = Math.min(Number(req.query.label || 0), zpls.length - 1)
       return res.status(200).json({ ok: true, order: o.name, labels: zpls.length, zpl: zpls[i], png: req.query.png === '0' ? undefined : await labelPng(zpls[i]) })
     }
+    if (job === 'printers') {
+      const list = await pn('/printers')
+      return res.status(200).json({ ok: true, printers: list.map(x => ({ id: x.id, name: x.name, description: x.description, state: x.state, computer: x.computer && x.computer.name })) })
+    }
     if (job === 'caps') { // what the Zebra driver offers (paper sizes) as PrintNode sees it
       const p = await printer(); const d = await pn('/printers/' + p.id)
       const c = (d[0] && d[0].capabilities) || {}
@@ -199,17 +214,39 @@ export default async function handler(req, res) {
     }
     if (job === 'status') {
       const s = await switchState(); const out = { ok: true, switch: s.v, printNodeKey: !!process.env.PRINTNODE_API_KEY }
-      if (out.printNodeKey) { try { out.printer = await printer() } catch (e) { out.printerError = String(e.message) } }
+      if (out.printNodeKey) {
+        try { out.zebra = await printer('zebra') } catch (e) { out.zebraError = String(e.message) }
+        try { out.hp = await printer('hp') } catch (e) { out.hpError = String(e.message) }
+      }
       return res.status(200).json(out)
     }
-    if (job === 'start' || job === 'stop') {
+    if (job === 'start' || job === 'stop' || job === 'use') {
+      // use&device=zebra|hp : choose the printer; start: switch on (orders from now on); stop: switch off
       const s = await switchState()
-      const v = job === 'start' ? { on: true, since: new Date().toISOString() } : { ...s.v, on: false, stopped: new Date().toISOString() }
-      return res.status(200).json({ ok: true, switch: v, errors: await setSwitch(s.shopId, v) })
+      let v = { ...s.v }
+      if (job === 'use') { const dv = String(req.query.device || ''); if (!/^(zebra|hp)$/.test(dv)) return res.status(400).json({ ok: false, error: 'device must be zebra or hp' }); v.device = dv; v.changed = new Date().toISOString() }
+      if (job === 'start') v = { ...v, on: true, since: s.v.on ? s.v.since : new Date().toISOString(), device: req.query.device && /^(zebra|hp)$/.test(req.query.device) ? req.query.device : (v.device || 'zebra') }
+      if (job === 'stop') v = { ...v, on: false, stopped: new Date().toISOString() }
+      const errors = await setSwitch(s.shopId, v)
+      if (req.query.panel === '1') { res.setHeader('Location', '?job=panel'); return res.status(303).end() }
+      return res.status(200).json({ ok: true, switch: v, errors })
+    }
+    if (job === 'panel') {
+      const s = await switchState(); const v = s.v; const dev = v.device || 'zebra'
+      const btn = (href, label, on) => `<a class="b${on ? ' on' : ''}" href="${href}">${label}</a>`
+      const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CC order printing</title>
+<style>body{font-family:system-ui,sans-serif;max-width:480px;margin:24px auto;padding:0 16px;background:#fff;color:#111}h1{font-size:22px}p{color:#444}
+.row{display:flex;gap:10px;margin:12px 0 22px}.b{flex:1;text-align:center;padding:18px 8px;border:2px solid #111;border-radius:10px;text-decoration:none;color:#111;font-weight:700;font-size:17px}
+.b.on{background:#111;color:#fff}.st{font-size:18px;padding:12px;border-radius:8px;background:${v.on ? '#e6f6ea' : '#fdeaea'}}</style></head><body>
+<h1>CC order printing</h1><div class="st">${v.on ? 'ON: new paid orders print automatically on the <b>' + (dev === 'hp' ? 'HP printer (A4)' : 'Zebra (6x4 label)') + '</b>' : 'OFF: nothing prints automatically'}</div>
+<p>Print new orders on:</p><div class="row">${btn('?job=use&device=zebra&panel=1', 'Zebra<br><small>6x4 label</small>', dev === 'zebra')}${btn('?job=use&device=hp&panel=1', 'HP<br><small>A4 page</small>', dev === 'hp')}</div>
+<p>Automatic printing:</p><div class="row">${btn('?job=start&panel=1', 'ON', v.on)}${btn('?job=stop&panel=1', 'OFF', !v.on)}</div>
+<p style="font-size:13px">Reprint an order: add <code>?job=reprint&amp;order=33948&amp;device=hp</code> (or zebra) to this page's address.</p></body></html>`
+      res.setHeader('Content-Type', 'text/html; charset=utf-8'); return res.status(200).send(html)
     }
     if (job === 'reprint') {
       const o = await findOrder(req.query.order); if (!o) return res.status(404).json({ ok: false, error: 'order not found' })
-      return res.status(200).json({ ok: true, order: o.name, ...(await sendToPrinter(o, buildZpl(o), 'reprint', req.query.paper || process.env.ZEBRA_PAPER || 'w288h432')) })
+      return res.status(200).json({ ok: true, order: o.name, ...(await sendToPrinter(o, buildZpl(o), 'reprint', req.query.paper || process.env.ZEBRA_PAPER || 'w288h432', req.query.device === 'hp' ? 'hp' : req.query.device === 'zebra' ? 'zebra' : ((await switchState()).v.device || 'zebra'))) })
     }
     if (job === 'cron') {
       const s = await switchState()
@@ -224,7 +261,7 @@ export default async function handler(req, res) {
         const c = await gql('mutation($m:[MetafieldsSetInput!]!){ metafieldsSet(metafields:$m){ userErrors{ code message } } }', { m: [{ ownerId: o.id, namespace: 'custom', key: 'zebra_printed', type: 'single_line_text_field', value: 'printing ' + new Date().toISOString(), compareDigest: null }] })
         if (c.metafieldsSet.userErrors.length) continue
         try {
-          const r = await sendToPrinter(o, buildZpl(o))
+          const r = await sendToPrinter(o, buildZpl(o), '', undefined, s.v.device === 'hp' ? 'hp' : 'zebra')
           await gql('mutation($m:[MetafieldsSetInput!]!){ metafieldsSet(metafields:$m){ userErrors{ message } } }', { m: [{ ownerId: o.id, namespace: 'custom', key: 'zebra_printed', type: 'single_line_text_field', value: 'printed ' + new Date().toISOString() + ' job ' + r.job }] })
           done.push(o.name + ' ' + r.labels + ' label(s)')
         } catch (e) {
