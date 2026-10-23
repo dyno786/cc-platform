@@ -66,6 +66,7 @@ export default async function handler(req, res) {
       cur = d.orders.pageInfo.endCursor
     }
     if (go) await flush()
+    if (req.query.cron === '1') console.log('picklist cron', JSON.stringify({ seen, changed, errors: errors.length }))
     return res.status(200).json({ ok: errors.length === 0, preview: !go, openOrders: seen, updated: go ? changed : 0, wouldUpdate: go ? undefined : changed, alreadyRight: same, nothingToPick: empty, errors, sample })
   } catch (e) { return res.status(500).json({ ok: false, error: String(e.message || e) }) }
 }
