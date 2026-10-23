@@ -141,7 +141,9 @@ async function printer() {
 // The Mac's Zebra driver prints raw label code as text, so labels go as a 6 x 4 inch PDF (one page per label),
 // made from the ZPL by Labelary. Set ZEBRA_MODE=raw in Vercel to send the ZPL itself instead.
 async function labelPdf(zpls) {
-  const r = await fetch('https://api.labelary.com/v1/printers/8dpmm/labels/4x6/', { method: 'POST', headers: { Accept: 'application/pdf', 'Content-Type': 'application/x-www-form-urlencoded' }, body: zpls.join('\n') })
+  // send the ZPL as a file upload: a plain form body would be cut at characters like '&'
+  const fd = new FormData(); fd.append('file', new Blob([zpls.join('\n')], { type: 'text/plain' }), 'label.zpl')
+  const r = await fetch('https://api.labelary.com/v1/printers/8dpmm/labels/4x6/', { method: 'POST', headers: { Accept: 'application/pdf' }, body: fd })
   if (!r.ok) throw new Error('label PDF failed ' + r.status + ' ' + (await r.text()).slice(0, 120))
   return Buffer.from(await r.arrayBuffer()).toString('base64')
 }
@@ -166,7 +168,8 @@ async function setSwitch(shopId, v) {
 }
 
 async function labelPng(zpl) {
-  const r = await fetch('https://api.labelary.com/v1/printers/8dpmm/labels/4x6/0/', { method: 'POST', headers: { Accept: 'image/png', 'Content-Type': 'application/x-www-form-urlencoded' }, body: zpl })
+  const fd = new FormData(); fd.append('file', new Blob([zpl], { type: 'text/plain' }), 'label.zpl')
+  const r = await fetch('https://api.labelary.com/v1/printers/8dpmm/labels/4x6/0/', { method: 'POST', headers: { Accept: 'image/png' }, body: fd })
   if (!r.ok) return null
   return Buffer.from(await r.arrayBuffer()).toString('base64')
 }
@@ -178,6 +181,16 @@ export default async function handler(req, res) {
       const o = await findOrder(req.query.order); if (!o) return res.status(404).json({ ok: false, error: 'order not found' })
       const zpls = buildZpl(o); const i = Math.min(Number(req.query.label || 0), zpls.length - 1)
       return res.status(200).json({ ok: true, order: o.name, labels: zpls.length, zpl: zpls[i], png: req.query.png === '0' ? undefined : await labelPng(zpls[i]) })
+    }
+    if (job === 'pdfcheck') { // size of the label PDF for an order (a cut-off label gives a much smaller file)
+      const o = await findOrder(req.query.order); const z = buildZpl(o)
+      const fd = new FormData(); fd.append('file', new Blob([z.join('\n')], { type: 'text/plain' }), 'label.zpl')
+      const r = await fetch('https://api.labelary.com/v1/printers/8dpmm/labels/4x6/0/', { method: 'POST', headers: { Accept: 'image/png' }, body: fd })
+      const png = Buffer.from(await r.arrayBuffer())
+      // count dark pixel rows in the PNG is not possible without a decoder, so report sizes for a cut and a full label
+      const fd2 = new FormData(); fd2.append('file', new Blob(['^XA^FO28,1164^A0N,24,24^FDLabel 1 of 1^FS^XZ'], { type: 'text/plain' }), 'l.zpl')
+      const r2 = await fetch('https://api.labelary.com/v1/printers/8dpmm/labels/4x6/0/', { method: 'POST', headers: { Accept: 'image/png' }, body: fd2 })
+      return res.status(200).json({ ok: r.ok, fullLabelPngBytes: png.length, footerOnlyPngBytes: (await r2.arrayBuffer()).byteLength })
     }
     if (job === 'status') {
       const s = await switchState(); const out = { ok: true, switch: s.v, printNodeKey: !!process.env.PRINTNODE_API_KEY }
