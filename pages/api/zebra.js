@@ -131,10 +131,12 @@ async function pn(path, opts = {}) {
 }
 // HP (or any office printer) for when staff want the pick list on A4 instead of the Zebra
 async function hpPrinter() {
-  if (process.env.PRINTNODE_HP_ID) return { id: Number(process.env.PRINTNODE_HP_ID), name: 'set in Vercel', kind: 'hp' }
   const list = await pn('/printers')
+  // Roundhay Road: HP OfficeJet Pro 8710 on THES-IMAC (73823766); never the Fax entries
+  const fixed = list.find(x => x.id === Number(process.env.PRINTNODE_HP_ID || 73823766))
+  if (fixed) return { id: fixed.id, name: fixed.name, state: fixed.state, computer: fixed.computer && fixed.computer.name, kind: 'hp' }
   const score = x => (x.state === 'online' ? 8 : 0) + (x.computer && /thes-imac/i.test(x.computer.name) ? 2 : 0)
-  const p = list.filter(x => /\bhp\b|hp_|laserjet|deskjet|officejet|envy|smart_tank/i.test(x.name + ' ' + (x.description || ''))).sort((a, b) => score(b) - score(a))[0]
+  const p = list.filter(x => /\bhp\b|hp_|laserjet|deskjet|officejet|envy|smart_tank/i.test(x.name + ' ' + (x.description || '')) && !/fax/i.test(x.name)).sort((a, b) => score(b) - score(a))[0]
   if (!p) throw new Error('No HP printer found in PrintNode. Printers seen: ' + list.map(x => x.name + ' (' + x.state + ')').join(', '))
   return { id: p.id, name: p.name, state: p.state, computer: p.computer && p.computer.name, kind: 'hp' }
 }
@@ -142,6 +144,9 @@ async function printer(device) {
   if (device === 'hp') return hpPrinter()
   if (process.env.PRINTNODE_PRINTER_ID) return { id: Number(process.env.PRINTNODE_PRINTER_ID), name: 'set in Vercel' }
   const list = await pn('/printers')
+  // Roundhay Road: GK420d on THES-IMAC (73823768), used whenever it is in PrintNode
+  const fixed = list.find(x => x.id === 73823768)
+  if (fixed) return { id: fixed.id, name: fixed.name, state: fixed.state, computer: fixed.computer && fixed.computer.name }
   // the GK420d by name, online ones first (old offline copies of the same printer are ignored); 'amazon_zebra' only as a last resort
   const score = x => (/gk420/i.test(x.name + ' ' + (x.description || '')) ? 4 : /zdesigner|zebra_technologies/i.test(x.name) ? 2 : 0) + (x.state === 'online' ? 8 : 0) - (/amazon/i.test(x.name) ? 3 : 0)
   const p = list.filter(x => /zebra|zdesigner|gk420/i.test(x.name + ' ' + (x.description || ''))).sort((a, b) => score(b) - score(a))[0]
