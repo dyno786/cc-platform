@@ -132,7 +132,9 @@ async function pn(path, opts = {}) {
 async function printer() {
   if (process.env.PRINTNODE_PRINTER_ID) return { id: Number(process.env.PRINTNODE_PRINTER_ID), name: 'set in Vercel' }
   const list = await pn('/printers')
-  const p = list.find(x => /zebra|zdesigner|gk420/i.test(x.name + ' ' + (x.description || '')))
+  // the GK420d by name, online ones first (old offline copies of the same printer are ignored); 'amazon_zebra' only as a last resort
+  const score = x => (/gk420/i.test(x.name + ' ' + (x.description || '')) ? 4 : /zdesigner|zebra_technologies/i.test(x.name) ? 2 : 0) + (x.state === 'online' ? 8 : 0) - (/amazon/i.test(x.name) ? 3 : 0)
+  const p = list.filter(x => /zebra|zdesigner|gk420/i.test(x.name + ' ' + (x.description || ''))).sort((a, b) => score(b) - score(a))[0]
   if (!p) throw new Error('No Zebra found in PrintNode. Printers seen: ' + list.map(x => x.name).join(', '))
   return { id: p.id, name: p.name, state: p.state, computer: p.computer && p.computer.name }
 }
