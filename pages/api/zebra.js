@@ -33,7 +33,7 @@ const ORDER_FIELDS = `id name createdAt displayFinancialStatus note
   shippingAddress{ name address1 city zip }
   billingAddress{ name address1 zip }
   printed: metafield(namespace:"custom", key:"zebra_printed"){ value compareDigest }
-  fulfillmentOrders(first:10){ nodes{ status assignedLocation{ name } lineItems(first:100){ nodes{ remainingQuantity sku productTitle variantTitle } } } }`
+  fulfillmentOrders(first:10){ nodes{ status assignedLocation{ name } lineItems(first:100){ nodes{ remainingQuantity sku productTitle variantTitle variant{ legacyResourceId } lineItem{ product{ onlineStoreUrl } } } } } }`
 
 async function findOrder(num) {
   const n = String(num).replace(/[^0-9]/g, '')
@@ -49,7 +49,10 @@ function groupItems(o) {
     let g = GROUPS.findIndex(([, re]) => re.test(loc))
     for (const li of fo.lineItems.nodes) {
       if (!li.remainingQuantity) continue
-      const item = { q: li.remainingQuantity, sku: li.sku || '', title: li.productTitle + (li.variantTitle && li.variantTitle !== 'Default Title' ? ' (' + li.variantTitle + ')' : '') }
+      // QR link to the product page (that shade/size selected) so staff can see the picture; none if the product isn't on the website
+      const purl = li.lineItem && li.lineItem.product && li.lineItem.product.onlineStoreUrl
+      const url = purl ? purl + (li.variant && li.variant.legacyResourceId ? '?variant=' + li.variant.legacyResourceId : '') : ''
+      const item = { url, q: li.remainingQuantity, sku: li.sku || '', title: li.productTitle + (li.variantTitle && li.variantTitle !== 'Default Title' ? ' (' + li.variantTitle + ')' : '') }
       if (g >= 0) groups[g].items.push(item)
       else (other[loc] = other[loc] || { label: loc.replace(/ Branch$/, ''), items: [] }).items.push(item)
     }
@@ -76,6 +79,7 @@ function buildZpl(o) {
     z += T(W - M - 250, 64, 26, date)
     z += `^FO${M},128^BY2,3,84^B3N,N,84,N,N^FD${num}^FS`
     z += T(M + 470, 140, 24, 'Scan in PackCheck')
+    z += T(M + 470, 170, 20, 'Item QR codes: scan to see picture')
     y = 226
     if (!first) { z += T(M, y, 26, 'continued...'); y += 36; return }
     for (const l of wrap('Delivery: ' + ((o.shippingLine && o.shippingLine.title) || 'Not specified'), 52).slice(0, 2)) { z += T(M, y, 26, l); y += 30 }
@@ -93,8 +97,9 @@ function buildZpl(o) {
     if (y + 46 + 60 > H - FOOT) { finish(); header(false) }
     z += `^FO${M},${y}^GB${W - 2 * M},42,42^FS^FO${M + 12},${y + 8}^FR^A0N,30,32^FD${clean(g.label.toUpperCase())}  -  ${gq} item${gq === 1 ? '' : 's'}^FS`; y += 52
     for (const it of g.items) {
-      const lines = wrap(it.title, 40).slice(0, 3)
-      const need = lines.length * 30 + (it.sku ? 26 : 0) + 14
+      const QR = 130 // QR code area at the right of the item (about 15 mm)
+      const lines = wrap(it.title, it.url ? 32 : 40).slice(0, 3)
+      const need = Math.max(lines.length * 30 + (it.sku ? 26 : 0), it.url ? QR : 0) + 14
       if (y + need > H - FOOT) {
         finish(); header(false)
         z += `^FO${M},${y}^GB${W - 2 * M},42,42^FS^FO${M + 12},${y + 8}^FR^A0N,30,32^FD${clean(g.label.toUpperCase())} (continued)^FS`; y += 52
@@ -104,6 +109,7 @@ function buildZpl(o) {
       let ly = y
       for (const l of lines) { z += T(M + 120, ly, 28, l); ly += 30 }
       if (it.sku) { z += T(M + 120, ly, 22, 'SKU ' + it.sku); ly += 26 }
+      if (it.url) { z += `^FO${W - M - QR + 4},${y - 8}^BQN,2,3^FDQA,${it.url.replace(/[\^~]/g, '')}^FS`; ly = Math.max(ly, y + QR - 8) }
       y = ly + 8
       z += `^FO${M + 120},${y - 4}^GB${W - 2 * M - 120},1,1^FS`
       y += 6
