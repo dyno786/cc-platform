@@ -138,10 +138,21 @@ async function printer() {
   if (!p) throw new Error('No Zebra found in PrintNode. Printers seen: ' + list.map(x => x.name).join(', '))
   return { id: p.id, name: p.name, state: p.state, computer: p.computer && p.computer.name }
 }
+// The Mac's Zebra driver prints raw label code as text, so labels go as a 6 x 4 inch PDF (one page per label),
+// made from the ZPL by Labelary. Set ZEBRA_MODE=raw in Vercel to send the ZPL itself instead.
+async function labelPdf(zpls) {
+  const r = await fetch('https://api.labelary.com/v1/printers/8dpmm/labels/4x6/', { method: 'POST', headers: { Accept: 'application/pdf', 'Content-Type': 'application/x-www-form-urlencoded' }, body: zpls.join('\n') })
+  if (!r.ok) throw new Error('label PDF failed ' + r.status + ' ' + (await r.text()).slice(0, 120))
+  return Buffer.from(await r.arrayBuffer()).toString('base64')
+}
 async function sendToPrinter(o, zpls, why) {
   const p = await printer()
-  const job = await pn('/printjobs', { method: 'POST', body: JSON.stringify({ printerId: p.id, title: 'CC ' + o.name + (why ? ' ' + why : ''), contentType: 'raw_base64', content: Buffer.from(zpls.join('\n')).toString('base64'), source: 'CC Shopify pick labels' }) })
-  return { printer: p.name, job, labels: zpls.length }
+  const raw = process.env.ZEBRA_MODE === 'raw'
+  const body = { printerId: p.id, title: 'CC ' + o.name + (why ? ' ' + why : ''), source: 'CC Shopify pick labels' }
+  if (raw) { body.contentType = 'raw_base64'; body.content = Buffer.from(zpls.join('\n')).toString('base64') }
+  else { body.contentType = 'pdf_base64'; body.content = await labelPdf(zpls); body.options = { fit_to_page: true } }
+  const job = await pn('/printjobs', { method: 'POST', body: JSON.stringify(body) })
+  return { printer: p.name, job, labels: zpls.length, as: raw ? 'zpl' : 'pdf' }
 }
 
 // ---- on/off switch, kept on the shop so it survives deploys
