@@ -7,6 +7,10 @@
     {
       "path": "/api/crm/sync",
       "schedule": "20 * * * *"
+    },
+    {
+      "path": "/api/picklist?cron=1",
+      "schedule": "* * * * *"
     }
   ]
 }

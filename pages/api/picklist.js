@@ -2,6 +2,7 @@
 // onto the order, so packing slips, invoices and emails can show staff which branch holds each item.
 //   job=picklist            preview: how many open orders would change (no changes)
 //   job=picklist&go=1       write order metafields custom.branch_picklist and custom.pick_branches
+//   cron=1                  every minute (vercel.json): same, for orders from the last 3 days only
 // custom.branch_picklist: one line per item  "Branch|quantity|SKU|product (variant)", grouped by branch
 // custom.pick_branches:   "Chapeltown Branch, Roundhay Road"
 // Only touches orders that are open and not yet fully fulfilled. Never changes items, stock, fulfilment or customers.
@@ -27,7 +28,9 @@ function build(o) {
 
 export default async function handler(req, res) {
   try {
-    const go = req.query.go === '1'
+    const go = req.query.go === '1' || req.query.cron === '1'
+    // cron=1 (every minute, from vercel.json): only orders from the last 3 days, so it stays quick
+    const since = req.query.cron === '1' ? new Date(Date.now() - 3 * 86400000).toISOString() : ''
     const started = Date.now()
     let cur = null, seen = 0, changed = 0, same = 0, empty = 0, errors = []
     const sample = []
@@ -40,11 +43,12 @@ export default async function handler(req, res) {
       }
     }
     for (let page = 0; page < 40; page++) {
-      const d = await gql(`query($c:String){ orders(first:25, after:$c, sortKey:CREATED_AT, reverse:true, query:"status:open AND (fulfillment_status:unfulfilled OR fulfillment_status:partial)"){
+      const q = 'status:open AND (fulfillment_status:unfulfilled OR fulfillment_status:partial)' + (since ? " AND created_at:>'" + since + "'" : '')
+      const d = await gql(`query($c:String,$q:String){ orders(first:25, after:$c, sortKey:CREATED_AT, reverse:true, query:$q){
         pageInfo{ hasNextPage endCursor }
         nodes{ id name
           a: metafield(namespace:"custom", key:"branch_picklist"){ value }
-          fulfillmentOrders(first:10){ nodes{ status assignedLocation{ name } lineItems(first:100){ nodes{ remainingQuantity sku productTitle variantTitle } } } } } } }`, { c: cur })
+          fulfillmentOrders(first:10){ nodes{ status assignedLocation{ name } lineItems(first:100){ nodes{ remainingQuantity sku productTitle variantTitle } } } } } } }`, { c: cur, q })
       for (const o of d.orders.nodes) {
         seen++
         const v = build(o)
