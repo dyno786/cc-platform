@@ -8,6 +8,7 @@
 // Roundhay's stock (plus any Warehouse stock) is printed in brackets beside each line.
 //   job=preview[&label=0][&range=all][&max=12]  the list as JSON, plus label ZPL and a PNG picture. Prints nothing.
 //   job=print                                   print the full list now
+//   job=print&store=chapeltown  (or store=city)  print one store's list only; works on preview too
 //   job=print&demo=1                            print only the first label, marked DEMO
 //   job=status                                  switch, printer, last print
 //   job=start / job=stop                        nightly printing on / off (on unless stopped)
@@ -105,7 +106,11 @@ export default async function handler(req, res) {
     const job = String(req.query.job || (req.query.cron === '1' ? 'cron' : ''))
     const max = Math.min(99, Math.max(1, Number(req.query.max || process.env.TOPUP_MAX || 12)))
     const range = String(req.query.range || process.env.TOPUP_RANGE || 'hair') === 'all' ? 'all' : 'hair'
-    const make = async () => { const list = buildList(await loadVariants(), { max, range }); return list }
+    // &store=chapeltown or &store=city : just that one store's list (for a test run). Left out: both stores.
+    const only = String(req.query.store || '').toLowerCase().replace(/[^a-z]/g, '')
+    const pick = only ? STORES.find(s => s.re.test(only) || s.key === only || (/^city/.test(only) && s.key === 'city') || (/^chap/.test(only) && s.key === 'chap')) : null
+    if (only && !pick) return res.status(400).json({ ok: false, error: 'unknown store: use store=chapeltown or store=city' })
+    const make = async () => { const list = buildList(await loadVariants(), { max, range }); if (pick) list.stores = list.stores.filter(s => s.key === pick.key); return list }
 
     if (job === 'preview') {
       const list = await make(); const zpls = buildZpl(list)
@@ -128,7 +133,7 @@ export default async function handler(req, res) {
       const all = zpls.length
       if (demo) zpls = zpls.slice(0, 1)
       if (zpls.length > MAX_LABELS) return res.status(400).json({ ok: false, error: 'The list is ' + zpls.length + ' labels, more than the limit of ' + MAX_LABELS + '. Nothing was printed.', ...summary(list) })
-      const r = await sendToPrinter(zpls, 'CC top-up ' + londonDay() + (demo ? ' demo' : ''))
+      const r = await sendToPrinter(zpls, 'CC top-up ' + londonDay() + (pick ? ' ' + pick.label : '') + (demo ? ' demo' : ''))
       return res.status(200).json({ ok: true, printed: true, demo, labelsInFullList: all, ...r, ...summary(list) })
     }
     if (job === 'cron') {
