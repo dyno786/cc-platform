@@ -16,22 +16,25 @@
 //   job=print&store=chapeltown  (or store=city)  print one store's list only; works on preview too
 //   job=print&demo=1                            print only the first label, marked DEMO
 //   job=status                                  switch, printer, last print
+//   supplier=<name> on preview/pdf/print         an order from an outside supplier: products tagged "supplier <name>"
+//       [&max=12] top up to 12  [&when=3] only once a shop has 3 or fewer  [&when=3&qty=6] at 3 or fewer, order 6
+//       (supplier=roundhay warehouse, or none, is the store top-up list above). &store=total|chapeltown|city|roundhay
 //   job=start / job=stop                        nightly printing on / off (on unless stopped)
 //   cron=1                                      vercel.json, 17:00 and 18:00 UTC: prints once, when it is 6pm in London
 // Needs Vercel env PRINTNODE_API_KEY. Optional TOPUP_PRINTER_ID (the HP, default 73836448), TOPUP_DEVICE=zebra, PRINTNODE_PRINTER_ID, ZEBRA_PAPER, ZEBRA_MODE, TOPUP_MAX, TOPUP_RANGE.
 // Read-only on products and stock: it never changes stock, products or orders. It only keeps its own on/off
 // switch and "last printed" date on the shop (metafield cc_print.topup).
 import { gql } from '../../lib/intake'
-import { TAG, STORES, SOURCE, WAREHOUSE, HAIR, MAX_LABELS, london, londonDay, buildList, buildZpl, buildPdf } from '../../lib/topup'
+import { TAG, STORES, SOURCE, WAREHOUSE, HAIR, MAX_LABELS, london, londonDay, buildList, buildOrder, buildZpl, buildPdf } from '../../lib/topup'
 
 export const config = { maxDuration: 120 }
 // ---- stock from Shopify
-async function loadVariants() {
+async function loadVariants(tag = TAG) {
   const out = []; let after = null
   for (let page = 0; page < 30; page++) {
     const d = await gql(`query($q:String!, $after:String){ productVariants(first:60, after:$after, query:$q){ pageInfo{ hasNextPage endCursor }
       nodes{ sku title position product{ id title status category{ fullName } }
-        inventoryItem{ inventoryLevels(first:6){ nodes{ location{ name } quantities(names:["available"]){ quantity } } } } } } }`, { q: `tag:'${TAG}'`, after })
+        inventoryItem{ inventoryLevels(first:6){ nodes{ location{ name } quantities(names:["available"]){ quantity } } } } } } }`, { q: `tag:'${tag}'`, after })
     const c = d.productVariants
     for (const v of c.nodes) {
       const qty = { chap: 0, city: 0, round: 0, wh: 0 }
@@ -114,9 +117,10 @@ async function setState(shopId, v) {
 }
 
 const summary = list => ({
-  topUpTo: list.max, range: list.range === 'all' ? 'everything tagged ' + TAG : 'synthetic hair only', linesChecked: list.checked,
+  supplier: list.kind === 'supplier' ? list.supplier : 'Roundhay Warehouse', rule: list.kind === 'supplier' ? { topUpTo: list.max, when: list.when, qty: list.qty } : undefined,
+  topUpTo: list.max, range: list.kind === 'supplier' ? 'everything tagged supplier ' + list.supplier.toLowerCase() : list.range === 'all' ? 'everything tagged ' + TAG : 'synthetic hair only', linesChecked: list.checked,
   stores: list.stores.map(s => ({ store: s.label, lines: s.lines, pieces: s.pieces })),
-  linesLeftOffNothingSpare: list.notListedNothingSpare,
+  linesLeftOffNothingSpare: list.kind === 'supplier' ? undefined : list.notListedNothingSpare,
 })
 
 export default async function handler(req, res) {
@@ -127,9 +131,19 @@ export default async function handler(req, res) {
     const range = String(req.query.range || process.env.TOPUP_RANGE || 'hair') === 'all' ? 'all' : 'hair'
     // &store=chapeltown or &store=city : just that one store's list (for a test run). Left out: both stores.
     const only = String(req.query.store || '').toLowerCase().replace(/[^a-z]/g, '')
-    const pick = only ? STORES.find(s => s.re.test(only) || s.key === only || (/^city/.test(only) && s.key === 'city') || (/^chap/.test(only) && s.key === 'chap') || (/^round/.test(only) && s.key === 'round')) : null
-    if (only && !pick) return res.status(400).json({ ok: false, error: 'unknown store: use store=chapeltown, store=city or store=roundhay' })
-    const make = async () => { const list = buildList(await loadVariants(), { max, range }); if (pick) list.stores = list.stores.filter(s => s.key === pick.key); return list }
+    const pick = only === 'total' ? { key: 'total', label: 'Total order' } : only ? STORES.find(s => s.re.test(only) || s.key === only || (/^city/.test(only) && s.key === 'city') || (/^chap/.test(only) && s.key === 'chap') || (/^round/.test(only) && s.key === 'round')) : null
+    if (only && !pick) return res.status(400).json({ ok: false, error: 'unknown store: use store=chapeltown, store=city, store=roundhay (or store=total on a supplier order)' })
+    // an outside supplier: tag "supplier <name>", every shop ordered for by the supplier's rule
+    const supName = String(req.query.supplier || '').replace(/[^A-Za-z0-9 &.+-]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60)
+    const external = !!supName && supName.toLowerCase() !== TAG
+    const num = k => (req.query[k] === undefined || req.query[k] === '' || !Number.isFinite(Number(req.query[k])) ? null : Math.max(0, Math.min(999, Math.floor(Number(req.query[k])))))
+    const make = async () => {
+      const list = external
+        ? buildOrder(await loadVariants('supplier ' + supName.toLowerCase()), { max, when: num('when'), qty: num('qty') || null, supplier: supName })
+        : buildList(await loadVariants(), { max, range })
+      if (pick) list.stores = list.stores.filter(s => s.key === pick.key)
+      return list
+    }
 
     if (job === 'pdf') {
       const list = await make()
@@ -142,6 +156,7 @@ export default async function handler(req, res) {
       const i = Math.max(0, Math.min(Number(req.query.label || 0), zpls.length - 1))
       return res.status(200).json({ ok: true, ...summary(list), labels: zpls.length, lists: list.stores, zpl: zpls[i], png: req.query.png === '0' || !zpls.length ? undefined : await labelary(zpls[i], 'image/png', 0) })
     }
+    if ((job === 'preview' || job === '') && external) return res.status(400).json({ ok: false, error: 'supplier orders are previewed with json=1 or job=pdf' })
     if (job === 'preview' || job === '') {
       // a page staff can read: the list for one branch at a time, with print buttons. Prints nothing by itself.
       const full = buildList(await loadVariants(), { max, range })
@@ -176,7 +191,7 @@ ${body}</body></html>`
     if (job === 'print') {
       const list = await make(); const demo = req.query.demo === '1'
       if (!list.stores.length) return res.status(200).json({ ok: true, printed: false, reason: 'nothing to send: no store is short of a line that has spare stock', ...summary(list) })
-      const title = 'CC top-up ' + londonDay() + (pick ? ' ' + pick.label : '') + (demo ? ' demo' : '')
+      const title = (external ? 'CC order ' + supName + ' ' : 'CC top-up ') + londonDay() + (pick ? ' ' + pick.label : '') + (demo ? ' demo' : '')
       let r
       if (device === 'zebra') {
         let zpls = buildZpl(list, { demo }); if (demo) zpls = zpls.slice(0, 1)
