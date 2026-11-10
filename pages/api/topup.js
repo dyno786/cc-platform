@@ -65,7 +65,7 @@ async function hpPrinter() {
 }
 async function sendPdf(pdf, title) {
   const p = await hpPrinter()
-  const job = await pn('/printjobs', { method: 'POST', body: JSON.stringify({ printerId: p.id, title, source: 'CC store top-up list', contentType: 'pdf_base64', content: pdf.toString('base64'), options: { fit_to_page: true } })   // the HP's own A4 paper, as zebra.js does })
+  const job = await pn('/printjobs', { method: 'POST', body: JSON.stringify({ printerId: p.id, title, source: 'CC store top-up list', contentType: 'pdf_base64', content: pdf.toString('base64'), options: { fit_to_page: true } }) })   // no paper option: the HP uses its own A4, as zebra.js does
   return { printer: p.name, printerState: p.state, computer: p.computer, jobs: [job], as: 'A4 pdf' }
 }
 async function printer() {
