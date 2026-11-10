@@ -1,12 +1,14 @@
-// Store top-up list: every night at 6pm, prints on the HP OfficeJet Pro 8710 (through PrintNode) what Chapeltown and
-// City Centre each need to bring a shelf back up to 12. One A4 page per store. (&device=zebra prints 6 x 4 labels
+// Store top-up list: every night at 6pm, prints on the HP OfficeJet Pro 8710 (through PrintNode) what Chapeltown,
+// City Centre and the Roundhay Road shop floor each need to bring a shelf back up to 12. One A4 page per store. (&device=zebra prints 6 x 4 labels
 // on the Zebra GK420d instead, the same way as the order pick labels in zebra.js.)
 // Products: everything in Shopify tagged "roundhay warehouse". For now only the synthetic hair (Shopify category
 // "Hair Extensions"); add &range=all for the cosmetics too, or set TOPUP_RANGE=all in Vercel.
-// Stock: Shopify's stock for each branch. Roundhay Road holds the bulk and supplies the other two stores.
-// Listed: only lines Roundhay Road has in stock and a store has fewer than 12 of. Lines Roundhay has none of are left off.
-// Quantity: tops the store up to 12, never more than Roundhay has (shared between the two stores, the lower one first).
-// Roundhay's stock (plus any Warehouse stock) is printed in brackets beside each line.
+// Stock: Shopify's stock for each branch.
+// Roundhay Road is a shop as well as the stock room: its first 12 of every line stay on its own shop floor and are
+// never sent out. Only what it holds above 12 (upstairs) is spare for Chapeltown and City Centre.
+// The Warehouse location's stock is spare for all three shops; it is the only place Roundhay's own shelf is topped up from.
+// Listed: a store's line only when the store has fewer than 12 and there is spare stock for it.
+// Quantity: tops the store up to 12, never more than the spare stock (shared out, the store with the least first).
 //   job=preview[&store=city][&range=all]        a page staff can read, one branch at a time, with print buttons. Prints nothing.
 //   job=preview&json=1[&label=0]                the same list as JSON, plus label ZPL and a PNG picture
 //   job=print                                   print the full list now (one A4 page per store)
@@ -114,7 +116,7 @@ async function setState(shopId, v) {
 const summary = list => ({
   topUpTo: list.max, range: list.range === 'all' ? 'everything tagged ' + TAG : 'synthetic hair only', linesChecked: list.checked,
   stores: list.stores.map(s => ({ store: s.label, lines: s.lines, pieces: s.pieces })),
-  linesLeftOffRoundhayHasNone: list.notListedRoundhayHasNone,
+  linesLeftOffNothingSpare: list.notListedNothingSpare,
 })
 
 export default async function handler(req, res) {
@@ -125,8 +127,8 @@ export default async function handler(req, res) {
     const range = String(req.query.range || process.env.TOPUP_RANGE || 'hair') === 'all' ? 'all' : 'hair'
     // &store=chapeltown or &store=city : just that one store's list (for a test run). Left out: both stores.
     const only = String(req.query.store || '').toLowerCase().replace(/[^a-z]/g, '')
-    const pick = only ? STORES.find(s => s.re.test(only) || s.key === only || (/^city/.test(only) && s.key === 'city') || (/^chap/.test(only) && s.key === 'chap')) : null
-    if (only && !pick) return res.status(400).json({ ok: false, error: 'unknown store: use store=chapeltown or store=city' })
+    const pick = only ? STORES.find(s => s.re.test(only) || s.key === only || (/^city/.test(only) && s.key === 'city') || (/^chap/.test(only) && s.key === 'chap') || (/^round/.test(only) && s.key === 'round')) : null
+    if (only && !pick) return res.status(400).json({ ok: false, error: 'unknown store: use store=chapeltown, store=city or store=roundhay' })
     const make = async () => { const list = buildList(await loadVariants(), { max, range }); if (pick) list.stores = list.stores.filter(s => s.key === pick.key); return list }
 
     if (job === 'pdf') {
@@ -148,14 +150,14 @@ export default async function handler(req, res) {
       const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
       const q = (extra) => '?' + ['job=' + extra.job, 'store=' + (extra.store || cur), range === 'all' ? 'range=all' : '', extra.demo ? 'demo=1' : ''].filter(Boolean).join('&')
       const tabs = STORES.map(x => { const f = full.stores.find(y => y.key === x.key); return `<a class="tab${x.key === cur ? ' on' : ''}" href="${q({ job: 'preview', store: x.key })}">${esc(x.label)}<small>${f ? f.lines + ' lines, ' + f.pieces + ' pcs' : 'nothing to send'}</small></a>` }).join('')
-      const body = !s ? '<p class="none">Nothing to send to this branch: it has ' + max + ' of everything Roundhay has in stock.</p>' : s.products.map(p => `<h2>${esc(p.title)}</h2><table><tr><th>Send</th><th>Colour</th><th>Branch has</th><th>Roundhay has</th></tr>${p.items.map(i => `<tr><td class="q">${i.q}</td><td>${esc(i.variant || 'one size')}</td><td>${i.storeHas}</td><td>${i.pick}</td></tr>`).join('')}</table>`).join('')
+      const body = !s ? '<p class="none">Nothing to send to this branch right now. ' + (cur === 'round' ? 'Roundhay\'s shop floor is only topped up from the Warehouse location, and the Warehouse has no stock of the lines Roundhay is short of.' : 'Either it already has ' + max + ', or Roundhay has no stock above its own ' + max + ' to spare.') + '</p>' : s.products.map(p => `<h2>${esc(p.title)}</h2><table><tr><th>Send</th><th>Colour</th><th>Branch has</th><th>Spare stock</th></tr>${p.items.map(i => `<tr><td class="q">${i.q}</td><td>${esc(i.variant || 'one size')}</td><td>${i.storeHas}</td><td>${i.pick}${i.fromWarehouse && cur !== 'round' ? ' <small>(' + i.fromWarehouse + ' from Warehouse)</small>' : ''}</td></tr>`).join('')}</table>`).join('')
       const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CC store top-up</title>
 <style>body{font-family:system-ui,sans-serif;max-width:640px;margin:20px auto;padding:0 14px 60px;background:#fff;color:#111}h1{font-size:22px;margin:0 0 4px}p{color:#444;margin:6px 0}
 .tabs{display:flex;gap:10px;margin:14px 0}.tab{flex:1;text-align:center;padding:12px 6px;border:2px solid #111;border-radius:10px;text-decoration:none;color:#111;font-weight:700;font-size:17px}.tab small{display:block;font-weight:400;font-size:13px;margin-top:2px}.tab.on{background:#111;color:#fff}
 .btns{display:flex;gap:10px;margin:10px 0 18px}.b{flex:1;text-align:center;padding:14px 6px;border-radius:10px;text-decoration:none;font-weight:700;font-size:16px;background:#0a7a3c;color:#fff}.b.alt{background:#fff;color:#111;border:2px solid #111}
 h2{font-size:16px;margin:20px 0 6px;padding-top:10px;border-top:2px solid #111}table{width:100%;border-collapse:collapse;font-size:15px}th{text-align:left;font-size:12px;color:#666;font-weight:600;padding:4px 6px}td{padding:6px;border-top:1px solid #ddd}td.q{font-weight:800;font-size:18px;width:60px}.none{padding:20px;background:#f3f3f3;border-radius:8px}</style></head><body>
-<h1>Store top-up from Roundhay</h1>
-<p>${esc(london({ weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))}. ${range === 'all' ? 'All tagged products' : 'Synthetic hair only'}. Tops each shelf up to ${max}. Only lines Roundhay has in stock are listed (${full.notListedRoundhayHasNone} left off).</p>
+<h1>Store top-up</h1>
+<p>${esc(london({ weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))}. ${range === 'all' ? 'All tagged products' : 'Synthetic hair only'}. Tops each shelf up to ${max}. Roundhay keeps its own ${max}: only its stock above ${max}, plus Warehouse stock, is sent out. ${full.notListedNothingSpare} lines left off because nothing is spare.</p>
 <div class="tabs">${tabs}</div>
 ${s ? `<div class="btns"><a class="b" href="${q({ job: 'print' })}" onclick="return confirm('Print the ${esc(s.label)} page on the HP printer now?')">Print ${esc(s.label)} (1 page)</a><a class="b alt" href="${q({ job: 'pdf' })}" target="_blank">See the page first</a></div>` : ''}
 ${body}</body></html>`
@@ -173,7 +175,7 @@ ${body}</body></html>`
     }
     if (job === 'print') {
       const list = await make(); const demo = req.query.demo === '1'
-      if (!list.stores.length) return res.status(200).json({ ok: true, printed: false, reason: 'nothing to send: both stores have ' + max + ' of everything Roundhay has in stock', ...summary(list) })
+      if (!list.stores.length) return res.status(200).json({ ok: true, printed: false, reason: 'nothing to send: no store is short of a line that has spare stock', ...summary(list) })
       const title = 'CC top-up ' + londonDay() + (pick ? ' ' + pick.label : '') + (demo ? ' demo' : '')
       let r
       if (device === 'zebra') {
