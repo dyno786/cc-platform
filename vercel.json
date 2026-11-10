@@ -15,6 +15,14 @@
     {
       "path": "/api/zebra?cron=1",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/topup?cron=1",
+      "schedule": "0 17 * * *"
+    },
+    {
+      "path": "/api/topup?cron=1",
+      "schedule": "0 18 * * *"
     }
   ]
 }
