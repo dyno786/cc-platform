@@ -20,7 +20,8 @@
 //       [&max=12] top up to 12  [&when=3] only once a shop has 3 or fewer  [&when=3&qty=6] at 3 or fewer, order 6
 //       (supplier=roundhay warehouse, or none, is the store top-up list above). &store=total|chapeltown|city|roundhay
 //   job=start / job=stop                        nightly printing on / off (on unless stopped)
-//   cron=1                                      vercel.json, 17:00 and 18:00 UTC: prints once, when it is 6pm in London
+//   job=schedule&time=18:00[&on=1|0][&range=hair|all]  set when the nightly store top-up prints (UK time), on/off, and what it covers
+//   cron=1                                      vercel.json, every 5 minutes: prints once a day, at the set time (UK time)
 // Needs Vercel env PRINTNODE_API_KEY. Optional TOPUP_PRINTER_ID (the HP, default 73836448), TOPUP_DEVICE=zebra, PRINTNODE_PRINTER_ID, ZEBRA_PAPER, ZEBRA_MODE, TOPUP_MAX, TOPUP_RANGE.
 // Read-only on products and stock: it never changes stock, products or orders. It only keeps its own on/off
 // switch and "last printed" date on the shop (metafield cc_print.topup).
@@ -109,7 +110,8 @@ async function sendToPrinter(zpls, title) {
 // ---- switch and "last printed", kept on the shop so they survive deploys
 async function state() {
   const d = await gql('query{ shop{ id metafield(namespace:"cc_print", key:"topup"){ value } } }')
-  return { shopId: d.shop.id, v: d.shop.metafield ? JSON.parse(d.shop.metafield.value) : { on: true } }
+  const v = d.shop.metafield ? JSON.parse(d.shop.metafield.value) : {}
+  return { shopId: d.shop.id, v: { on: true, time: '18:00', ...v } }
 }
 async function setState(shopId, v) {
   const r = await gql('mutation($m:[MetafieldsSetInput!]!){ metafieldsSet(metafields:$m){ userErrors{ message } } }', { m: [{ ownerId: shopId, namespace: 'cc_print', key: 'topup', type: 'json', value: JSON.stringify(v) }] })
@@ -128,7 +130,7 @@ export default async function handler(req, res) {
     const job = String(req.query.job || (req.query.cron === '1' ? 'cron' : ''))
     const max = Math.min(99, Math.max(1, Number(req.query.max || process.env.TOPUP_MAX || 12)))
     const device = String(req.query.device || process.env.TOPUP_DEVICE || 'hp') === 'zebra' ? 'zebra' : 'hp'
-    const range = String(req.query.range || process.env.TOPUP_RANGE || 'hair') === 'all' ? 'all' : 'hair'
+    let range = String(req.query.range || process.env.TOPUP_RANGE || 'hair') === 'all' ? 'all' : 'hair'
     // &store=chapeltown or &store=city : just that one store's list (for a test run). Left out: both stores.
     const only = String(req.query.store || '').toLowerCase().replace(/[^a-z]/g, '')
     const pick = only === 'total' ? { key: 'total', label: 'Total order' } : only ? STORES.find(s => s.re.test(only) || s.key === only || (/^city/.test(only) && s.key === 'city') || (/^chap/.test(only) && s.key === 'chap') || (/^round/.test(only) && s.key === 'round')) : null
@@ -184,6 +186,19 @@ ${body}</body></html>`
       if (out.printNodeKey) { try { out.hp = await hpPrinter() } catch (e) { out.hpError = String(e.message) } }
       return res.status(200).json(out)
     }
+    if (job === 'schedule') {
+      const s = await state(); const v = { ...s.v }
+      if (req.query.time !== undefined) {
+        const t = String(req.query.time)
+        if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(t)) return res.status(400).json({ ok: false, error: 'time must look like 18:00 (24 hour clock)' })
+        v.time = t
+      }
+      if (req.query.on !== undefined) v.on = req.query.on === '1'
+      if (req.query.range !== undefined) v.range = req.query.range === 'all' ? 'all' : 'hair'
+      v.changed = new Date().toISOString()
+      const errors = await setState(s.shopId, v)
+      return res.status(200).json({ ok: !errors.length, switch: v, errors, londonTime: london({ hour: '2-digit', minute: '2-digit' }) })
+    }
     if (job === 'start' || job === 'stop') {
       const s = await state(); const v = { ...s.v, on: job === 'start', changed: new Date().toISOString() }
       return res.status(200).json({ ok: true, switch: v, errors: await setState(s.shopId, v) })
@@ -207,9 +222,13 @@ ${body}</body></html>`
       return res.status(200).json({ ok: true, printed: true, device, ...r, ...summary(list) })
     }
     if (job === 'cron') {
-      // vercel.json calls this at 17:00 and 18:00 UTC; only the one that is 6pm in London prints (summer and winter time)
-      if (Number(london({ hour: '2-digit', hour12: false })) !== 18) return res.status(200).json({ ok: true, skipped: 'not 6pm in London' })
+      // vercel.json calls this every 5 minutes; it prints once a day, in the hour after the set time (UK time, summer and winter)
       const s = await state(); const today = londonDay()
+      const [hh, mm] = london({ hour: '2-digit', minute: '2-digit', hour12: false }).split(':').map(Number)
+      const [th, tm] = String(s.v.time || '18:00').split(':').map(Number)
+      const late = (hh % 24) * 60 + mm - (th * 60 + tm)
+      if (late < 0 || late > 60) return res.status(200).json({ ok: true, skipped: 'not time yet: prints at ' + s.v.time })
+      if (s.v.range) range = s.v.range === 'all' ? 'all' : 'hair'
       if (!s.v.on) return res.status(200).json({ ok: true, skipped: 'nightly printing is off' })
       if (s.v.lastDay === today) return res.status(200).json({ ok: true, skipped: 'already printed today' })
       if (!process.env.PRINTNODE_API_KEY) return res.status(200).json({ ok: true, skipped: 'no PrintNode key' })
