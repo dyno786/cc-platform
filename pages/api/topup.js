@@ -3,8 +3,9 @@
 // Products: everything in Shopify tagged "roundhay warehouse". For now only the synthetic hair (Shopify category
 // "Hair Extensions"); add &range=all for the cosmetics too, or set TOPUP_RANGE=all in Vercel.
 // Stock: Shopify's stock for each branch. Roundhay Road holds the bulk and supplies the other two stores.
-// Quantity: 12 minus what the store has, in full. It is not cut down to what Roundhay has; Roundhay's stock
-// (plus any Warehouse stock) is printed in brackets beside each line so the picker can see what is there.
+// Listed: only lines Roundhay Road has in stock and a store has fewer than 12 of. Lines Roundhay has none of are left off.
+// Quantity: tops the store up to 12, never more than Roundhay has (shared between the two stores, the lower one first).
+// Roundhay's stock (plus any Warehouse stock) is printed in brackets beside each line.
 //   job=preview[&label=0][&range=all][&max=12]  the list as JSON, plus label ZPL and a PNG picture. Prints nothing.
 //   job=print                                   print the full list now
 //   job=print&demo=1                            print only the first label, marked DEMO
@@ -95,7 +96,8 @@ async function setState(shopId, v) {
 
 const summary = list => ({
   topUpTo: list.max, range: list.range === 'all' ? 'everything tagged ' + TAG : 'synthetic hair only', linesChecked: list.checked,
-  stores: list.stores.map(s => ({ store: s.label, lines: s.lines, pieces: s.pieces, linesRoundhayHasNoneOf: s.noStock })),
+  stores: list.stores.map(s => ({ store: s.label, lines: s.lines, pieces: s.pieces })),
+  linesLeftOffRoundhayHasNone: list.notListedRoundhayHasNone,
 })
 
 export default async function handler(req, res) {
@@ -122,7 +124,7 @@ export default async function handler(req, res) {
     if (job === 'print') {
       const list = await make(); const demo = req.query.demo === '1'
       let zpls = buildZpl(list, { demo })
-      if (!zpls.length) return res.status(200).json({ ok: true, printed: false, reason: 'both stores already have ' + max + ' of everything', ...summary(list) })
+      if (!zpls.length) return res.status(200).json({ ok: true, printed: false, reason: 'nothing to send: both stores have ' + max + ' of everything Roundhay has in stock', ...summary(list) })
       const all = zpls.length
       if (demo) zpls = zpls.slice(0, 1)
       if (zpls.length > MAX_LABELS) return res.status(400).json({ ok: false, error: 'The list is ' + zpls.length + ' labels, more than the limit of ' + MAX_LABELS + '. Nothing was printed.', ...summary(list) })
