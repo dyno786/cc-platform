@@ -6,7 +6,8 @@
 // Listed: only lines Roundhay Road has in stock and a store has fewer than 12 of. Lines Roundhay has none of are left off.
 // Quantity: tops the store up to 12, never more than Roundhay has (shared between the two stores, the lower one first).
 // Roundhay's stock (plus any Warehouse stock) is printed in brackets beside each line.
-//   job=preview[&label=0][&range=all][&max=12]  the list as JSON, plus label ZPL and a PNG picture. Prints nothing.
+//   job=preview[&store=city][&range=all]        a page staff can read, one branch at a time, with print buttons. Prints nothing.
+//   job=preview&json=1[&label=0]                the same list as JSON, plus label ZPL and a PNG picture
 //   job=print                                   print the full list now
 //   job=print&store=chapeltown  (or store=city)  print one store's list only; works on preview too
 //   job=print&demo=1                            print only the first label, marked DEMO
@@ -112,10 +113,32 @@ export default async function handler(req, res) {
     if (only && !pick) return res.status(400).json({ ok: false, error: 'unknown store: use store=chapeltown or store=city' })
     const make = async () => { const list = buildList(await loadVariants(), { max, range }); if (pick) list.stores = list.stores.filter(s => s.key === pick.key); return list }
 
-    if (job === 'preview') {
+    if (job === 'preview' && req.query.json === '1') {
       const list = await make(); const zpls = buildZpl(list)
       const i = Math.max(0, Math.min(Number(req.query.label || 0), zpls.length - 1))
       return res.status(200).json({ ok: true, ...summary(list), labels: zpls.length, lists: list.stores, zpl: zpls[i], png: req.query.png === '0' || !zpls.length ? undefined : await labelary(zpls[i], 'image/png', 0) })
+    }
+    if (job === 'preview' || job === '') {
+      // a page staff can read: the list for one branch at a time, with print buttons. Prints nothing by itself.
+      const full = buildList(await loadVariants(), { max, range })
+      const cur = pick ? pick.key : (full.stores[0] ? full.stores[0].key : STORES[0].key)
+      const s = full.stores.find(x => x.key === cur)
+      const labels = s ? buildZpl({ ...full, stores: [s] }).length : 0
+      const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+      const q = (extra) => '?' + ['job=' + extra.job, 'store=' + (extra.store || cur), range === 'all' ? 'range=all' : '', extra.demo ? 'demo=1' : ''].filter(Boolean).join('&')
+      const tabs = STORES.map(x => { const f = full.stores.find(y => y.key === x.key); return `<a class="tab${x.key === cur ? ' on' : ''}" href="${q({ job: 'preview', store: x.key })}">${esc(x.label)}<small>${f ? f.lines + ' lines, ' + f.pieces + ' pcs' : 'nothing to send'}</small></a>` }).join('')
+      const body = !s ? '<p class="none">Nothing to send to this branch: it has ' + max + ' of everything Roundhay has in stock.</p>' : s.products.map(p => `<h2>${esc(p.title)}</h2><table><tr><th>Send</th><th>Colour</th><th>Branch has</th><th>Roundhay has</th></tr>${p.items.map(i => `<tr><td class="q">${i.q}</td><td>${esc(i.variant || 'one size')}</td><td>${i.storeHas}</td><td>${i.pick}</td></tr>`).join('')}</table>`).join('')
+      const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CC store top-up</title>
+<style>body{font-family:system-ui,sans-serif;max-width:640px;margin:20px auto;padding:0 14px 60px;background:#fff;color:#111}h1{font-size:22px;margin:0 0 4px}p{color:#444;margin:6px 0}
+.tabs{display:flex;gap:10px;margin:14px 0}.tab{flex:1;text-align:center;padding:12px 6px;border:2px solid #111;border-radius:10px;text-decoration:none;color:#111;font-weight:700;font-size:17px}.tab small{display:block;font-weight:400;font-size:13px;margin-top:2px}.tab.on{background:#111;color:#fff}
+.btns{display:flex;gap:10px;margin:10px 0 18px}.b{flex:1;text-align:center;padding:14px 6px;border-radius:10px;text-decoration:none;font-weight:700;font-size:16px;background:#0a7a3c;color:#fff}.b.alt{background:#fff;color:#111;border:2px solid #111}
+h2{font-size:16px;margin:20px 0 6px;padding-top:10px;border-top:2px solid #111}table{width:100%;border-collapse:collapse;font-size:15px}th{text-align:left;font-size:12px;color:#666;font-weight:600;padding:4px 6px}td{padding:6px;border-top:1px solid #ddd}td.q{font-weight:800;font-size:18px;width:60px}.none{padding:20px;background:#f3f3f3;border-radius:8px}</style></head><body>
+<h1>Store top-up from Roundhay</h1>
+<p>${esc(london({ weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))}. ${range === 'all' ? 'All tagged products' : 'Synthetic hair only'}. Tops each shelf up to ${max}. Only lines Roundhay has in stock are listed (${full.notListedRoundhayHasNone} left off).</p>
+<div class="tabs">${tabs}</div>
+${s ? `<div class="btns"><a class="b" href="${q({ job: 'print' })}" onclick="return confirm('Print ${labels} label${labels === 1 ? '' : 's'} for ${esc(s.label)} on the Zebra now?')">Print ${esc(s.label)} (${labels} label${labels === 1 ? '' : 's'})</a><a class="b alt" href="${q({ job: 'print', demo: 1 })}" onclick="return confirm('Print just the first label as a test?')">Test: first label only</a></div>` : ''}
+${body}</body></html>`
+      res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.setHeader('Cache-Control', 'no-store'); return res.status(200).send(html)
     }
     if (job === 'status') {
       const s = await state(); const out = { ok: true, switch: s.v, printNodeKey: !!process.env.PRINTNODE_API_KEY, londonTime: london({ hour: '2-digit', minute: '2-digit' }) }
@@ -134,6 +157,10 @@ export default async function handler(req, res) {
       if (demo) zpls = zpls.slice(0, 1)
       if (zpls.length > MAX_LABELS) return res.status(400).json({ ok: false, error: 'The list is ' + zpls.length + ' labels, more than the limit of ' + MAX_LABELS + '. Nothing was printed.', ...summary(list) })
       const r = await sendToPrinter(zpls, 'CC top-up ' + londonDay() + (pick ? ' ' + pick.label : '') + (demo ? ' demo' : ''))
+      if (req.query.json !== '1' && /text\/html/.test(req.headers.accept || '')) {
+        res.setHeader('Content-Type', 'text/html; charset=utf-8')
+        return res.status(200).send(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:system-ui,sans-serif;max-width:480px;margin:40px auto;padding:0 16px"><h1 style="font-size:22px">Sent to the Zebra</h1><p>${r.labels} label${r.labels === 1 ? '' : 's'}${pick ? ' for ' + pick.label : ''}${demo ? ' (test: first label only)' : ''}. Printer: ${r.printerState || 'unknown'}.</p><p><a href="?job=preview${pick ? '&store=' + pick.key : ''}">Back to the list</a></p></body>`)
+      }
       return res.status(200).json({ ok: true, printed: true, demo, labelsInFullList: all, ...r, ...summary(list) })
     }
     if (job === 'cron') {
