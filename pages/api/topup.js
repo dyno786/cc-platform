@@ -21,14 +21,46 @@
 //       (supplier=roundhay warehouse, or none, is the store top-up list above). &store=total|chapeltown|city|roundhay
 //   job=start / job=stop                        nightly printing on / off (on unless stopped)
 //   job=schedule&time=18:00[&on=1|0][&range=hair|all]  set when the nightly store top-up prints (UK time), on/off, and what it covers
+//   supplier=bhc-schwarzkopf                     an order worked from the supplier's own order sheet (lib/bhc-schwarzkopf.json):
+//       one page per shop, then the order in cases. &store=chapeltown|city|roundhay|order. job=schedule&which=bhc-schwarzkopf&on=1&time=07:30&day=daily|0..6
 //   cron=1                                      vercel.json, every 5 minutes: prints once a day, at the set time (UK time)
 // Needs Vercel env PRINTNODE_API_KEY. Optional TOPUP_PRINTER_ID (the HP, default 73836448), TOPUP_DEVICE=zebra, PRINTNODE_PRINTER_ID, ZEBRA_PAPER, ZEBRA_MODE, TOPUP_MAX, TOPUP_RANGE.
 // Read-only on products and stock: it never changes stock, products or orders. It only keeps its own on/off
 // switch and "last printed" date on the shop (metafield cc_print.topup).
 import { gql } from '../../lib/intake'
-import { TAG, STORES, SOURCE, WAREHOUSE, HAIR, MAX_LABELS, london, londonDay, buildList, buildOrder, buildZpl, buildPdf } from '../../lib/topup'
+import { TAG, STORES, SOURCE, WAREHOUSE, HAIR, MAX_LABELS, london, londonDay, buildList, buildOrder, buildSheetOrder, buildSheetPdf, buildZpl, buildPdf } from '../../lib/topup'
+import bhc from '../../lib/bhc-schwarzkopf.json'
+
+// suppliers ordered from their own order sheet (lib/<slug>.json) instead of from Shopify tags
+const SHEETS = { [bhc.slug]: bhc }
+const pdfOf = list => (list.kind === 'sheet' ? buildSheetPdf(list) : buildPdf(list))
 
 export const config = { maxDuration: 120 }
+// stock for a list of SKUs, keyed by SKU. The same SKU can sit on two listings with the same stock: it is counted once.
+async function loadBySkus(skus) {
+  const out = {}
+  for (let i = 0; i < skus.length; i += 60) {
+    const q = skus.slice(i, i + 60).map(k => 'sku:' + k).join(' OR '); let after = null
+    for (let page = 0; page < 10; page++) {
+      const d = await gql(`query($q:String!, $after:String){ productVariants(first:100, after:$after, query:$q){ pageInfo{ hasNextPage endCursor }
+        nodes{ sku product{ status } inventoryItem{ inventoryLevels(first:6){ nodes{ location{ name } quantities(names:["available"]){ quantity } } } } } } }`, { q, after })
+      const c = d.productVariants
+      for (const v of c.nodes) {
+        const sku = String(v.sku || '').trim().replace(/^0+/, ''); if (!sku) continue
+        const qty = { chap: 0, city: 0, round: 0, wh: 0, active: v.product.status === 'ACTIVE' }
+        for (const l of v.inventoryItem.inventoryLevels.nodes) {
+          const name = (l.location && l.location.name) || '', n = (l.quantities[0] && l.quantities[0].quantity) || 0
+          const st = STORES.find(x => x.re.test(name))
+          if (st) qty[st.key] += n; else if (WAREHOUSE.test(name)) qty.wh += n
+        }
+        if (!out[sku] || (qty.active && !out[sku].active) || (qty.active === out[sku].active && qty.wh > out[sku].wh)) out[sku] = qty
+      }
+      if (!c.pageInfo.hasNextPage) break
+      after = c.pageInfo.endCursor
+    }
+  }
+  return out
+}
 // ---- stock from Shopify
 async function loadVariants(tag = TAG) {
   const out = []; let after = null
@@ -119,9 +151,9 @@ async function setState(shopId, v) {
 }
 
 const summary = list => ({
-  supplier: list.kind === 'supplier' ? list.supplier : 'Roundhay Warehouse', rule: list.kind === 'supplier' ? { topUpTo: list.max, when: list.when, qty: list.qty } : undefined,
+  supplier: list.kind === 'supplier' || list.kind === 'sheet' ? list.supplier : 'Roundhay Warehouse', linesNotInShopify: list.notInShopify, rule: list.kind === 'supplier' ? { topUpTo: list.max, when: list.when, qty: list.qty } : undefined,
   topUpTo: list.max, range: list.kind === 'supplier' ? 'everything tagged supplier ' + list.supplier.toLowerCase() : list.range === 'all' ? 'everything tagged ' + TAG : 'synthetic hair only', linesChecked: list.checked,
-  stores: list.stores.map(s => ({ store: s.label, lines: s.lines, pieces: s.pieces })),
+  stores: list.stores.map(s => ({ store: s.label, lines: s.lines, pieces: s.pieces, unit: s.unit, cost: s.cost })),
   linesLeftOffNothingSpare: list.kind === 'supplier' ? undefined : list.notListedNothingSpare,
 })
 
@@ -133,14 +165,16 @@ export default async function handler(req, res) {
     let range = String(req.query.range || process.env.TOPUP_RANGE || 'hair') === 'all' ? 'all' : 'hair'
     // &store=chapeltown or &store=city : just that one store's list (for a test run). Left out: both stores.
     const only = String(req.query.store || '').toLowerCase().replace(/[^a-z]/g, '')
-    const pick = only === 'total' ? { key: 'total', label: 'Total order' } : only ? STORES.find(s => s.re.test(only) || s.key === only || (/^city/.test(only) && s.key === 'city') || (/^chap/.test(only) && s.key === 'chap') || (/^round/.test(only) && s.key === 'round')) : null
+    const pick = only === 'total' ? { key: 'total', label: 'Total order' } : only === 'order' ? { key: 'order', label: 'Warehouse order' } : only ? STORES.find(s => s.re.test(only) || s.key === only || (/^city/.test(only) && s.key === 'city') || (/^chap/.test(only) && s.key === 'chap') || (/^round/.test(only) && s.key === 'round')) : null
     if (only && !pick) return res.status(400).json({ ok: false, error: 'unknown store: use store=chapeltown, store=city, store=roundhay (or store=total on a supplier order)' })
     // an outside supplier: tag "supplier <name>", every shop ordered for by the supplier's rule
     const supName = String(req.query.supplier || '').replace(/[^A-Za-z0-9 &.+-]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60)
+    const sheet = SHEETS[supName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')] || null
     const external = !!supName && supName.toLowerCase() !== TAG
+    const makeSheet = async cfg => buildSheetOrder(cfg, await loadBySkus([...new Set(cfg.lines.flatMap(l => l.skus || []))]), { max })
     const num = k => (req.query[k] === undefined || req.query[k] === '' || !Number.isFinite(Number(req.query[k])) ? null : Math.max(0, Math.min(999, Math.floor(Number(req.query[k])))))
     const make = async () => {
-      const list = external
+      const list = sheet ? await makeSheet(sheet) : external
         ? buildOrder(await loadVariants('supplier ' + supName.toLowerCase()), { max, when: num('when'), qty: num('qty') || null, supplier: supName })
         : buildList(await loadVariants(), { max, range })
       if (pick) list.stores = list.stores.filter(s => s.key === pick.key)
@@ -151,12 +185,12 @@ export default async function handler(req, res) {
       const list = await make()
       if (!list.stores.length) return res.status(200).send('Nothing to send.')
       res.setHeader('Content-Type', 'application/pdf'); res.setHeader('Content-Disposition', 'inline; filename="top-up-' + londonDay() + '.pdf"'); res.setHeader('Cache-Control', 'no-store')
-      return res.status(200).send(buildPdf(list).pdf)
+      return res.status(200).send(pdfOf(list).pdf)
     }
     if (job === 'preview' && req.query.json === '1') {
-      const list = await make(); const zpls = buildZpl(list)
+      const list = await make(); const zpls = list.kind === 'sheet' ? [] : buildZpl(list)
       const i = Math.max(0, Math.min(Number(req.query.label || 0), zpls.length - 1))
-      return res.status(200).json({ ok: true, ...summary(list), labels: zpls.length, lists: list.stores, zpl: zpls[i], png: req.query.png === '0' || !zpls.length ? undefined : await labelary(zpls[i], 'image/png', 0) })
+      return res.status(200).json({ ok: true, ...summary(list), labels: zpls.length, sheetPages: list.kind === 'sheet' ? buildSheetPdf(list).pages.length : undefined, lists: list.stores, zpl: zpls[i], png: req.query.png === '0' || !zpls.length ? undefined : await labelary(zpls[i], 'image/png', 0) })
     }
     if ((job === 'preview' || job === '') && external) return res.status(400).json({ ok: false, error: 'supplier orders are previewed with json=1 or job=pdf' })
     if (job === 'preview' || job === '') {
@@ -186,6 +220,21 @@ ${body}</body></html>`
       if (out.printNodeKey) { try { out.hp = await hpPrinter() } catch (e) { out.hpError = String(e.message) } }
       return res.status(200).json(out)
     }
+    if (job === 'schedule' && req.query.which) {
+      // automatic printing of a sheet supplier's order: &which=bhc-schwarzkopf&on=1&time=07:30&day=daily|0..6 (0 = Sunday)
+      const cfg = SHEETS[String(req.query.which)]
+      if (!cfg) return res.status(400).json({ ok: false, error: 'unknown supplier' })
+      const s = await state(); const cur = { on: false, time: '07:00', day: 'daily', ...((s.v.sheets || {})[cfg.slug] || {}) }
+      if (req.query.time !== undefined) {
+        if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(String(req.query.time))) return res.status(400).json({ ok: false, error: 'time must look like 07:30 (24 hour clock)' })
+        cur.time = String(req.query.time)
+      }
+      if (req.query.on !== undefined) cur.on = req.query.on === '1'
+      if (req.query.day !== undefined) cur.day = /^[0-6]$/.test(String(req.query.day)) ? String(req.query.day) : 'daily'
+      const v = { ...s.v, sheets: { ...(s.v.sheets || {}), [cfg.slug]: cur }, changed: new Date().toISOString() }
+      const errors = await setState(s.shopId, v)
+      return res.status(200).json({ ok: !errors.length, switch: v, errors, londonTime: london({ hour: '2-digit', minute: '2-digit' }) })
+    }
     if (job === 'schedule') {
       const s = await state(); const v = { ...s.v }
       if (req.query.time !== undefined) {
@@ -208,12 +257,12 @@ ${body}</body></html>`
       if (!list.stores.length) return res.status(200).json({ ok: true, printed: false, reason: 'nothing to send: no store is short of a line that has spare stock', ...summary(list) })
       const title = (external ? 'CC order ' + supName + ' ' : 'CC top-up ') + londonDay() + (pick ? ' ' + pick.label : '') + (demo ? ' demo' : '')
       let r
-      if (device === 'zebra') {
+      if (device === 'zebra' && list.kind !== 'sheet') {
         let zpls = buildZpl(list, { demo }); if (demo) zpls = zpls.slice(0, 1)
         if (zpls.length > MAX_LABELS) return res.status(400).json({ ok: false, error: 'The list is ' + zpls.length + ' labels, more than the limit of ' + MAX_LABELS + '. Nothing was printed.', ...summary(list) })
         r = { ...(await sendToPrinter(zpls, title)), sheets: zpls.length, what: 'label' }
       } else {
-        const d = buildPdf(list); r = { ...(await sendPdf(d.pdf, title)), sheets: d.pages.length, what: 'page', pages: d.pages }
+        const d = pdfOf(list); r = { ...(await sendPdf(d.pdf, title)), sheets: d.pages.length, what: 'page', pages: d.pages }
       }
       if (req.query.json !== '1' && /text\/html/.test(req.headers.accept || '')) {
         res.setHeader('Content-Type', 'text/html; charset=utf-8')
@@ -222,31 +271,56 @@ ${body}</body></html>`
       return res.status(200).json({ ok: true, printed: true, device, ...r, ...summary(list) })
     }
     if (job === 'cron') {
-      // vercel.json calls this every 5 minutes; it prints once a day, in the hour after the set time (UK time, summer and winter)
-      const s = await state(); const today = londonDay()
+      // vercel.json calls this every 5 minutes. Each automatic print runs once on its day, in the hour after its set time (UK time).
+      const s0 = await state(); const today = londonDay(); const out = {}
       const [hh, mm] = london({ hour: '2-digit', minute: '2-digit', hour12: false }).split(':').map(Number)
-      const [th, tm] = String(s.v.time || '18:00').split(':').map(Number)
-      const late = (hh % 24) * 60 + mm - (th * 60 + tm)
-      if (late < 0 || late > 60) return res.status(200).json({ ok: true, skipped: 'not time yet: prints at ' + s.v.time })
-      if (s.v.range) range = s.v.range === 'all' ? 'all' : 'hair'
-      if (!s.v.on) return res.status(200).json({ ok: true, skipped: 'nightly printing is off' })
-      if (s.v.lastDay === today) return res.status(200).json({ ok: true, skipped: 'already printed today' })
+      const due = t => { const [th, tm] = String(t || '18:00').split(':').map(Number); const late = (hh % 24) * 60 + mm - (th * 60 + tm); return late >= 0 && late <= 60 }
+      const weekday = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(london({ weekday: 'short' }))
       if (!process.env.PRINTNODE_API_KEY) return res.status(200).json({ ok: true, skipped: 'no PrintNode key' })
-      const list = await make()
-      // mark the day first, so a second call can never print the list twice
-      await setState(s.shopId, { ...s.v, lastDay: today, lastAt: new Date().toISOString(), last: 'printing' })
-      let last
-      try {
-        if (!list.stores.length) last = 'nothing to send'
-        else if (device === 'zebra') {
-          const zpls = buildZpl(list)
-          if (zpls.length > MAX_LABELS) last = 'not printed: ' + zpls.length + ' labels is over the limit of ' + MAX_LABELS
-          else { const r = await sendToPrinter(zpls, 'CC top-up ' + today); last = 'printed ' + r.labels + ' label(s) on the Zebra, job ' + r.jobs.join(', ') }
-        } else { const d = buildPdf(list); const r = await sendPdf(d.pdf, 'CC top-up ' + today); last = 'printed ' + d.pages.length + ' page(s) on ' + r.printer + ', job ' + r.jobs.join(', ') }
-      } catch (e) { last = 'failed: ' + String(e.message).slice(0, 160) }
-      await setState(s.shopId, { ...s.v, lastDay: today, lastAt: new Date().toISOString(), last, lastSummary: summary(list) })
-      console.log('topup cron', last, JSON.stringify(summary(list)))
-      return res.status(200).json({ ok: true, result: last, ...summary(list) })
+      // 1. the store top-up list
+      if (!due(s0.v.time)) out.topup = 'not time yet: prints at ' + s0.v.time
+      else if (!s0.v.on) out.topup = 'nightly printing is off'
+      else if (s0.v.lastDay === today) out.topup = 'already printed today'
+      else {
+        if (s0.v.range) range = s0.v.range === 'all' ? 'all' : 'hair'
+        const list = buildList(await loadVariants(), { max, range })
+        // mark the day first, so a second call can never print the list twice
+        let v = (await state()).v
+        await setState(s0.shopId, { ...v, lastDay: today, lastAt: new Date().toISOString(), last: 'printing' })
+        let last
+        try {
+          if (!list.stores.length) last = 'nothing to send'
+          else if (device === 'zebra') {
+            const zpls = buildZpl(list)
+            if (zpls.length > MAX_LABELS) last = 'not printed: ' + zpls.length + ' labels is over the limit of ' + MAX_LABELS
+            else { const r = await sendToPrinter(zpls, 'CC top-up ' + today); last = 'printed ' + r.labels + ' label(s) on the Zebra, job ' + r.jobs.join(', ') }
+          } else { const d = buildPdf(list); const r = await sendPdf(d.pdf, 'CC top-up ' + today); last = 'printed ' + d.pages.length + ' page(s) on ' + r.printer + ', job ' + r.jobs.join(', ') }
+        } catch (e) { last = 'failed: ' + String(e.message).slice(0, 160) }
+        v = (await state()).v
+        await setState(s0.shopId, { ...v, lastDay: today, lastAt: new Date().toISOString(), last, lastSummary: summary(list) })
+        console.log('topup cron', last, JSON.stringify(summary(list)))
+        out.topup = last
+      }
+      // 2. orders worked from a supplier's order sheet
+      for (const cfg of Object.values(SHEETS)) {
+        const c = { on: false, time: '07:00', day: 'daily', ...((s0.v.sheets || {})[cfg.slug] || {}) }
+        if (!c.on) { out[cfg.slug] = 'automatic printing is off'; continue }
+        if (c.day !== 'daily' && Number(c.day) !== weekday) { out[cfg.slug] = 'not its day'; continue }
+        if (!due(c.time)) { out[cfg.slug] = 'not time yet: prints at ' + c.time; continue }
+        if (c.lastDay === today) { out[cfg.slug] = 'already printed today'; continue }
+        const save = async patch => { const v = (await state()).v; await setState(s0.shopId, { ...v, sheets: { ...(v.sheets || {}), [cfg.slug]: { ...((v.sheets || {})[cfg.slug] || c), ...patch } } }) }
+        await save({ lastDay: today, lastAt: new Date().toISOString(), last: 'printing' })
+        let last
+        try {
+          const list = await makeSheet(cfg)
+          if (!list.stores.length) last = 'nothing needed'
+          else { const d = buildSheetPdf(list); const r = await sendPdf(d.pdf, 'CC order ' + cfg.name + ' ' + today); last = 'printed ' + d.pages.length + ' page(s) on ' + r.printer + ', job ' + r.jobs.join(', ') }
+        } catch (e) { last = 'failed: ' + String(e.message).slice(0, 160) }
+        await save({ last })
+        console.log('sheet cron', cfg.slug, last)
+        out[cfg.slug] = last
+      }
+      return res.status(200).json({ ok: true, ...out })
     }
     return res.status(400).json({ ok: false, error: 'unknown job: use job=preview, print, status, start or stop' })
   } catch (e) { return res.status(500).json({ ok: false, error: String(e.message || e) }) }

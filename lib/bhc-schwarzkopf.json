@@ -1,0 +1,1989 @@
+{
+"slug": "bhc-schwarzkopf",
+"name": "BHC Schwarzkopf",
+"source": "BHC Schwarzkopf order sheet Nov/Dec 2026 (Direct, CC offer). Lines with no skus are not in Shopify yet and are never ordered.",
+"lines": [
+{
+"row": 11,
+"code": "2844530",
+"barcode": "7332531080460",
+"brand": "Live",
+"desc": "LIVE Silver Shampoo 200ml UK",
+"section": "Live Shampoo",
+"case": 6,
+"cost": 13.89,
+"skus": [
+"7332531080460"
+]
+},
+{
+"row": 12,
+"code": "3069933",
+"barcode": "9000101222999",
+"brand": "Live",
+"desc": "Live Purple Shampoo UK",
+"section": "Live Shampoo",
+"case": 6,
+"cost": 13.89,
+"skus": []
+},
+{
+"row": 14,
+"code": "2803338",
+"barcode": "5012583205401",
+"brand": "Live",
+"desc": "LC UB 098 Steel Silver FG UK",
+"section": "LIVE Semi-permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583205401"
+]
+},
+{
+"row": 15,
+"code": "3067503",
+"barcode": "5012583207427",
+"brand": "Live",
+"desc": "LIVE Colour Moment 010 Charcoal Brunette UK",
+"section": "LIVE Semi-permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583213697"
+]
+},
+{
+"row": 16,
+"code": "3067780",
+"barcode": "5012583214311",
+"brand": "Live",
+"desc": "LIVE Colour Moment 095 Cobalt Blue UK",
+"section": "LIVE Semi-permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583203513"
+]
+},
+{
+"row": 17,
+"code": "3067781",
+"barcode": "4015100816808",
+"brand": "Live",
+"desc": "LIVE Colour Moment 097 Sea Mermaid UK",
+"section": "LIVE Semi-permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583214298"
+]
+},
+{
+"row": 18,
+"code": "3067779",
+"barcode": "5012583203506",
+"brand": "Live",
+"desc": "LIVE Colour Moment 094 Purple Punk UK",
+"section": "LIVE Semi-permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583203506"
+]
+},
+{
+"row": 19,
+"code": "3067585",
+"barcode": "5012583203209",
+"brand": "Live",
+"desc": "LIVE Colour Moment 092 Pillar Box Red UK",
+"section": "LIVE Semi-permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583203209"
+]
+},
+{
+"row": 20,
+"code": "3067509",
+"barcode": "NEW",
+"brand": "Live",
+"desc": "LIVE Colour Moment 065 Spicy Rum",
+"section": "LIVE Semi-permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": []
+},
+{
+"row": 21,
+"code": "3067776",
+"barcode": "5012583203490",
+"brand": "Live",
+"desc": "LIVE Colour Moment 093 Shocking Pink",
+"section": "LIVE Semi-permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583203490"
+]
+},
+{
+"row": 22,
+"code": "2803333",
+"barcode": "5012583203193",
+"brand": "Live",
+"desc": "LC UB 091 Rasp Rebel FG UK",
+"section": "LIVE Semi-permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583203193"
+]
+},
+{
+"row": 23,
+"code": "2931035",
+"barcode": "5012583212218",
+"brand": "Live",
+"desc": "LC UB 085 Vibrant Orange UK FG",
+"section": "LIVE Semi-permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583212218"
+]
+},
+{
+"row": 24,
+"code": "3067505",
+"barcode": "5012583213116",
+"brand": "Live",
+"desc": "LIVE Colour Moment 024 Vivid Green UK",
+"section": "LIVE Semi-permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583213116"
+]
+},
+{
+"row": 25,
+"code": "3067506",
+"barcode": "5012583213079",
+"brand": "Live",
+"desc": "LIVE Colour Moment 025 Dusty Rose UK",
+"section": "LIVE Semi-permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583213079"
+]
+},
+{
+"row": 26,
+"code": "3067502",
+"barcode": "5012583213093",
+"brand": "Live",
+"desc": "LIVE Colour Moment 026 Dark Red",
+"section": "LIVE Semi-permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": []
+},
+{
+"row": 27,
+"code": "2880344",
+"barcode": "5012583207719",
+"brand": "Live",
+"desc": "LC UB P121 PP DenimSteel UK FG",
+"section": "LIVE Semi-permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583207719"
+]
+},
+{
+"row": 28,
+"code": "2880200",
+"barcode": "5012583207733",
+"brand": "Live",
+"desc": "LC UB L120 PP LilacCrush UK FG",
+"section": "LIVE Semi-permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583207733"
+]
+},
+{
+"row": 29,
+"code": "2880343",
+"barcode": "5012583207771",
+"brand": "Live",
+"desc": "LC UB P123 PP Rose Gold UK FG",
+"section": "LIVE Semi-permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583207771"
+]
+},
+{
+"row": 31,
+"code": "3067630",
+"barcode": "5012583205616",
+"brand": "Live",
+"desc": "Live Intense Colour U71 Metallic Silver UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583205616"
+]
+},
+{
+"row": 32,
+"code": "3067757",
+"barcode": "5012583205609",
+"brand": "Live",
+"desc": "Live Intense Colour U67 Blue Mercury UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583205609"
+]
+},
+{
+"row": 33,
+"code": "3067772",
+"barcode": "5012583205623",
+"brand": "Live",
+"desc": "Live Intense Colour U69 Amethyst Chrome UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583205623"
+]
+},
+{
+"row": 34,
+"code": "2947752",
+"barcode": "5012583206941",
+"brand": "Live",
+"desc": "Live Intense UM U72 Dusty Silver (FG) UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583206941"
+]
+},
+{
+"row": 35,
+"code": "3067771",
+"barcode": "5012583208303",
+"brand": "Live",
+"desc": "Live Intense Colour U68 Ruby Glaze UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583208303"
+]
+},
+{
+"row": 36,
+"code": "3067773",
+"barcode": "5012583208280",
+"brand": "Live",
+"desc": "Live Intense Colour U75 Midnight Jade UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583208280"
+]
+},
+{
+"row": 37,
+"code": "3067769",
+"barcode": "5012583002642",
+"brand": "Live",
+"desc": "LIVE Intense Bleach 00A Absolute Platinum",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583002642"
+]
+},
+{
+"row": 38,
+"code": "2924237",
+"barcode": "5012583212171",
+"brand": "Live",
+"desc": "Live IntenseBL B14  Sparkling Blonde UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583212171"
+]
+},
+{
+"row": 39,
+"code": "3067770",
+"barcode": "5012583202448",
+"brand": "Live",
+"desc": "LIVE Intense Bleach 00B Max Blonde",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583202448"
+]
+},
+{
+"row": 40,
+"code": "2861696",
+"barcode": "5012583211709",
+"brand": "Live",
+"desc": "LC XXL Powder BlBolBlond UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": []
+},
+{
+"row": 41,
+"code": "3067609",
+"barcode": "5012583213673",
+"brand": "Live",
+"desc": "LIVE Intense Bleach 00H Highlight Kit",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583213673"
+]
+},
+{
+"row": 42,
+"code": "3067756",
+"barcode": "5012583212133",
+"brand": "Live",
+"desc": "Live Intense Colour B11 Frosty Blonde UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583212133"
+]
+},
+{
+"row": 43,
+"code": "3069029",
+"barcode": "5012583212195",
+"brand": "Live",
+"desc": "Live Intense Colour B16 Honey Blonde UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583212195"
+]
+},
+{
+"row": 44,
+"code": "2924240",
+"barcode": "5012583212232",
+"brand": "Live",
+"desc": "Live Intense BL B13 Pearl Blonde UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583212232"
+]
+},
+{
+"row": 45,
+"code": "3069932",
+"barcode": "5012583212270",
+"brand": "Live",
+"desc": "Live Intense Colour B15 Platinum Blonde UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583212270"
+]
+},
+{
+"row": 46,
+"code": "2880345",
+"barcode": "5012583211723",
+"brand": "Live",
+"desc": "Live Intense XXL Toner Soft Blonde UK FG",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583211723"
+]
+},
+{
+"row": 47,
+"code": "3067791",
+"barcode": "5012583211747",
+"brand": "Live",
+"desc": "LIVE Blonde Perfector Toner T1 Ice White",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583211747"
+]
+},
+{
+"row": 48,
+"code": "3067755",
+"barcode": "5012583204985",
+"brand": "Live",
+"desc": "Live Intense Colour 109 Cool Rose UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583204985"
+]
+},
+{
+"row": 49,
+"code": "2942449",
+"barcode": "5012583205005",
+"brand": "Live",
+"desc": "LIVE Intense 104 Cool Lilac UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583205005"
+]
+},
+{
+"row": 50,
+"code": "3067633",
+"barcode": "5012583206064",
+"brand": "Live",
+"desc": "Live Intense Colour 105 Mauve Kiss",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583206064"
+]
+},
+{
+"row": 51,
+"code": "3067746",
+"barcode": "5012583002826",
+"brand": "Live",
+"desc": "Live Intense Colour Deep Black 099 UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583002826"
+]
+},
+{
+"row": 52,
+"code": "3067625",
+"barcode": "5012583002819",
+"brand": "Live",
+"desc": "Live Cosmic Blue 090 Cosmic Blue UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583002819"
+]
+},
+{
+"row": 53,
+"code": "3067753",
+"barcode": "5012583002703",
+"brand": "Live",
+"desc": "Live Intense Colour Real Red 035 UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583002703"
+]
+},
+{
+"row": 54,
+"code": "3067775",
+"barcode": "5012583002796",
+"brand": "Live",
+"desc": "LIVE Intense Colour 087 Mystic Violet UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583002796"
+]
+},
+{
+"row": 55,
+"code": "3067751",
+"barcode": "5012583002734",
+"brand": "Live",
+"desc": "Live Intense Colour 043 Red Passion",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583002734"
+]
+},
+{
+"row": 56,
+"code": "3067747",
+"barcode": "5012583002802",
+"brand": "Live",
+"desc": "Live Intense Colour 089 Bitter Sweet Chocolate",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583002802"
+]
+},
+{
+"row": 57,
+"code": "3067750",
+"barcode": "5012583201649",
+"brand": "Live",
+"desc": "Live Intense Colour 880 Tempting Chocolate UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583201649"
+]
+},
+{
+"row": 58,
+"code": "3067748",
+"barcode": "5012583203599",
+"brand": "Live",
+"desc": "Live Intense Colour Urban Brown 088 UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583203599"
+]
+},
+{
+"row": 59,
+"code": "2949622",
+"barcode": "5012583203582",
+"brand": "Live",
+"desc": "LC 086 Pure Purple (FG) UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583203582"
+]
+},
+{
+"row": 60,
+"code": "3067749",
+"barcode": "5012583002758",
+"brand": "Live",
+"desc": "Live Intense Colour 046 Cyber Purple",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583002758"
+]
+},
+{
+"row": 61,
+"code": "3067754",
+"barcode": "5012583204879",
+"brand": "Live",
+"desc": "Live Intense Colour 030 Mango Twist UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583204879"
+]
+},
+{
+"row": 62,
+"code": "3067676",
+"barcode": "5410091652265",
+"brand": "Live",
+"desc": "Live Intense Colour L76 Ultra Violet UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5410091652265"
+]
+},
+{
+"row": 63,
+"code": "3067677",
+"barcode": "5012583207412",
+"brand": "Live",
+"desc": "Live Intense Colour L74 Tangerine Twist",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583207412"
+]
+},
+{
+"row": 64,
+"code": "3067678",
+"barcode": "5012583207399",
+"brand": "Live",
+"desc": "Live Intenese Colour L75 Deep Red",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583207399"
+]
+},
+{
+"row": 65,
+"code": "3067606",
+"barcode": "5012583215043",
+"brand": "Live",
+"desc": "Live Intenese Colour L68 Volcanic Blaze",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583213857"
+]
+},
+{
+"row": 66,
+"code": "3067508",
+"barcode": "5012583214328",
+"brand": "Live",
+"desc": "Live Intense Colour L61 Nude Bronde",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": []
+},
+{
+"row": 67,
+"code": "3067595",
+"barcode": "5012583214465",
+"brand": "Live",
+"desc": "Live Intense Colour 890 Espresso Martini UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583213819"
+]
+},
+{
+"row": 68,
+"code": "RL",
+"barcode": "5012583211303",
+"brand": "Live",
+"desc": "LIVE Intense Deep Coral 077 UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583211303"
+]
+},
+{
+"row": 69,
+"code": "RL",
+"barcode": "5012583212294",
+"brand": "Live",
+"desc": "LIVE Intense Berry Blue UK",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583212294"
+]
+},
+{
+"row": 70,
+"code": "3067596",
+"barcode": "7332531133449",
+"brand": "Live",
+"desc": "LIVE Intense Colour 049 Cinnamon Cookie Butter",
+"section": "LIVE Permanent Colour",
+"case": 3,
+"cost": 13.75,
+"skus": [
+"5012583213833"
+]
+},
+{
+"row": 72,
+"code": "3069917",
+"barcode": "NEW",
+"brand": "Live",
+"desc": "LC GG Cayenne Copper UK",
+"section": "Hair Color Gloss",
+"case": 6,
+"cost": 22.99,
+"skus": []
+},
+{
+"row": 73,
+"code": "3069919",
+"barcode": "NEW",
+"brand": "Live",
+"desc": "LC GG Onyx UK",
+"section": "Hair Color Gloss",
+"case": 6,
+"cost": 22.99,
+"skus": []
+},
+{
+"row": 74,
+"code": "3069931",
+"barcode": "NEW",
+"brand": "Live",
+"desc": "LC GG Strawberry Soda UK",
+"section": "Hair Color Gloss",
+"case": 6,
+"cost": 22.99,
+"skus": []
+},
+{
+"row": 75,
+"code": "3069920",
+"barcode": "NEW",
+"brand": "Live",
+"desc": "LC GG Sheer Silk UK",
+"section": "Hair Color Gloss",
+"case": 6,
+"cost": 22.99,
+"skus": []
+},
+{
+"row": 76,
+"code": "3068078",
+"barcode": "NEW",
+"brand": "Live",
+"desc": "LC GG Cherry Cola UK",
+"section": "Hair Color Gloss",
+"case": 6,
+"cost": 22.99,
+"skus": []
+},
+{
+"row": 77,
+"code": "3069025",
+"barcode": "NEW",
+"brand": "Live",
+"desc": "LC GG Icy Pearl UK",
+"section": "Hair Color Gloss",
+"case": 6,
+"cost": 22.99,
+"skus": []
+},
+{
+"row": 79,
+"code": "2778601",
+"barcode": "Relaunch",
+"brand": "Live",
+"desc": "LC CCM Pearl UK",
+"section": "LIVE Temporary Colour",
+"case": 6,
+"cost": 19.99,
+"skus": []
+},
+{
+"row": 80,
+"code": "3069026",
+"barcode": "Relaunch",
+"brand": "Live",
+"desc": "Live Custom Drops Ice Silver UK",
+"section": "LIVE Temporary Colour",
+"case": 6,
+"cost": 19.99,
+"skus": []
+},
+{
+"row": 81,
+"code": "2793540",
+"barcode": "Relaunch",
+"brand": "Live",
+"desc": "LC Drops Blue UK",
+"section": "LIVE Temporary Colour",
+"case": 6,
+"cost": 19.99,
+"skus": []
+},
+{
+"row": 82,
+"code": "2793541",
+"barcode": "Relaunch",
+"brand": "Live",
+"desc": "LC Drops Pink UK",
+"section": "LIVE Temporary Colour",
+"case": 6,
+"cost": 19.99,
+"skus": []
+},
+{
+"row": 83,
+"code": "3068086",
+"barcode": "Relaunch",
+"brand": "Live",
+"desc": "LIVE Custom Drops Orchid Purple UK",
+"section": "LIVE Temporary Colour",
+"case": 6,
+"cost": 19.99,
+"skus": []
+},
+{
+"row": 84,
+"code": "3068089",
+"barcode": "Relaunch",
+"brand": "Live",
+"desc": "LIVE Custom Drops Fiery Red UK",
+"section": "LIVE Temporary Colour",
+"case": 6,
+"cost": 19.99,
+"skus": []
+},
+{
+"row": 85,
+"code": "3069027",
+"barcode": "Relaunch",
+"brand": "Live",
+"desc": "LIVE Custom Drops Petal Pink UK",
+"section": "LIVE Temporary Colour",
+"case": 6,
+"cost": 19.99,
+"skus": []
+},
+{
+"row": 87,
+"code": "3083503",
+"barcode": "5012583212027",
+"brand": "Schwarzkopf",
+"desc": "SK Oleo 10-50 Light Ash Blonde UK",
+"section": "Schwarzkopf Oleo Intense Hair Color Range",
+"case": 3,
+"cost": 11.99,
+"skus": [
+"5012583208341",
+"5012583212027"
+]
+},
+{
+"row": 88,
+"code": "3083501",
+"barcode": "05012583782735",
+"brand": "Schwarzkopf",
+"desc": "SK Oleo 1-10 Intense Black (FG) UK",
+"section": "Schwarzkopf Oleo Intense Hair Color Range",
+"case": 3,
+"cost": 11.99,
+"skus": [
+"5012583214977",
+"5012583211952"
+]
+},
+{
+"row": 89,
+"code": "3083496",
+"barcode": "05012583782742",
+"brand": "Schwarzkopf",
+"desc": "SK Oleo 3-10 Deep Brown (FG) UK",
+"section": "Schwarzkopf Oleo Intense Hair Color Range",
+"case": 3,
+"cost": 11.99,
+"skus": [
+"5012583208440",
+"5012583211976"
+]
+},
+{
+"row": 90,
+"code": "2871137",
+"barcode": "05012583782759",
+"brand": "Schwarzkopf",
+"desc": "SK Oleo 3-22 MidnghtBdeaux FG UK",
+"section": "Schwarzkopf Oleo Intense Hair Color Range",
+"case": 3,
+"cost": 11.99,
+"skus": [
+"5012583211389",
+"5012583212072"
+]
+},
+{
+"row": 91,
+"code": "2874058",
+"barcode": "5012583212072",
+"brand": "Schwarzkopf",
+"desc": "SK Oleo 3-33 Rich Plum FG UK",
+"section": "Schwarzkopf Oleo Intense Hair Color Range",
+"case": 3,
+"cost": 11.99,
+"skus": [
+"5012583211341",
+"5012583212065"
+]
+},
+{
+"row": 92,
+"code": "2871138",
+"barcode": "5012583212065",
+"brand": "Schwarzkopf",
+"desc": "SK Oleo 4-18 Mokka Brown FG UK",
+"section": "Schwarzkopf Oleo Intense Hair Color Range",
+"case": 3,
+"cost": 11.99,
+"skus": [
+"5012583208365",
+"5012583211983"
+]
+},
+{
+"row": 93,
+"code": "3083498",
+"barcode": "5012583211990",
+"brand": "Schwarzkopf",
+"desc": "SK Oleo 4-50 Stone Brown UK",
+"section": "Schwarzkopf Oleo Intense Hair Color Range",
+"case": 3,
+"cost": 11.99,
+"skus": [
+"5012583214915"
+]
+},
+{
+"row": 94,
+"code": "3083504",
+"barcode": "9000100814737",
+"brand": "Schwarzkopf",
+"desc": "SK Oleo 5-92 Bright Red UK",
+"section": "Schwarzkopf Oleo Intense Hair Color Range",
+"case": 3,
+"cost": 11.99,
+"skus": [
+"5012583215035"
+]
+},
+{
+"row": 95,
+"code": "2871139",
+"barcode": "5012583211990",
+"brand": "Schwarzkopf",
+"desc": "SK Oleo 4-23 Burgundy Red FG UK",
+"section": "Schwarzkopf Oleo Intense Hair Color Range",
+"case": 3,
+"cost": 11.99,
+"skus": [
+"5012583208402",
+"5012583211990"
+]
+},
+{
+"row": 96,
+"code": "3083506",
+"barcode": "5012583212003",
+"brand": "Schwarzkopf",
+"desc": "SK Oleo 4-60 Gold Brown (FG) UK",
+"section": "Schwarzkopf Oleo Intense Hair Color Range",
+"case": 3,
+"cost": 11.99,
+"skus": [
+"5012583208389",
+"5012583215059"
+]
+},
+{
+"row": 97,
+"code": "3083502",
+"barcode": "5012583212058",
+"brand": "Schwarzkopf",
+"desc": "SK Oleo 4-86 Chocolate Brown (FG) UK",
+"section": "Schwarzkopf Oleo Intense Hair Color Range",
+"case": 3,
+"cost": 11.99,
+"skus": [
+"5012583210023",
+"5012583214991"
+]
+},
+{
+"row": 98,
+"code": "3083499",
+"barcode": "5012583212041",
+"brand": "Schwarzkopf",
+"desc": "SK Oleo 5-10 Frosty Brown (FG) UK",
+"section": "Schwarzkopf Oleo Intense Hair Color Range",
+"case": 3,
+"cost": 11.99,
+"skus": [
+"5012583210047",
+"5012583212041"
+]
+},
+{
+"row": 99,
+"code": "3083497",
+"barcode": "5012583212034",
+"brand": "Schwarzkopf",
+"desc": "SK Oleo 5-77 Glossy Auburn (FG) UK",
+"section": "Schwarzkopf Oleo Intense Hair Color Range",
+"case": 3,
+"cost": 11.99,
+"skus": [
+"5012583210009",
+"5012583214892"
+]
+},
+{
+"row": 100,
+"code": "3083505",
+"barcode": "5012583212010",
+"brand": "Schwarzkopf",
+"desc": "SK Oleo 8-05 Beige Blonde (FG) UK",
+"section": "Schwarzkopf Oleo Intense Hair Color Range",
+"case": 3,
+"cost": 11.99,
+"skus": [
+"5012583208426",
+"5012583215073"
+]
+},
+{
+"row": 101,
+"code": "2867261",
+"barcode": "5012583212096",
+"brand": "Schwarzkopf",
+"desc": "SK Oleo 8-86 GoldDarkBlond FG UK",
+"section": "Schwarzkopf Oleo Intense Hair Color Range",
+"case": 3,
+"cost": 11.99,
+"skus": [
+"5012583211327",
+"5012583212096"
+]
+},
+{
+"row": 102,
+"code": "2960552",
+"barcode": "5012583212478",
+"brand": "Schwarzkopf",
+"desc": "SK Oleo 6-10 Espresso Blonde UK",
+"section": "Schwarzkopf Oleo Intense Hair Color Range",
+"case": 3,
+"cost": 11.99,
+"skus": [
+"5012583210061"
+]
+},
+{
+"row": 104,
+"code": "2993106",
+"barcode": "5012583212676",
+"brand": "Palette",
+"desc": "Palette DLX 1-0 Deep Black (b) UK",
+"section": "Palette Hair Color Range",
+"case": 3,
+"cost": 7.8,
+"skus": [
+"5012583212676"
+]
+},
+{
+"row": 105,
+"code": "2993104",
+"barcode": "5012583212713",
+"brand": "Palette",
+"desc": "Palette DLX 1-1 Blue Black (b) UK",
+"section": "Palette Hair Color Range",
+"case": 3,
+"cost": 7.8,
+"skus": [
+"5012583212713"
+]
+},
+{
+"row": 106,
+"code": "2976783",
+"barcode": "5012583212614",
+"brand": "Palette",
+"desc": "Palette DLX 3-65 Chocolate Brown GB",
+"section": "Palette Hair Color Range",
+"case": 3,
+"cost": 7.8,
+"skus": [
+"5012583212614"
+]
+},
+{
+"row": 107,
+"code": "2976781",
+"barcode": "5012583212553",
+"brand": "Palette",
+"desc": "Palette DLX 4-0 Mid Brwn/Dark Brwn GB",
+"section": "Palette Hair Color Range",
+"case": 3,
+"cost": 7.8,
+"skus": [
+"5012583212553"
+]
+},
+{
+"row": 108,
+"code": "2976782",
+"barcode": "5012583212591",
+"brand": "Palette",
+"desc": "Palette DLX 3-0 Dark Brown GB",
+"section": "Palette Hair Color Range",
+"case": 3,
+"cost": 7.8,
+"skus": [
+"5012583212591"
+]
+},
+{
+"row": 109,
+"code": "2976786",
+"barcode": "5012583212690",
+"brand": "Palette",
+"desc": "Palette DLX 6-0 Light Brown GB",
+"section": "Palette Hair Color Range",
+"case": 3,
+"cost": 7.8,
+"skus": [
+"5012583212690"
+]
+},
+{
+"row": 110,
+"code": "2976640",
+"barcode": "5012583212539",
+"brand": "Palette",
+"desc": "Palette DLX 7-0 MidBlo GB",
+"section": "Palette Hair Color Range",
+"case": 3,
+"cost": 7.8,
+"skus": [
+"5012583212539"
+]
+},
+{
+"row": 111,
+"code": "2976784",
+"barcode": "5012583212652",
+"brand": "Palette",
+"desc": "Palette DLX 5-68 Golden Chestnut GB",
+"section": "Palette Hair Color Range",
+"case": 3,
+"cost": 7.8,
+"skus": [
+"5012583212652"
+]
+},
+{
+"row": 113,
+"code": "2978312",
+"barcode": "5012583208006",
+"brand": "Schwarzkopf",
+"desc": "SK Brow Tint 1-1 Black (FG) UK",
+"section": "Brow Tint Color Range",
+"case": 3,
+"cost": 11.29,
+"skus": [
+"5012583208006"
+]
+},
+{
+"row": 114,
+"code": "2830166",
+"barcode": "5012583208020",
+"brand": "Schwarzkopf",
+"desc": "SK Brow Tint 5-1 Lght Br FG UK",
+"section": "Brow Tint Color Range",
+"case": 3,
+"cost": 11.29,
+"skus": [
+"5012583208020"
+]
+},
+{
+"row": 115,
+"code": "2978314",
+"barcode": "5012583208020",
+"brand": "Schwarzkopf",
+"desc": "SK Brow Tint 5-1 Light Br (FG) UK",
+"section": "Brow Tint Color Range",
+"case": 3,
+"cost": 11.29,
+"skus": [
+"5012583208020"
+]
+},
+{
+"row": 116,
+"code": "2830167",
+"barcode": "5012583208044",
+"brand": "Schwarzkopf",
+"desc": "SK Brow Tint 6-1 Dark Bl FG UK",
+"section": "Brow Tint Color Range",
+"case": 3,
+"cost": 11.29,
+"skus": [
+"5012583208044"
+]
+},
+{
+"row": 117,
+"code": "2978313",
+"barcode": "5012583208044",
+"brand": "Schwarzkopf",
+"desc": "SK Brow Tint 6-1 Dark Blonde (FG) UK",
+"section": "Brow Tint Color Range",
+"case": 3,
+"cost": 11.29,
+"skus": [
+"5012583208044"
+]
+},
+{
+"row": 118,
+"code": "2978315",
+"barcode": "5012583207986",
+"brand": "Schwarzkopf",
+"desc": "SK Brow Tint 4-1 Dark Br (FG) UK",
+"section": "Brow Tint Color Range",
+"case": 3,
+"cost": 11.29,
+"skus": [
+"5012583207986"
+]
+},
+{
+"row": 120,
+"code": "2872390",
+"barcode": "5410091733377",
+"brand": "Got2B",
+"desc": "g2b DRY SHP 200ml ExFrsh UK/ANZ",
+"section": "GOT2B",
+"case": 6,
+"cost": 9.79,
+"skus": [
+"5410091733377"
+]
+},
+{
+"row": 121,
+"code": "2872422",
+"barcode": "7332531063739",
+"brand": "Got2B",
+"desc": "g2b DRY SHP 200ml Ex Vol UK/ANZ",
+"section": "GOT2B",
+"case": 6,
+"cost": 9.79,
+"skus": [
+"7332531063739"
+]
+},
+{
+"row": 122,
+"code": "2872201",
+"barcode": "7332531063388",
+"brand": "Got2B",
+"desc": "g2b DRY SHP 200ml Texture UK",
+"section": "GOT2B",
+"case": 6,
+"cost": 9.79,
+"skus": [
+"7332531063388"
+]
+},
+{
+"row": 124,
+"code": "3049440",
+"barcode": "7332531063418",
+"brand": "Got2B",
+"desc": "g2b HSP 100ml Glued B Freeze UK",
+"section": "GOT2B",
+"case": 6,
+"cost": 9.79,
+"skus": [
+"7332531063418"
+]
+},
+{
+"row": 125,
+"code": "3048565",
+"barcode": "5012583105091",
+"brand": "Got2B",
+"desc": "g2b HSP 300ml BlastFreez UK/ANZ",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"5012583105091"
+]
+},
+{
+"row": 126,
+"code": "3048566",
+"barcode": "5012583105084",
+"brand": "Got2B",
+"desc": "g2b Gel 150ml NV GluSp UK/UA",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"5012583105084"
+]
+},
+{
+"row": 127,
+"code": "3048540",
+"barcode": "5012583203797",
+"brand": "Got2B",
+"desc": "g2b WAX 75ml Glued Spiking UK",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"5012583203797"
+]
+},
+{
+"row": 128,
+"code": "3048563",
+"barcode": "5012583206682",
+"brand": "Got2B",
+"desc": "g2b GEL 150ml Ultra Glued UK",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"5012583206682"
+]
+},
+{
+"row": 129,
+"code": "3049439",
+"barcode": "5012583212799",
+"brand": "Got2B",
+"desc": "g2b WAX Stick 50g Glued UK",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"5012583212799"
+]
+},
+{
+"row": 130,
+"code": "3050049",
+"barcode": "5012583213154",
+"brand": "Got2B",
+"desc": "g2b MS 150ml Un-glued Styling Remover UK",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"5012583213154"
+]
+},
+{
+"row": 131,
+"code": "3052975",
+"barcode": "5012583213673",
+"brand": "Got2B",
+"desc": "g2b WAX 12ml Glued Brow Lift UK",
+"section": "GOT2B",
+"case": 12,
+"cost": 38.78,
+"skus": [
+"5012583213673"
+]
+},
+{
+"row": 132,
+"code": "3048564",
+"barcode": "5012583210900",
+"brand": "Got2B",
+"desc": "g2b GEL 16ml Glued 4 Brows & Edges UK",
+"section": "GOT2B",
+"case": 12,
+"cost": 38.78,
+"skus": [
+"5012583210900"
+]
+},
+{
+"row": 133,
+"code": "2916954",
+"barcode": "5410091771478",
+"brand": "Got2B",
+"desc": "g2b GEL 16ml Glued4BE Waterproof UK",
+"section": "GOT2B",
+"case": 12,
+"cost": 38.78,
+"skus": [
+"5410091771478"
+]
+},
+{
+"row": 134,
+"code": "3048567",
+"barcode": "5410091774059",
+"brand": "Got2B",
+"desc": "g2b GEL 16ml Glued B&E Tint Black UK",
+"section": "GOT2B",
+"case": 12,
+"cost": 38.78,
+"skus": [
+"5410091774059"
+]
+},
+{
+"row": 135,
+"code": "3048562",
+"barcode": "5410091774073",
+"brand": "Got2B",
+"desc": "g2b GEL 16ml Glued B&E TintDarkBrown UK",
+"section": "GOT2B",
+"case": 12,
+"cost": 38.78,
+"skus": [
+"5410091774073"
+]
+},
+{
+"row": 137,
+"code": "2873262",
+"barcode": "7332531019330",
+"brand": "Got2B",
+"desc": "g2b PWD 10g Powderful UK/ANZ",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"7332531019330"
+]
+},
+{
+"row": 138,
+"code": "3059696",
+"barcode": "7332531008891",
+"brand": "Got2B",
+"desc": "g2b Paste 100ml NV Beach Matt UK",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"7332531008891"
+]
+},
+{
+"row": 139,
+"code": "2872387",
+"barcode": "96038802",
+"brand": "Got2B",
+"desc": "g2b Clay 75ml iStyler UK/AU/UA",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"96038802"
+]
+},
+{
+"row": 140,
+"code": "2892095",
+"barcode": "96060896",
+"brand": "Got2B",
+"desc": "got2b Oil-icious Styling Oil 50ml UK FG",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"96060896"
+]
+},
+{
+"row": 141,
+"code": "2872158",
+"barcode": "7332531097901",
+"brand": "Got2B",
+"desc": "g2b HSP 300ml Happy Hour UK",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"7332531097901"
+]
+},
+{
+"row": 142,
+"code": "3059682",
+"barcode": "5012583203261",
+"brand": "Got2B",
+"desc": "g2b HSP 200ml BeachMattSalt UK",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"5012583203261"
+]
+},
+{
+"row": 143,
+"code": "2872295",
+"barcode": "5012583201885",
+"brand": "Got2B",
+"desc": "g2b HSP 200ml Gard Angel UK/ANZ",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"5012583201885"
+]
+},
+{
+"row": 144,
+"code": "2872291",
+"barcode": "7332531063456",
+"brand": "Got2B",
+"desc": "g2b Mousse 250ml Volumaniac UK",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"7332531063456"
+]
+},
+{
+"row": 145,
+"code": "2870280",
+"barcode": "5012583211860",
+"brand": "Got2B",
+"desc": "g2b Hair Spray 300ml Volumaniac UK",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": []
+},
+{
+"row": 146,
+"code": "2872206",
+"barcode": "5012583204954",
+"brand": "Got2B",
+"desc": "g2b HSP 200ml PhenomMatt UK",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"5012583204954"
+]
+},
+{
+"row": 147,
+"code": "2872423",
+"barcode": "5012583204398",
+"brand": "Got2B",
+"desc": "g2b PASTE 100ml Phen Molding UK",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"5012583204398"
+]
+},
+{
+"row": 148,
+"code": "2872156",
+"barcode": "7332531074933",
+"brand": "Got2B",
+"desc": "g2b Clay 100ml Phenomenal UK",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"7332531074933"
+]
+},
+{
+"row": 149,
+"code": "2973928",
+"barcode": "5012583212492",
+"brand": "Got2B",
+"desc": "g2b dry SHP 150ml getFRESH Mist UK",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"5012583212492"
+]
+},
+{
+"row": 150,
+"code": "2973594",
+"barcode": "5012583204398",
+"brand": "Got2B",
+"desc": "g2b PASTE 100ml Phen Molding UK",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"5012583204398"
+]
+},
+{
+"row": 151,
+"code": "2893179",
+"barcode": "7332531112277",
+"brand": "Got2B",
+"desc": "g2b NA HSP 150ml HydBWave UK/AU",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"7332531112277"
+]
+},
+{
+"row": 152,
+"code": "2893709",
+"barcode": "5012583211921",
+"brand": "Got2B",
+"desc": "g2b TRT 200ml SmoothOperator UK",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"5012583211921"
+]
+},
+{
+"row": 153,
+"code": "2900500",
+"barcode": "5012583211945",
+"brand": "Got2B",
+"desc": "g2b HSP 150ml Def&Prot UK/ANZ",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"5012583211945"
+]
+},
+{
+"row": 154,
+"code": "3002038",
+"barcode": "5012583212331",
+"brand": "Got2B",
+"desc": "g2b HSP 200ml gotGLOSS Finish UK",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"5012583212331"
+]
+},
+{
+"row": 155,
+"code": "3002292",
+"barcode": "5012583212317",
+"brand": "Got2B",
+"desc": "g2b Cream 150ml gotGLOSS Primer UK",
+"section": "GOT2B",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"5012583212317"
+]
+},
+{
+"row": 157,
+"code": "NEW",
+"barcode": "5012583214252",
+"brand": "Got2B",
+"desc": "got2b CURLZ Moisturising Detangler",
+"section": "Got2b Curlz Range - New Afro Focused Range",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"5012583213215"
+]
+},
+{
+"row": 158,
+"code": "NEW",
+"barcode": "5012583214214",
+"brand": "Got2B",
+"desc": "got2b CURLZ Flexible Curl Mousse",
+"section": "Got2b Curlz Range - New Afro Focused Range",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"5012583213239"
+]
+},
+{
+"row": 159,
+"code": "NEW",
+"barcode": "5012583214238",
+"brand": "Got2B",
+"desc": "got2b CURLZ Defining Jelly",
+"section": "Got2b Curlz Range - New Afro Focused Range",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"5012583213192"
+]
+},
+{
+"row": 160,
+"code": "NEW",
+"barcode": "5012583214245",
+"brand": "Got2B",
+"desc": "got2b CURLZ Styling Cream",
+"section": "Got2b Curlz Range - New Afro Focused Range",
+"case": 6,
+"cost": 19.39,
+"skus": []
+},
+{
+"row": 161,
+"code": "NEW",
+"barcode": "5012583214269",
+"brand": "Got2B",
+"desc": "got2b CURLZ Refreshing Dry Oil Mist",
+"section": "Got2b Curlz Range - New Afro Focused Range",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"5012583213178"
+]
+},
+{
+"row": 162,
+"code": "NEW",
+"barcode": "5012583204732",
+"brand": "Got2B",
+"desc": "got2b CURLZ Twisted Curling Mousse",
+"section": "Got2b Curlz Range - New Afro Focused Range",
+"case": 6,
+"cost": 19.39,
+"skus": [
+"5012583204732"
+]
+},
+{
+"row": 164,
+"code": "2999953",
+"barcode": "5012583212959",
+"brand": "Schwarzkopf",
+"desc": "SK Balm 150ml Curl HL3 UK",
+"section": "Schwarzkopf Styling",
+"case": 6,
+"cost": 13.59,
+"skus": [
+"5012583212959"
+]
+},
+{
+"row": 165,
+"code": "2999940",
+"barcode": "5012583212898",
+"brand": "Schwarzkopf",
+"desc": "SK MOU 200ml Curl HL3 UK",
+"section": "Schwarzkopf Styling",
+"case": 6,
+"cost": 13.59,
+"skus": [
+"5012583212898"
+]
+},
+{
+"row": 166,
+"code": "3000024",
+"barcode": "5012583213031",
+"brand": "Schwarzkopf",
+"desc": "SK MS 200ml Volume HL4 UK",
+"section": "Schwarzkopf Styling",
+"case": 6,
+"cost": 13.59,
+"skus": [
+"5012583213031"
+]
+},
+{
+"row": 167,
+"code": "2999952",
+"barcode": "5012583212935",
+"brand": "Schwarzkopf",
+"desc": "SK MS 200ml Power Cashmere HL5 UK",
+"section": "Schwarzkopf Styling",
+"case": 6,
+"cost": 13.59,
+"skus": [
+"5012583212935"
+]
+},
+{
+"row": 168,
+"code": "2999951",
+"barcode": "5012583212911",
+"brand": "Schwarzkopf",
+"desc": "SK HSP 250ml Power Caffeine HL5 UK",
+"section": "Schwarzkopf Styling",
+"case": 6,
+"cost": 13.59,
+"skus": [
+"5012583212911"
+]
+},
+{
+"row": 169,
+"code": "2999939",
+"barcode": "5012583212874",
+"brand": "Schwarzkopf",
+"desc": "SK HSP 250ml Ultra HL4 UK",
+"section": "Schwarzkopf Styling",
+"case": 6,
+"cost": 13.59,
+"skus": [
+"5012583212874"
+]
+},
+{
+"row": 170,
+"code": "2999938",
+"barcode": "5012583212836",
+"brand": "Schwarzkopf",
+"desc": "SK HSP 250ml Volume HL4 UK",
+"section": "Schwarzkopf Styling",
+"case": 6,
+"cost": 13.59,
+"skus": []
+},
+{
+"row": 171,
+"code": "3000020",
+"barcode": "05012583515258",
+"brand": "Schwarzkopf",
+"desc": "SK SPR 250ml Heat Protection Set UK",
+"section": "Schwarzkopf Styling",
+"case": 6,
+"cost": 13.59,
+"skus": []
+},
+{
+"row": 172,
+"code": "3000023",
+"barcode": "05012583515296",
+"brand": "Schwarzkopf",
+"desc": "SK SPR 150ml Lovely Long Set UK",
+"section": "Schwarzkopf Styling",
+"case": 6,
+"cost": 16.99,
+"skus": []
+},
+{
+"row": 173,
+"code": "3000022",
+"barcode": "5012583212997",
+"brand": "Schwarzkopf",
+"desc": "SK CREAM 150ml Sleeky Smooth UK",
+"section": "Schwarzkopf Styling",
+"case": 6,
+"cost": 16.99,
+"skus": [
+"5012583212997"
+]
+},
+{
+"row": 174,
+"code": "3000021",
+"barcode": "5012583213055",
+"brand": "Schwarzkopf",
+"desc": "SK HSP 250ml Holding Me Strongly UK",
+"section": "Schwarzkopf Styling",
+"case": 6,
+"cost": 16.99,
+"skus": [
+"5012583213055"
+]
+},
+{
+"row": 175,
+"code": "2946135",
+"barcode": "5012583212416",
+"brand": "Schwarzkopf",
+"desc": "SK Hair Gloss 150 ml Cacao Brown UK",
+"section": "Schwarzkopf Styling",
+"case": 6,
+"cost": 19.99,
+"skus": [
+"5012583212416"
+]
+},
+{
+"row": 176,
+"code": "2946134",
+"barcode": "5012583212393",
+"brand": "Schwarzkopf",
+"desc": "SK Hair Gloss 150 ml Beige Blonde UK",
+"section": "Schwarzkopf Styling",
+"case": 6,
+"cost": 19.99,
+"skus": [
+"5012583212393"
+]
+},
+{
+"row": 177,
+"code": "2946481",
+"barcode": "5012583212379",
+"brand": "Schwarzkopf",
+"desc": "SK Hair Gloss 150 ml Light Brown UK",
+"section": "Schwarzkopf Styling",
+"case": 6,
+"cost": 19.99,
+"skus": [
+"5012583212379"
+]
+}
+]
+}
