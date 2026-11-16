@@ -42,6 +42,16 @@ export default async function handler(req, res) {
         if (KOREAN.test((it.vendor || '') + ' ' + (it.title || '') + ' ' + (it.type || ''))) add(korean, it.handle || it.title, { title: it.title, handle: it.handle, brand, cat: c.name }, o, it, rev)
       }
     }
+    // When customers order (UK time): by hour and weekday, orders and sales
+    const fmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', hourCycle: 'h23', weekday: 'short' })
+    const byHour = Array.from({ length: 24 }, () => ({ orders: 0, rev: 0 })), byDay = { Mon: { orders: 0, rev: 0 }, Tue: { orders: 0, rev: 0 }, Wed: { orders: 0, rev: 0 }, Thu: { orders: 0, rev: 0 }, Fri: { orders: 0, rev: 0 }, Sat: { orders: 0, rev: 0 }, Sun: { orders: 0, rev: 0 } }
+    for (const o of orders) {
+      const parts = fmt.formatToParts(new Date(o.createdAt)); const h = parseInt(parts.find(x => x.type === 'hour').value, 10), d = parts.find(x => x.type === 'weekday').value
+      const rev = o.items.reduce((t, it) => t + (it.price || 0) * (it.qty || 1), 0)
+      byHour[h].orders++; byHour[h].rev += rev
+      if (byDay[d]) { byDay[d].orders++; byDay[d].rev += rev }
+    }
+    const when = { byHour: byHour.map((x, h) => ({ hour: h, orders: x.orders, rev: r2(x.rev) })), byDay: Object.entries(byDay).map(([day, x]) => ({ day, orders: x.orders, rev: r2(x.rev) })) }
     const fin = b => {
       const buyers = b.custs.size
       const repeat = Object.values(b.perCust).filter(s => s.size >= 2).length
@@ -56,7 +66,7 @@ export default async function handler(req, res) {
     const due = {}
     for (const r of (reorders.rows || [])) { const d = due[r.catName] || (due[r.catName] = { due: 0, upcoming: 0 }); r.due ? d.due++ : d.upcoming++ }
     res.status(200).json({
-      ok: true, windowDays: 200, builtAt: snap.updatedAt, orders: totalOrders, revenue: r2(totalRev),
+      ok: true, windowDays: 200, when, builtAt: snap.updatedAt, orders: totalOrders, revenue: r2(totalRev),
       categories: top(cats, 20), brands: top(brands, 30), products: top(prods, 25), repeatProducts: Object.values(prods).map(fin).filter(p => p.buyers >= 15).sort((a, b) => b.repeatPct - a.repeatPct).slice(0, 15),
       trending, risers, korean: top(korean, 25), koreanSummary: (() => { const t = Object.values(korean).map(fin); return { products: t.length, rev: r2(t.reduce((s, p) => s + p.rev, 0)), sharePct: totalRev ? r2(t.reduce((s, p) => s + p.rev, 0) / totalRev * 100) : 0, rev30: r2(t.reduce((s, p) => s + p.rev30, 0)) } })(),
       reordersDue: due, reorderTotals: { due: reorders.due || 0, rows: (reorders.rows || []).length },
