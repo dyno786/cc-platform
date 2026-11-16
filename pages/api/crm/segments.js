@@ -13,6 +13,8 @@ export default async function handler(req, res) {
     const snap = await getJSON(PATHS.snapshot, null)
     if (!snap) return res.status(200).json({ ok: false, pending: true })
     const cc = customerCategories(snap)
+    const custs = Object.values(snap.customers)
+    const consent = { customersWithOrders: custs.length, withEmail: custs.filter(c => c.email).length, emailSubscribed: custs.filter(c => c.email && c.emailSub).length, smsSubscribed: custs.filter(c => c.smsSub).length, boughtAndSubscribed: custs.filter(c => c.emailSub && (cc[c.id] && Object.keys(cc[c.id]).length)).length }
     const q = req.query
     if (q.cat) {
       const rows = segmentMembers(snap, cc, { cat: q.cat, bucket: q.bucket, not: q.not, repeat: q.repeat === '1' })
@@ -36,6 +38,6 @@ export default async function handler(req, res) {
       }
       return row
     })
-    res.status(200).json({ ok: true, history: { from: snap.since, orders: snap.orders.length, customers: Object.keys(snap.customers).length }, buckets: BUCKETS, categories: cats })
+    res.status(200).json({ ok: true, consent, history: { from: snap.since, orders: snap.orders.length, customers: Object.keys(snap.customers).length }, buckets: BUCKETS, categories: cats })
   } catch (e) { res.status(500).json({ ok: false, error: String(e.message || e) }) }
 }
