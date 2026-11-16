@@ -2,8 +2,8 @@
 //   GET  /api/crm/reorder-wave                         today's plan: categories and how many are due (Tue/Thu/Sat)
 //   GET  /api/crm/reorder-wave?cat=dye&step=1          the email (HTML, subject) + audience for that category
 //   GET  /api/crm/reorder-wave?cat=dye&step=1&format=csv   audience as CSV (email,first_name,product)
-//   POST /api/crm/reorder-wave { cat, step, action:'tag' }   tags the audience in Shopify (reorder-<cat>[-final]) so AfterShip can segment on it; clears last wave's tag first
-//   POST /api/crm/reorder-wave { cat, step }           marks the audience as emailed so they are never sent it twice
+//   GET/POST ...&action=tag                             tags the audience in Shopify (reorder-<cat>[-final]) so AfterShip can segment on it; clears last wave's tag first
+//   GET/POST ...&action=mark                            marks the audience as emailed so they are never sent it twice
 import { getJSON, updateJSON, PATHS } from '../../../lib/crm/store'
 import { mergeSettings } from '../../../lib/crm/engine'
 import { CATEGORIES } from '../../../lib/crm/rules'
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
     if (!CATEGORIES.find(c => c.key === cat && c.reorder)) return res.status(400).json({ ok: false, error: 'Unknown reorder category' })
     const aud = waveAudience(snap, state, settingsRaw, cat, step)
 
-    if (req.method === 'POST' && src.action === 'tag') {
+    if (src.action === 'tag') {
       const tag = 'reorder-' + cat + (step === 3 ? '-final' : '')
       const gid = id => String(id).startsWith('gid://') ? String(id) : 'gid://shopify/Customer/' + id
       // clear the tag from last wave
@@ -54,7 +54,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, tag, cleared, tagged, of: aud.rows.length })
     }
 
-    if (req.method === 'POST') {
+    if (req.method === 'POST' || src.action === 'mark') {
       const ts = new Date().toISOString()
       const keys = {}; aud.rows.forEach(r => { keys[r.customerId] = r.key })
       await updateJSON(PATHS.state, {}, st => {
