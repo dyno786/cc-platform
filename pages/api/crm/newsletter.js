@@ -5,6 +5,7 @@ import { getJSON, PATHS } from '../../../lib/crm/store'
 import { mergeSettings } from '../../../lib/crm/engine'
 import { DAYS, EXTRA, checkDay, nightly, todayKey, SEGMENT_FOR } from '../../../lib/crm/newsletter'
 import { SEGMENTS } from '../../../lib/crm/newsletterData'
+import { utm } from '../../../lib/crm/messages'
 
 export const config = { maxDuration: 60 }
 
@@ -19,7 +20,8 @@ export default async function handler(req, res) {
     if (!day) return res.status(400).json({ ok: false, error: 'Only the seven nightly emails are built here. One-offs (story, app, still-with-us) are in the Newsletter Maker page.' })
     const products = await checkDay(day)
     const o = { local: req.query.aud === 'local', app: req.query.app !== '0', offer: req.query.offer === '1', offerText: String(req.query.offerText || 'free UK delivery on every order') }
-    const html = nightly(day, products, o, S)
+    const ukDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/London' })).toISOString().slice(0, 10)
+    const html = utm(nightly(day, products, o, S), 'newsletter-' + day.key + '-' + ukDate + '-' + (o.local ? 'local' : 'uk'))
     res.status(200).json({ ok: true, html, subject: day.subjects[0], subjects: day.subjects, preview: day.preview, theme: day.theme, segment: o.local ? SEGMENT_FOR.local : SEGMENT_FOR.uk, products, swaps: products.filter(p => !p.ok).map(p => p.name) })
   } catch (e) { res.status(500).json({ ok: false, error: String(e.message || e) }) }
 }
