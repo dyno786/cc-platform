@@ -2,11 +2,13 @@
 //   GET  /api/crm/reorder-wave                         today's plan: categories and how many are due (Tue/Thu/Sat)
 //   GET  /api/crm/reorder-wave?cat=dye&step=1          the email (HTML, subject) + audience for that category
 //   GET  /api/crm/reorder-wave?cat=dye&step=1&format=csv   audience as CSV (email,first_name,product)
+//   POST /api/crm/reorder-wave { cat, step, action:'tag' }   tags the audience in Shopify (reorder-<cat>[-final]) so AfterShip can segment on it; clears last wave's tag first
 //   POST /api/crm/reorder-wave { cat, step }           marks the audience as emailed so they are never sent it twice
 import { getJSON, updateJSON, PATHS } from '../../../lib/crm/store'
 import { mergeSettings } from '../../../lib/crm/engine'
 import { CATEGORIES } from '../../../lib/crm/rules'
 import { utm } from '../../../lib/crm/messages'
+import { gql } from '../../../lib/intake'
 import { waveAudience, topProducts, reorderEmail, WAVE_DAYS, dayOfCat } from '../../../lib/crm/reorder'
 
 export const config = { maxDuration: 60 }
@@ -32,6 +34,25 @@ export default async function handler(req, res) {
     }
     if (!CATEGORIES.find(c => c.key === cat && c.reorder)) return res.status(400).json({ ok: false, error: 'Unknown reorder category' })
     const aud = waveAudience(snap, state, settingsRaw, cat, step)
+
+    if (req.method === 'POST' && src.action === 'tag') {
+      const tag = 'reorder-' + cat + (step === 3 ? '-final' : '')
+      const gid = id => String(id).startsWith('gid://') ? String(id) : 'gid://shopify/Customer/' + id
+      // clear the tag from last wave
+      let cleared = 0, after = null
+      for (let i = 0; i < 20; i++) {
+        const d = await gql('query($q:String!,$a:String){ customers(first:100, query:$q, after:$a){ pageInfo{ hasNextPage endCursor } nodes{ id } } }', { q: 'tag:' + tag, a: after })
+        for (const n of d.customers.nodes) { await gql('mutation($id:ID!,$t:[String!]!){ tagsRemove(id:$id, tags:$t){ userErrors{ message } } }', { id: n.id, t: [tag] }); cleared++ }
+        if (!d.customers.pageInfo.hasNextPage) break
+        after = d.customers.pageInfo.endCursor
+      }
+      let tagged = 0
+      for (const r of aud.rows) {
+        const d = await gql('mutation($id:ID!,$t:[String!]!){ tagsAdd(id:$id, tags:$t){ userErrors{ message } } }', { id: gid(r.customerId), t: [tag] })
+        if (!(d.tagsAdd.userErrors || []).length) tagged++
+      }
+      return res.status(200).json({ ok: true, tag, cleared, tagged, of: aud.rows.length })
+    }
 
     if (req.method === 'POST') {
       const ts = new Date().toISOString()
