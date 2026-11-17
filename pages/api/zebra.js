@@ -264,10 +264,25 @@ export default async function handler(req, res) {
       const s = await switchState()
       if (!s.v.on || !process.env.PRINTNODE_API_KEY) return res.status(200).json({ ok: true, skipped: !s.v.on ? 'printing is off' : 'no PrintNode key' })
       const since = new Date(Math.max(new Date(s.v.since).getTime(), Date.now() - 2 * 86400000)).toISOString()
-      const d = await gql(`query($q:String){ orders(first:20, sortKey:CREATED_AT, query:$q){ nodes{ ${ORDER_FIELDS} } } }`,
-        { q: `financial_status:paid AND status:open AND (fulfillment_status:unfulfilled OR fulfillment_status:partial) AND created_at:>'${since}'` })
+      // Discover new orders via REST (live database) instead of GraphQL orders(query:) —
+      // the GraphQL search index lags the primary DB by up to an hour, which made
+      // orders print ~1 hour late. REST hits the live DB so new orders show up
+      // within seconds of being paid. Full per-order details still come via GraphQL below.
+      const shop = process.env.SHOPIFY_STORE, token = process.env.SHOPIFY_TOKEN
+      const restUrl = 'https://' + shop + '/admin/api/2025-01/orders.json'
+        + '?status=open&financial_status=paid&fulfillment_status=unshipped'
+        + '&created_at_min=' + encodeURIComponent(since)
+        + '&limit=20&fields=id,name'
+      const restR = await fetch(restUrl, { headers: { 'X-Shopify-Access-Token': token } })
+      if (!restR.ok) return res.status(500).json({ ok: false, error: 'Shopify REST ' + restR.status + ': ' + (await restR.text()).slice(0, 200) })
+      const restOrders = ((await restR.json()).orders || []).sort((a, b) => a.id - b.id)
       const done = []
-      for (const o of d.orders.nodes) {
+      for (const ro of restOrders) {
+        // fetch full detail via GraphQL so buildZpl() receives the same shape as before
+        const gid = 'gid://shopify/Order/' + ro.id
+        const dd = await gql('query($id:ID!){ order(id:$id){ ' + ORDER_FIELDS + ' } }', { id: gid })
+        const o = dd.order
+        if (!o) continue
         if (o.printed) continue
         // claim the order first, so two runs can never print it twice
         const c = await gql('mutation($m:[MetafieldsSetInput!]!){ metafieldsSet(metafields:$m){ userErrors{ code message } } }', { m: [{ ownerId: o.id, namespace: 'custom', key: 'zebra_printed', type: 'single_line_text_field', value: 'printing ' + new Date().toISOString(), compareDigest: null }] })
