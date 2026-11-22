@@ -28,6 +28,46 @@ function wrap(text, max) {
 }
 const T = (x, y, h, s, bold) => `^FO${x},${y}^A0N,${h},${bold ? Math.round(h * 1.05) : h}^FD${clean(s)}^FS`
 
+// Picking priority: which orders pickers should pack first.
+// P1 (urgent)  - TikTok orders, DPD Next Working Day, DPD Saturday, Royal Mail Express Tracked (1-2 day)
+// P2 (middle)  - DHL Express International
+// P3 (last)    - Royal Mail Standard/Tracked, Free UK Standard, plain Standard, DHL Economy, DPD Europe, DHL Commerce
+// Anything unrecognised falls back to P2 so it does not get lost at the bottom.
+function priority(o) {
+  const src = String((o && o.sourceName) || '').toLowerCase()
+  const ship = String((o && o.shippingLine && o.shippingLine.title) || '').toLowerCase()
+  if (src.includes('tiktok') || ship.includes('tiktok')) return { p: 1, label: 'TIKTOK' }
+  if (ship.includes('next working day') || ship.includes('next day')) return { p: 1, label: 'NEXT DAY (DPD)' }
+  if (ship.includes('saturday delivery')) return { p: 1, label: 'SATURDAY (DPD)' }
+  if (ship.includes('express tracked') || ship.includes('1-2 working') || ship.includes('1 to 2 working')) return { p: 1, label: 'EXPRESS TRACKED' }
+  if (ship.includes('express international')) return { p: 2, label: "DHL EXPRESS INT'L" }
+  if (ship.includes('free')) return { p: 3, label: 'FREE DELIVERY' }
+  if (ship.includes('royal mail') && (ship.includes('standard') || ship.includes('tracked'))) return { p: 3, label: 'ROYAL MAIL STANDARD' }
+  if (ship.includes('economy')) return { p: 3, label: 'DHL ECONOMY' }
+  if (ship.includes('classic europe')) return { p: 3, label: 'DPD EUROPE' }
+  if (ship.includes('dhl commerce')) return { p: 3, label: 'DHL COMMERCE' }
+  if (ship.includes('standard')) return { p: 3, label: 'STANDARD' }
+  return { p: 2, label: 'UNKNOWN' }
+}
+
+// ZPL for the priority banner at the very top of a 4x6 label.
+// P1 = solid dark bar with reversed (white) text, impossible to miss in a stack.
+// P2 = outlined box with dark text, medium emphasis.
+// P3 = plain text, small, no box - these can wait.
+function priorityBanner(p) {
+  const text = 'PRIORITY ' + p.p + '  -  ' + p.label
+  if (p.p === 1) {
+    // dark rectangle, white reversed text inside
+    return `^FO0,0^GB${W},50,50^FS^FO${M},10^FR^A0N,32,34^FD${clean(text)}^FS`
+  }
+  if (p.p === 2) {
+    // outlined box, dark text
+    return `^FO6,4^GB${W - 12},42,3^FS` + T(M, 10, 28, text, true)
+  }
+  // P3 - centred plain text
+  return T(M, 14, 22, text)
+}
+
 const ORDER_FIELDS = `id name createdAt displayFinancialStatus note
   shippingLine{ title }
   shippingAddress{ name address1 city zip }
@@ -71,17 +111,23 @@ function buildZpl(o) {
   let addr = 'none'
   if (o.shippingAddress && o.billingAddress) addr = norm(ship.zip) === norm(bill.zip) && String(ship.address1 || '').toLowerCase().trim() === String(bill.address1 || '').toLowerCase().trim() ? 'match' : 'differ'
   const date = new Date(o.createdAt).toLocaleString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+  const prio = priority(o)
+  // Pushes the pick-label content down just enough to fit the priority banner at the top.
+  // P1 uses a 50-pixel solid bar; P2/P3 are smaller so content can start higher.
+  const topShift = prio.p === 1 ? 54 : prio.p === 2 ? 48 : 36
 
   const labels = []; let z = '', y = 0
   const header = (first) => {
     z = '^XA^CI28^PW' + W + '^LL' + H + '^LH0,0'
-    z += T(M, 22, 24, 'CC HAIR & BEAUTY  |  PACK AT ROUNDHAY ROAD')
-    z += T(M, 52, 62, 'Order #' + num, true)
-    z += T(W - M - 250, 64, 26, date)
-    z += `^FO${M},128^BY2,3,84^B3N,N,84,N,N^FD${num}^FS`
-    z += T(M + 470, 140, 24, 'Scan in PackCheck')
-    z += T(M + 470, 170, 20, 'Item QR: see picture')
-    y = 226
+    // Priority banner first, so staff can sort a stack of labels at a glance
+    z += priorityBanner(prio)
+    z += T(M, 22 + topShift, 24, 'CC HAIR & BEAUTY  |  PACK AT ROUNDHAY ROAD')
+    z += T(M, 52 + topShift, 62, 'Order #' + num, true)
+    z += T(W - M - 250, 64 + topShift, 26, date)
+    z += `^FO${M},${128 + topShift}^BY2,3,84^B3N,N,84,N,N^FD${num}^FS`
+    z += T(M + 470, 140 + topShift, 24, 'Scan in PackCheck')
+    z += T(M + 470, 170 + topShift, 20, 'Item QR: see picture')
+    y = 226 + topShift
     if (!first) { z += T(M, y, 26, 'continued...'); y += 36; return }
     for (const l of wrap('Delivery: ' + ((o.shippingLine && o.shippingLine.title) || 'Not specified'), 52).slice(0, 2)) { z += T(M, y, 26, l); y += 30 }
     z += T(M, y + 4, 32, 'To: ' + clean(ship.name || 'No delivery address') + (ship.zip ? '  ' + ship.zip : ''), true); y += 46
@@ -125,6 +171,128 @@ function buildZpl(o) {
     + T(M, H - FOOT + 16, 24, `Label ${i + 1} of ${labels.length}  |  ${totalQty} item${totalQty === 1 ? '' : 's'} in total`)
     + T(M, H - FOOT + 44, 22, 'Picked by ___________   Checked by ___________')
     + '^XZ')
+}
+
+// ---- Thank-you label (prints once per order after the pick labels) ----
+// Rotating 20-message pool - a mix of heartfelt and motivational notes.
+// Each order gets a different one, picked by order ID so the same order always
+// gets the same message on reprint. Two short lines each so they fit the label.
+const THANK_YOU_MESSAGES = [
+  ["Your trust means the world to us.", "Thank you for choosing CC Hair and Beauty."],
+  ["You light up our day, every day.", "Thank you for being part of our story."],
+  ["Small business, big love.", "Thank you for supporting a dream."],
+  ["Every great journey begins with a step.", "Thanks for taking yours with us."],
+  ["You are capable of amazing things.", "Thank you for inspiring us today."],
+  ["Confidence is your best accessory.", "Thank you for shining with us."],
+  ["Beauty begins when you decide to be you.", "Thanks for being wonderfully you."],
+  ["Dream big, work hard, stay humble.", "Thank you for believing in us."],
+  ["You deserve all the beautiful things.", "Thank you for choosing us."],
+  ["Stay bright, stay bold, stay beautiful.", "Thanks for shining your light here."],
+  ["Good things come to those who go for them.", "Thank you for coming for us."],
+  ["You are a star. Never forget it.", "Thank you for lighting up our day."],
+  ["Kindness is the only language we all speak.", "Thank you for yours today."],
+  ["Your happiness is our heartbeat.", "Thank you for choosing us."],
+  ["The world needs more people like you.", "Thank you for being here."],
+  ["Every day is a fresh start.", "Thank you for starting yours with us."],
+  ["Believe in yourself and all that you are.", "Thanks for believing in us too."],
+  ["Be the reason someone smiles today.", "You just made us smile. Thank you."],
+  ["Chase the dream, not the competition.", "Thank you for dreaming with us."],
+  ["You are loved, you are enough, you are amazing.", "Thank you for choosing CC."],
+]
+
+// Deterministic per-order index into the pool (same order -> same message, even on reprint).
+function pickThankYouMessage(order) {
+  const id = String((order && order.id) || '').replace(/[^0-9]/g, '') || '0'
+  let h = 0
+  for (const ch of id) h = (h * 31 + Number(ch)) % 1000003
+  return THANK_YOU_MESSAGES[h % THANK_YOU_MESSAGES.length]
+}
+
+// Build a 4x6 "thank you" label that prints after each order. Customer first
+// name, a rotating heartfelt + motivational message, a QR code sat inside a
+// stylised heart that opens Trustpilot's review form, and a sign-off.
+// Review URL is overridable via CC_REVIEW_URL (default: Trustpilot /evaluate/ page).
+function buildThankYouZpl(o) {
+  const ship = o.shippingAddress || {}
+  const bill = o.billingAddress || {}
+  const fullName = String(ship.name || bill.name || '').trim()
+  const first = fullName.split(/\s+/)[0] || 'friend'
+  const greet = first.charAt(0).toUpperCase() + first.slice(1).toLowerCase()
+  const reviewUrl = (process.env.CC_REVIEW_URL || 'https://www.trustpilot.com/evaluate/cchairandbeauty.com').replace(/[\^~]/g, '')
+  const msg = pickThankYouMessage(o)
+
+  let z = '^XA^CI28^PW' + W + '^LL' + H + '^LH0,0'
+
+  // Top decorative line + handwritten-style intro
+  z += `^FO${M + 60},50^GB${W - 2 * (M + 60)},2,2^FS`
+  z += `^FO0,66^A0N,30,30^FB${W},1,0,C,0^FDA little note just for you...^FS`
+  z += `^FO${M + 60},110^GB${W - 2 * (M + 60)},2,2^FS`
+
+  // Big centred THANK YOU
+  z += `^FO0,138^A0N,96,96^FB${W},1,0,C,0^FDTHANK YOU^FS`
+
+  // Customer first name followed by comma
+  z += `^FO0,248^A0N,54,56^FB${W},1,0,C,0^FD${clean(greet)},^FS`
+
+  // Rotating two-line message
+  z += `^FO0,326^A0N,32,33^FB${W},1,0,C,0^FD${clean(msg[0])}^FS`
+  z += `^FO0,368^A0N,32,33^FB${W},1,0,C,0^FD${clean(msg[1])}^FS`
+
+  // --- Heart drawn around the QR code ---
+  // ZPL only has circles, boxes and lines - so the heart is two outlined
+  // circles for the bumps + two diagonal lines down to a point. Not a Bezier
+  // curve but reads clearly as a heart with the QR tucked inside.
+  const QR_SIZE = 230
+  const qrCx = Math.round(W / 2)
+  const qrCy = 650
+  const qrX = qrCx - Math.round(QR_SIZE / 2)
+  const qrY = qrCy - Math.round(QR_SIZE / 2)
+
+  const bumpDia = 190
+  const heartTopY = qrY - 60
+  const leftBumpX = qrCx - bumpDia + 20
+  const rightBumpX = qrCx - 20
+  const bumpThickness = 5
+  const pointX = qrCx
+  const pointY = qrY + QR_SIZE + 80
+
+  // Left + right bumps (outline circles)
+  z += `^FO${leftBumpX},${heartTopY}^GC${bumpDia},${bumpThickness},B^FS`
+  z += `^FO${rightBumpX},${heartTopY}^GC${bumpDia},${bumpThickness},B^FS`
+  // Left diagonal side (top-left to bottom-right)
+  const sideY = heartTopY + Math.round(bumpDia / 2)
+  const leftSideW = pointX - leftBumpX
+  const leftSideH = pointY - sideY
+  z += `^FO${leftBumpX},${sideY}^GD${leftSideW},${leftSideH},${bumpThickness},B,L^FS`
+  // Right diagonal side (top-right to bottom-left)
+  const rightSideW = rightBumpX + bumpDia - pointX
+  const rightSideH = pointY - sideY
+  z += `^FO${pointX},${sideY}^GD${rightSideW},${rightSideH},${bumpThickness},B,R^FS`
+
+  // QR code sits inside the heart. Error correction M so a bit of overlap
+  // with the heart outline won't stop phones scanning it.
+  z += `^FO${qrX},${qrY}^BQN,2,6^FDQA,${reviewUrl}^FS`
+
+  // Caption below the heart
+  const capY = pointY + 24
+  z += `^FO0,${capY}^A0N,32,33^FB${W},1,0,C,0^FDLoved your order?^FS`
+  z += `^FO0,${capY + 42}^A0N,26,27^FB${W},1,0,C,0^FDScan the heart to leave us a Trustpilot review^FS`
+  z += `^FO0,${capY + 72}^A0N,24,25^FB${W},1,0,C,0^FDIt makes a huge difference to a small business.^FS`
+
+  // Footer sign-off
+  z += `^FO${M + 60},${H - 50}^GB${W - 2 * (M + 60)},2,2^FS`
+  z += `^FO0,${H - 36}^A0N,26,27^FB${W},1,0,C,0^FDWith love, the CC Hair and Beauty team^FS`
+
+  z += '^XZ'
+  return z
+}
+
+// Pick labels followed by the thank-you label for one order. The thank-you label
+// is 4x6 so it only makes sense on the Zebra; the HP A4 flow gets pick labels only.
+function allLabelsFor(o, device) {
+  const pick = buildZpl(o)
+  if (device === 'hp') return pick
+  return pick.concat(buildThankYouZpl(o))
 }
 
 // ---- PrintNode
@@ -258,7 +426,8 @@ export default async function handler(req, res) {
     }
     if (job === 'reprint') {
       const o = await findOrder(req.query.order); if (!o) return res.status(404).json({ ok: false, error: 'order not found' })
-      return res.status(200).json({ ok: true, order: o.name, ...(await sendToPrinter(o, buildZpl(o), 'reprint', req.query.paper || process.env.ZEBRA_PAPER || 'w288h432', req.query.device === 'hp' ? 'hp' : req.query.device === 'zebra' ? 'zebra' : ((await switchState()).v.device || 'zebra'))) })
+      const reprintDevice = req.query.device === 'hp' ? 'hp' : req.query.device === 'zebra' ? 'zebra' : ((await switchState()).v.device || 'zebra')
+      return res.status(200).json({ ok: true, order: o.name, ...(await sendToPrinter(o, allLabelsFor(o, reprintDevice), 'reprint', req.query.paper || process.env.ZEBRA_PAPER || 'w288h432', reprintDevice)) })
     }
     if (job === 'cron') {
       const s = await switchState()
@@ -288,7 +457,8 @@ export default async function handler(req, res) {
         const c = await gql('mutation($m:[MetafieldsSetInput!]!){ metafieldsSet(metafields:$m){ userErrors{ code message } } }', { m: [{ ownerId: o.id, namespace: 'custom', key: 'zebra_printed', type: 'single_line_text_field', value: 'printing ' + new Date().toISOString(), compareDigest: null }] })
         if (c.metafieldsSet.userErrors.length) continue
         try {
-          const r = await sendToPrinter(o, buildZpl(o), '', undefined, s.v.device === 'hp' ? 'hp' : 'zebra')
+          const cronDevice = s.v.device === 'hp' ? 'hp' : 'zebra'
+          const r = await sendToPrinter(o, allLabelsFor(o, cronDevice), '', undefined, cronDevice)
           await gql('mutation($m:[MetafieldsSetInput!]!){ metafieldsSet(metafields:$m){ userErrors{ message } } }', { m: [{ ownerId: o.id, namespace: 'custom', key: 'zebra_printed', type: 'single_line_text_field', value: 'printed ' + new Date().toISOString() + ' job ' + r.job }] })
           done.push(o.name + ' ' + r.labels + ' label(s)')
         } catch (e) {
