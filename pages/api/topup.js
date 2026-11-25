@@ -20,7 +20,7 @@
 //       [&max=12] top up to 12  [&when=3] only once a shop has 3 or fewer  [&when=3&qty=6] at 3 or fewer, order 6
 //       (supplier=roundhay warehouse, or none, is the store top-up list above). &store=total|chapeltown|city|roundhay
 //   job=start / job=stop                        nightly printing on / off (on unless stopped)
-//   job=schedule&time=18:00[&on=1|0][&range=hair|all]  set when the nightly store top-up prints (UK time), on/off, and what it covers
+//   job=schedule&time=18:00[&on=1|0][&range=hair|all][&days=1,4|all]  set when the nightly store top-up prints (UK time), on/off, and what it covers
 //   supplier=bhc-schwarzkopf                     an order worked from the supplier's own order sheet (lib/bhc-schwarzkopf.json):
 //       one page per shop, then the order in cases. &store=chapeltown|city|roundhay|order. job=schedule&which=bhc-schwarzkopf&on=1&time=07:30&day=daily|0..6
 //   cron=1                                      vercel.json, every 5 minutes: prints once a day, at the set time (UK time)
@@ -244,6 +244,12 @@ ${body}</body></html>`
       }
       if (req.query.on !== undefined) v.on = req.query.on === '1'
       if (req.query.range !== undefined) v.range = req.query.range === 'all' ? 'all' : 'hair'
+      // &days=1,4 : print only on those days of the week (0 = Sunday ... 6 = Saturday). &days=all : every day.
+      if (req.query.days !== undefined) {
+        const d = [...new Set(String(req.query.days).split(',').map(x => x.trim()).filter(x => /^[0-6]$/.test(x)).map(Number))].sort()
+        if (String(req.query.days) !== 'all' && !d.length) return res.status(400).json({ ok: false, error: 'days must be all, or numbers 0 to 6 with commas (0 = Sunday), e.g. 1,4' })
+        if (d.length && d.length < 7) v.days = d; else delete v.days
+      }
       v.changed = new Date().toISOString()
       const errors = await setState(s.shopId, v)
       return res.status(200).json({ ok: !errors.length, switch: v, errors, londonTime: london({ hour: '2-digit', minute: '2-digit' }) })
@@ -278,7 +284,8 @@ ${body}</body></html>`
       const weekday = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(london({ weekday: 'short' }))
       if (!process.env.PRINTNODE_API_KEY) return res.status(200).json({ ok: true, skipped: 'no PrintNode key' })
       // 1. the store top-up list
-      if (!due(s0.v.time)) out.topup = 'not time yet: prints at ' + s0.v.time
+      if (Array.isArray(s0.v.days) && s0.v.days.length && !s0.v.days.includes(weekday)) out.topup = 'not a print day'
+      else if (!due(s0.v.time)) out.topup = 'not time yet: prints at ' + s0.v.time
       else if (!s0.v.on) out.topup = 'nightly printing is off'
       else if (s0.v.lastDay === today) out.topup = 'already printed today'
       else {
