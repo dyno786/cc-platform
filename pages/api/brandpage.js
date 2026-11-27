@@ -444,7 +444,7 @@ const stem = t => {
     .replace(/#\s*\w+|\bitem#?\s*\w+|\b\d+[\d",&x/ ]*\b/g, ' ').replace(/[^a-z0-9&% ]+/g, ' ').split(/\s+/).filter(Boolean)
   return [w.slice(0, 4).join(' '), w.length > 4 ? 'b:' + w.slice(0, 2).join(' ') + '|' + w.slice(-2).join(' ') : ''] // family, and brand + product type (e.g. two gel lip liners)
 }
-const famKeys = p => { const st = stem(p.title).filter(Boolean); const w2 = (st[0] || p.title.toLowerCase()).split(' ').slice(0, 2).join(' '); return st.concat('k:' + w2 + '|' + kindOf(p)) } // + same brand words and same kind (e.g. three 'Eue De Parfum' perfumes)
+const famKeys = p => { const st = stem(p.title).filter(Boolean); const w2 = String(p.vendor || '').toLowerCase().trim() || (st[0] || p.title.toLowerCase()).split(' ').slice(0, 2).join(' '); return st.concat('k:' + w2 + '|' + kindOf(p)) } // + same brand words and same kind (e.g. three 'Eue De Parfum' perfumes)
 const dedupe = ps => { const s = new Set(); return ps.filter(p => { const ks = famKeys(p); if (s.has(p.id) || ks.some(k => s.has(k))) return false; ks.forEach(k => s.add(k)); s.add(p.id); return true }) }
 const POOLS = {}
 async function colPool(handle, n = 120) {
