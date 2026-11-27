@@ -436,8 +436,15 @@ const MIX_N = 12
 const PF = 'id handle title vendor productType status totalInventory featuredImage{url} createdAt priceRangeV2{minVariantPrice{amount} maxVariantPrice{amount}} compareAtPriceRange{minVariantCompareAtPrice{amount}}'
 const mixOk = p => okP(p) && !/razor blade|blades? pack|edge blades?|single edge/i.test(p.title)
 const maxP = p => Number(p.priceRangeV2 && p.priceRangeV2.maxVariantPrice.amount || 0)
-const stem = t => t.toLowerCase().replace(/\s*-\s*\d.*$/, '').replace(/\s*\(.*?\)\s*/g, ' ').trim()
-const dedupe = ps => { const s = new Set(); return ps.filter(p => { const k = stem(p.title); if (s.has(k) || s.has(p.id)) return false; s.add(k); s.add(p.id); return true }) }
+// Product "family": the same thing in another size, colour or length counts once (the first, best-selling one is kept).
+// Sizes, lengths, item numbers and bracketed bits are dropped, then the first 4 words name the family.
+const stem = t => {
+  const w = t.toLowerCase().replace(/\(.*?\)|\[.*?\]/g, ' ').replace(/\s+-\s+.*$/, ' ')
+    .replace(/\b\d+(\.\d+)?\s*(ml|l|litre|liter|oz|fl ?oz|g|kg|mg|pcs|pieces|pack|inch|in|cm|mm|")(?=\W|$)/g, ' ')
+    .replace(/#\s*\w+|\bitem#?\s*\w+|\b\d+[\d",&x/ ]*\b/g, ' ').replace(/[^a-z0-9&% ]+/g, ' ').split(/\s+/).filter(Boolean)
+  return [w.slice(0, 4).join(' '), w.length > 4 ? 'b:' + w.slice(0, 2).join(' ') + '|' + w.slice(-2).join(' ') : ''] // family, and brand + product type (e.g. two gel lip liners)
+}
+const dedupe = ps => { const s = new Set(); return ps.filter(p => { const ks = stem(p.title).filter(Boolean); if (s.has(p.id) || ks.some(k => s.has(k))) return false; ks.forEach(k => s.add(k)); s.add(p.id); return true }) }
 const POOLS = {}
 async function colPool(handle, n = 120) {
   const k = 'c:' + handle; if (POOLS[k]) return POOLS[k]
@@ -513,13 +520,13 @@ const MIX_TYPES = [
 ]
 function mixPick(pool, turn, used, prev, ordered) {
   // ordered pools (selling fast, new in) keep their order; others start at a different place each run
-  pool = pool.filter(p => !used.has(p.id))
+  pool = pool.filter(p => !used.has(p.id) && !stem(p.title).some(k => k && used.has(k)))
   if (!ordered && pool.length > MIX_N) { const win = pool.slice(0, Math.min(pool.length, 60)); const off = (turn * 7) % win.length; pool = win.slice(off).concat(win.slice(0, off)) }
   const out = []; const kinds = {}
   const take = (p, cap) => { const k = kindOf(p); if ((kinds[k] || 0) >= cap) return; out.push(p); kinds[k] = (kinds[k] || 0) + 1 }
   for (const p of pool) { if (out.length >= MIX_N) break; if (!prev.has(p.id)) take(p, 3) } // fresh products, at most 3 of one kind
   for (const p of pool) { if (out.length >= MIX_N) break; if (!out.includes(p)) take(p, 99) } // top up if the pool is small
-  out.forEach(p => used.add(p.id)); return out
+  out.forEach(p => { used.add(p.id); stem(p.title).forEach(k => k && used.add(k)) }); return out
 }
 async function homeMix(runParam) {
   const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/London' }))
