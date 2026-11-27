@@ -9,7 +9,7 @@ import STATIC from '../../lib/staticpages'
 export const config = { maxDuration: 60 }
 const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const money = n => '£' + Number(n).toFixed(2)
-const LIGHT = /lighten|whiten|bleaching cream|fade cream|dark spot|toning (soap|cream|lotion|serum|oil|gel)|hydroquinone|clarifying (cream|lotion|serum)|carotone|caro light|fair\s*(&|and)\s*(white|lovely)|fair lady|makari|skin tone/i
+const LIGHT = /lighten|whiten|bleaching cream|fade cream|dark spot|toning (soap|cream|lotion|serum|oil|gel)|hydroquinone|clarifying (cream|lotion|serum)|carotone|caro light|fair\s*(&|and)\s*(white|lovely)|fair lady|makari|skin tone|even(s)? (skin )?tone|tone correct|brighten|healthy bright|glow\s*(&|and)\s*lovely|fair\s*(&|and)\s*lovely|skin ?bright|whitening|lightening|bleach(ing)? (cream|soap|lotion|serum)|pure white|white ?(&|and)? ?glow|clear ?(&|and)? ?white|kojic|glutathione|arbutin|movate|betasol|neoprosone|topgel|top gel|idole|half ?caste|maxi ?(white|light|tone)|caro ?white|precious ?white|miss ?white|fair ?(&|and)? ?white|rapid ?clair|symba|mekako|diproson/i
 
 const ING = [
   ['shea', 'Shea Butter', /shea/i], ['coconut', 'Coconut', /coconut/i], ['argan', 'Argan Oil', /argan|morocc/i],
