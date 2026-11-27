@@ -19,6 +19,14 @@
     {
       "path": "/api/topup?cron=1",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/brandpage?job=mix&run=am",
+      "schedule": "30 5 * * *"
+    },
+    {
+      "path": "/api/brandpage?job=mix&run=pm",
+      "schedule": "0 16 * * *"
     }
   ]
 }

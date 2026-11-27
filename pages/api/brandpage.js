@@ -426,6 +426,144 @@ async function homeSlides(runParam) {
   return { run, turn, slides: out }
 }
 
+// ---------- homepage mixed rows: 5 rows (cc-row-1..5) that change every morning and every evening ----------
+// Each run picks a different mix of row types (nearly gone, selling fast, new in, bundles, bulk, under £5, hair goals...)
+// and a different window of products, with no product shown twice across the rows and the last run's products avoided.
+// Each row collection gets metafields custom.kicker / custom.bg / custom.accent / custom.badge, read by sections/cc-collection-row.liquid.
+// Text never invents offers: prices, sale badges and stock counts come straight from Shopify.
+const MIX_ROWS = 5
+const MIX_N = 12
+const PF = 'id handle title vendor productType status totalInventory featuredImage{url} createdAt priceRangeV2{minVariantPrice{amount} maxVariantPrice{amount}} compareAtPriceRange{minVariantCompareAtPrice{amount}}'
+const mixOk = p => okP(p) && !/razor blade|blades? pack|edge blades?|single edge/i.test(p.title)
+const maxP = p => Number(p.priceRangeV2 && p.priceRangeV2.maxVariantPrice.amount || 0)
+const stem = t => t.toLowerCase().replace(/\s*-\s*\d.*$/, '').replace(/\s*\(.*?\)\s*/g, ' ').trim()
+const dedupe = ps => { const s = new Set(); return ps.filter(p => { const k = stem(p.title); if (s.has(k) || s.has(p.id)) return false; s.add(k); s.add(p.id); return true }) }
+const POOLS = {}
+async function colPool(handle, n = 120) {
+  const k = 'c:' + handle; if (POOLS[k]) return POOLS[k]
+  const d = await gql('query($h:String!){ collectionByHandle(handle:$h){ products(first:' + Math.min(n, 250) + ', sortKey:BEST_SELLING){ nodes{ ' + PF + ' } } } }', { h: handle })
+  return (POOLS[k] = d.collectionByHandle ? dedupe(d.collectionByHandle.products.nodes.filter(mixOk)) : [])
+}
+async function colsPool(handles, n = 80) { let ps = []; for (const h of handles) ps = ps.concat(await colPool(h, n)); return dedupe(ps) }
+async function searchPool(q, re, sortKey = 'RELEVANCE') {
+  const d = await gql('query($q:String!){ products(first:150, query:$q, sortKey:' + sortKey + (sortKey === 'CREATED_AT' ? ', reverse:true' : '') + '){ nodes{ ' + PF + ' } } }', { q })
+  return dedupe(d.products.nodes.filter(mixOk).filter(p => !re || re.test(p.title)))
+}
+async function sellingFast(hours) { // most bought in the last N hours, from real orders
+  const since = new Date(Date.now() - hours * 36e5).toISOString(); const qty = {}; let c = null
+  for (let i = 0; i < 4; i++) {
+    const d = await gql('query($q:String!,$c:String){ orders(first:40, after:$c, query:$q, sortKey:CREATED_AT, reverse:true){ pageInfo{hasNextPage endCursor} nodes{ lineItems(first:10){ nodes{ quantity product{ id } } } } } }', { q: 'created_at:>' + since, c })
+    d.orders.nodes.forEach(o => o.lineItems.nodes.forEach(l => { if (l.product) qty[l.product.id] = (qty[l.product.id] || 0) + l.quantity }))
+    if (!d.orders.pageInfo.hasNextPage) break; c = d.orders.pageInfo.endCursor
+  }
+  const ids = Object.keys(qty).sort((a, b) => qty[b] - qty[a]).slice(0, 100)
+  if (!ids.length) return []
+  const d = await gql('query($ids:[ID!]!){ nodes(ids:$ids){ ... on Product { ' + PF + ' } } }', { ids })
+  const byId = Object.fromEntries(d.nodes.filter(Boolean).map(p => [p.id, p]))
+  return dedupe(ids.map(id => byId[id]).filter(mixOk))
+}
+const BARBER = /pomade|clipper|trimmer|beard|wave (cap|brush|grease|pomade)|durag|du-rag|aftershave|after shave|shaving|barber|men'?s|\bmagic men\b/i
+const BULK = /\bbulk\b|multi ?-?pack|value pack|pack of \d|\b\d+ ?(pack|pcs|pieces)\b|\b(1000|946|950|1890|3785|5000) ?ml\b|\b(1|2|4|5) ?(l|litre|liter)s?\b|gallon|\b(32|64|128) ?oz\b|salon size|jumbo/i
+// Row types. kind 'deal' = shopping angle, 'goal' = a hair or beauty need. Colours are soft backgrounds with a strong accent.
+const MIX_TYPES = [
+  { key: 'nearly-gone', kind: 'deal', kicker: 'Nearly gone', title: "Buy before it's gone", text: 'Popular products with only a few left in stock right now.', bg: '#FFF1EF', accent: '#C2312B', badge: 'stock',
+    get: async () => (await colPool('best-sellers-live', 250)).filter(p => p.totalInventory <= 8) },
+  { key: 'selling-fast', kind: 'deal', kicker: 'Selling fast', title: 'Selling fast in Leeds', text: 'What our customers have bought most in the last 48 hours.', bg: '#FFF7E6', accent: '#B45309', ordered: true,
+    get: () => sellingFast(48) },
+  { key: 'new-in', kind: 'deal', kicker: 'Just landed', title: 'New in at CC', text: 'The newest arrivals at CC Hair & Beauty, in stock now.', bg: '#ECFDF3', accent: '#047857', ordered: true,
+    get: () => searchPool('status:active created_at:>' + new Date(Date.now() - 45 * 864e5).toISOString().slice(0, 10), null, 'CREATED_AT') },
+  { key: 'bundles', kind: 'deal', kicker: 'Bundles & sets', title: 'Bundle deals', text: 'Bundles and sets from our Bundle Deals range.', bg: '#FDF6E3', accent: '#8A6D1F', link: '/collections/bundle-deals-1',
+    get: () => colPool('bundle-deals-1', 150) },
+  { key: 'bulk', kind: 'deal', kicker: 'Stock up', title: 'Buy in bulk', text: 'Big sizes, multi-packs and bulk hair for salons, stylists and regulars.', bg: '#EEF2FF', accent: '#1D3E9E',
+    get: () => searchPool('status:active (bulk OR pack OR litre OR gallon OR jumbo OR 1000ml OR 32oz OR 64oz)', BULK) },
+  { key: 'under-5', kind: 'deal', kicker: 'Under £5', title: 'Little treats under £5', text: 'Best sellers that cost less than £5.', bg: '#FDF2F8', accent: '#BE185D',
+    get: async () => (await colPool('best-sellers-live', 250)).filter(p => maxP(p) > 0 && maxP(p) < 5) },
+  { key: 'under-10', kind: 'deal', kicker: 'Under £10', title: m => (m === 10 || m === 11) ? 'Stocking fillers under £10' : 'Top picks under £10', text: 'Best sellers from £5 to £10.', bg: '#F5F3FF', accent: '#6D28D9',
+    get: async () => (await colPool('best-sellers-live', 250)).filter(p => maxP(p) >= 5 && maxP(p) <= 10) },
+  { key: 'price-drop', kind: 'deal', kicker: 'Price drop', title: 'Now for less', text: 'Products on sale now, with the old price shown.', bg: '#FEF2F2', accent: '#B91C1C',
+    get: async () => (await colPool('best-sellers-live', 250)).filter(p => { const c = p.compareAtPriceRange && p.compareAtPriceRange.minVariantCompareAtPrice; return c && Number(c.amount) > maxP(p) && maxP(p) > 0 }) },
+  { key: 'favourites', kind: 'deal', kicker: 'Leeds favourites', title: 'What Leeds keeps coming back for', text: 'Our best sellers across hair, skin and beauty.', bg: '#F0F9FF', accent: '#0369A1', link: '/collections/best-sellers-live',
+    get: () => colPool('best-sellers-live', 250) },
+  { key: 'wash-day', kind: 'goal', kicker: 'Hair goals', title: 'Wash day essentials', text: 'Shampoo, conditioner and treatments for a proper wash day.', bg: '#ECFEFF', accent: '#0E7490', link: '/collections/shampoo',
+    get: () => colsPool(['shampoo']) },
+  { key: 'protective', kind: 'goal', kicker: 'Hair goals', title: 'Protective styles', text: 'Braiding, crochet and twist hair for your next protective style.', bg: '#FFF7ED', accent: '#C2410C', link: '/collections/crochet-braided',
+    get: () => colsPool(['crochet-braided', 'afro-kinky-braids']) },
+  { key: 'edges', kind: 'goal', kicker: 'Hair goals', title: 'Laid edges', text: 'Edge control, gels and durags to lay, wrap and hold.', bg: '#F7FEE7', accent: '#4D7C0F', link: '/collections/edge-control',
+    get: () => colsPool(['edge-control', 'durags']) },
+  { key: 'colour', kind: 'goal', kicker: 'Hair goals', title: 'New colour', text: 'Hair dyes and colour sprays from the brands Leeds buys most.', bg: '#FAF5FF', accent: '#7E22CE', link: '/collections/hair-dyes',
+    get: () => colsPool(['hair-dyes']) },
+  { key: 'wigs', kind: 'goal', kicker: 'Hair goals', title: 'Wigs & bundles', text: 'Wigs and human hair for a fresh install.', bg: '#FDF4FF', accent: '#A21CAF', link: '/collections/wigs',
+    get: () => colsPool(['wigs', 'human-hair-extensions']) },
+  { key: 'glam', kind: 'goal', kicker: 'Beauty', title: 'Glam night in', text: 'Makeup, lashes and nails for a night out.', bg: '#FFF1F2', accent: '#BE123C', link: '/collections/make-up',
+    get: () => colsPool(['make-up', 'eyelashes', 'nails']) },
+  { key: 'body', kind: 'goal', kicker: 'Self-care', title: 'Soft skin all week', text: 'Body lotions, creams and butters.', bg: '#FEFCE8', accent: '#A16207', link: '/collections/lotions',
+    get: () => colsPool(['lotions', 'body-butters']) },
+  { key: 'oils', kind: 'goal', kicker: 'Hair goals', title: 'Growth & oils', text: 'Hair oils for growth, shine and scalp care.', bg: '#F0FDF4', accent: '#15803D', link: '/collections/hair-oil',
+    get: () => colsPool(['hair-oil']) },
+  { key: 'kids', kind: 'goal', kicker: 'Kids', title: 'Kids hair care', text: 'Gentle hair care and styling for little ones.', bg: '#EFF6FF', accent: '#2563EB', link: '/collections/kids',
+    get: () => colsPool(['kids', 'styling-kids']) },
+  { key: 'barber', kind: 'goal', kicker: 'Barber corner', title: "Men's grooming", text: 'Pomades, wave caps, durags and grooming for men.', bg: '#F4F4F5', accent: '#18181B',
+    get: async () => dedupe((await searchPool('status:active (pomade OR clipper OR trimmer OR beard OR wave OR durag OR shaving OR men)', BARBER)).concat(await colPool('durags', 60))) },
+  { key: 'fragrance', kind: 'goal', kicker: 'Treat yourself', title: 'Fragrance', text: 'Perfumes and body mists.', bg: '#FAFAF9', accent: '#57534E', link: '/collections/perfumes-eau-de-parfum',
+    get: () => colsPool(['perfumes-eau-de-parfum']) }
+]
+function mixPick(pool, turn, used, prev, ordered) {
+  // ordered pools (selling fast, new in) keep their order; others start at a different place each run
+  pool = pool.filter(p => !used.has(p.id))
+  if (!ordered && pool.length > MIX_N) { const win = pool.slice(0, Math.min(pool.length, 60)); const off = (turn * 7) % win.length; pool = win.slice(off).concat(win.slice(0, off)) }
+  const out = []; const kinds = {}
+  const take = (p, cap) => { const k = kindOf(p); if ((kinds[k] || 0) >= cap) return; out.push(p); kinds[k] = (kinds[k] || 0) + 1 }
+  for (const p of pool) { if (out.length >= MIX_N) break; if (!prev.has(p.id)) take(p, 3) } // fresh products, at most 3 of one kind
+  for (const p of pool) { if (out.length >= MIX_N) break; if (!out.includes(p)) take(p, 99) } // top up if the pool is small
+  out.forEach(p => used.add(p.id)); return out
+}
+async function homeMix(runParam) {
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/London' }))
+  const doy = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 864e5)
+  const run = runParam === 'am' ? 0 : runParam === 'pm' ? 1 : (now.getHours() >= 15 ? 1 : 0)
+  const turn = doy * 2 + run
+  // products the rows showed last run, so this run shows different ones where it can
+  const prev = new Set()
+  for (let i = 1; i <= MIX_ROWS; i++) { try { const d = await gql('query($h:String!){ collectionByHandle(handle:$h){ products(first:20){ nodes{ id } } } }', { h: 'cc-row-' + i }); if (d.collectionByHandle) d.collectionByHandle.products.nodes.forEach(n => prev.add(n.id)) } catch (e) { } }
+  const used = new Set(); const rows = []
+  // 1. seasonal row when an event is live or coming up
+  const d0 = now.toLocaleDateString('en-CA'); const day = s => Math.round((Date.parse(s) - Date.parse(d0)) / 864e5)
+  const ev = SEASONS.events.filter(e => e.collections.length && day(e.end) >= 0 && day(e.start) <= Math.max(e.lead || 0, 14)).sort((a, b) => day(a.start) - day(b.start))
+  const e = ev.find(x => day(x.start) > 0) || ev[0]
+  if (e) {
+    const ps = mixPick(await colsPool(e.collections, 80), turn, used, prev, false)
+    const fmt = s => new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+    if (ps.length >= 4) rows.push({ key: 'seasonal', kicker: day(e.start) > 0 ? 'Coming up · ' + fmt(e.start) : 'On now', title: e.name, text: e.angle.split('. ')[0].replace(/\.$/, '') + '.', bg: '#FEF2F2', accent: '#B91C1C', link: e.page || '/collections/' + e.collections[0], ps })
+  }
+  // 2. the rest: alternate shopping angles and hair goals, a different set each morning and evening
+  const deals = MIX_TYPES.filter(t => t.kind === 'deal'), goals = MIX_TYPES.filter(t => t.kind === 'goal')
+  const rot = (list, off) => list.slice(off % list.length).concat(list.slice(0, off % list.length))
+  const dq = rot(deals, turn * 3), gq = rot(goals, turn * 2)
+  let want = 'deal'; const errors = []
+  while (rows.length < MIX_ROWS && (dq.length || gq.length)) {
+    const q = (want === 'deal' && dq.length) || !gq.length ? dq : gq
+    const t = q.shift(); want = want === 'deal' ? 'goal' : 'deal'
+    try {
+      const ps = mixPick(await t.get(), turn, used, prev, !!t.ordered)
+      if (ps.length >= 4) rows.push({ key: t.key, kicker: t.kicker, title: typeof t.title === 'function' ? t.title(now.getMonth()) : t.title, text: t.text, bg: t.bg, accent: t.accent, badge: t.badge || '', link: t.link || '', ps })
+      else errors.push(t.key + ': only ' + ps.length)
+    } catch (err) { errors.push(t.key + ': ' + String(err.message || err).slice(0, 120)) }
+  }
+  const out = []
+  for (let i = 0; i < MIX_ROWS; i++) {
+    const r = rows[i]; const handle = 'cc-row-' + (i + 1)
+    if (!SLOTS[handle]) SLOTS[handle] = 'Homepage row ' + (i + 1)
+    if (!r) { out.push(await fillSlot(handle, 'Homepage row ' + (i + 1), '', [])); continue }
+    const res = await fillSlot(handle, r.title, r.text, r.ps)
+    const id = await ensureSlot(handle)
+    await gql('mutation($m:[MetafieldsSetInput!]!){ metafieldsSet(metafields:$m){ userErrors{ message } } }', { m: [
+      ['kicker', r.kicker], ['bg', r.bg], ['accent', r.accent], ['badge', r.badge || 'none'], ['link', r.link || 'none'], ['row', r.key]
+    ].map(([key, value]) => ({ ownerId: id, namespace: 'custom', key, type: 'single_line_text_field', value })) })
+    out.push(Object.assign(res, { row: r.key, kicker: r.kicker }))
+  }
+  return { run: run ? 'evening' : 'morning', turn, rows: out, skipped: errors }
+}
+
 export default async function handler(req, res) {
   try {
     const job = String(req.query.job || '')
@@ -438,11 +576,13 @@ export default async function handler(req, res) {
       res.setHeader('content-type', 'text/plain; charset=utf-8'); return res.status(200).send(out.join('\n') || 'none')
     }
     if (job === 'slides') return res.status(200).json({ ok: true, ...(await homeSlides(req.query.run)) })
+    if (job === 'mix') return res.status(200).json({ ok: true, ...(await homeMix(req.query.run || '')) })
     if (job === 'homeslots') return res.status(200).json({ ok: true, slots: await homeSlots(req.query.only || '') })
     if (job === 'setslot') { // h=collection handle, p=product handles comma list, t=title, d=description
       const hs = (req.query.p || '').split(',').filter(Boolean)
-      const d = hs.length ? await gql('query($q:String!){ products(first:50, query:$q){ nodes{ id handle title vendor status totalInventory featuredImage{url} } } }', { q: hs.map(h => 'handle:' + h).join(' OR ') }) : { products: { nodes: [] } }
-      const byH = Object.fromEntries(d.products.nodes.map(p => [p.handle, p]))
+      // look each handle up directly: a search on many handles at once can miss some (it saved 6 of 12 on 27 Nov 2026)
+      const found = await Promise.all(hs.map(h => gql('query($h:String!){ productByHandle(handle:$h){ id handle title vendor status totalInventory featuredImage{url} } }', { h }).then(d => d.productByHandle).catch(() => null)))
+      const byH = Object.fromEntries(found.filter(Boolean).map(p => [p.handle, p]))
       return res.status(200).json({ ok: true, slot: await fillSlot(req.query.h, req.query.t || SLOTS[req.query.h] || req.query.h, req.query.d || '', hs.map(h => byH[h]).filter(okP)) })
     }
     if (job === 'staticpage') { // publish a hand-written page kept in lib/staticpages.js
