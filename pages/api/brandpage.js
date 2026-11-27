@@ -444,7 +444,11 @@ async function colPool(handle, n = 120) {
   const d = await gql('query($h:String!){ collectionByHandle(handle:$h){ products(first:' + Math.min(n, 250) + ', sortKey:BEST_SELLING){ nodes{ ' + PF + ' } } } }', { h: handle })
   return (POOLS[k] = d.collectionByHandle ? dedupe(d.collectionByHandle.products.nodes.filter(mixOk)) : [])
 }
-async function colsPool(handles, n = 80) { let ps = []; for (const h of handles) ps = ps.concat(await colPool(h, n)); return dedupe(ps) }
+async function colsPool(handles, n = 80) { // take turns between the collections, so one does not fill the whole row
+  const lists = []; for (const h of handles) lists.push(await colPool(h, n))
+  const ps = []; for (let i = 0; lists.some(l => i < l.length); i++) lists.forEach(l => { if (i < l.length) ps.push(l[i]) })
+  return dedupe(ps)
+}
 async function searchPool(q, re, sortKey = 'RELEVANCE') {
   const d = await gql('query($q:String!){ products(first:150, query:$q, sortKey:' + sortKey + (sortKey === 'CREATED_AT' ? ', reverse:true' : '') + '){ nodes{ ' + PF + ' } } }', { q })
   return dedupe(d.products.nodes.filter(mixOk).filter(p => !re || re.test(p.title)))
